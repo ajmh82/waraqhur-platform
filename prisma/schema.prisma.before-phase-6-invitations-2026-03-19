@@ -1,0 +1,386 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+  READ
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  REVOKED
+}
+
+enum PasswordResetStatus {
+  PENDING
+  USED
+  EXPIRED
+  REVOKED
+}
+
+enum CategoryStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum SourceStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum SourceType {
+  RSS
+  WEBSITE
+  TWITTER
+  TELEGRAM
+  YOUTUBE
+  MANUAL
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  DELETED
+}
+
+enum PostVisibility {
+  PRIVATE
+  PUBLIC
+  UNLISTED
+}
+
+enum CommentStatus {
+  ACTIVE
+  HIDDEN
+  DELETED
+}
+
+enum AuditActorType {
+  USER
+  SYSTEM
+  SERVICE
+}
+
+model User {
+  id                     String              @id @default(cuid())
+  email                  String              @unique
+  username               String              @unique
+  passwordHash           String?
+  status                 UserStatus          @default(PENDING)
+  lastLoginAt            DateTime?
+  emailVerifiedAt        DateTime?
+  invitedByInviteId      String?
+  invitedByInvite        Invite?             @relation("InviteAcceptedUsers", fields: [invitedByInviteId], references: [id], onDelete: SetNull)
+  profile                Profile?
+  userRoles              UserRole[]
+  issuedInvites          Invite[]            @relation("InviteIssuer")
+  inviteUsages           InviteUsage[]
+  notifications          Notification[]
+  emailVerifications     EmailVerification[]
+  passwordResets         PasswordReset[]
+  sessions               UserSession[]
+  authoredPosts          Post[]              @relation("PostAuthor")
+  updatedPosts           Post[]              @relation("PostUpdater")
+  comments               Comment[]           @relation("CommentAuthor")
+  auditLogs              AuditLog[]
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([status])
+}
+
+model Profile {
+  id                     String              @id @default(cuid())
+  userId                 String              @unique
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName            String
+  bio                    String?
+  avatarUrl              String?
+  locale                 String?
+  timezone               String?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+}
+
+model Role {
+  id                     String              @id @default(cuid())
+  key                    String              @unique
+  name                   String
+  description            String?
+  isSystem               Boolean             @default(false)
+  rolePermissions        RolePermission[]
+  userRoles              UserRole[]
+  invites                Invite[]
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+}
+
+model Permission {
+  id                     String              @id @default(cuid())
+  key                    String              @unique
+  name                   String
+  description            String?
+  rolePermissions        RolePermission[]
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+}
+
+model RolePermission {
+  id                     String              @id @default(cuid())
+  roleId                 String
+  permissionId           String
+  role                   Role                @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission             Permission          @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt              DateTime            @default(now())
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model UserRole {
+  id                     String              @id @default(cuid())
+  userId                 String
+  roleId                 String
+  assignedByUserId       String?
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role                   Role                @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedAt             DateTime            @default(now())
+
+  @@unique([userId, roleId])
+  @@index([roleId])
+}
+
+model Invite {
+  id                     String              @id @default(cuid())
+  email                  String
+  token                  String              @unique
+  status                 InviteStatus        @default(PENDING)
+  roleId                 String?
+  issuerUserId           String
+  maxUses                Int                 @default(1)
+  expiresAt              DateTime
+  acceptedAt             DateTime?
+  revokedAt              DateTime?
+  issuerUser             User                @relation("InviteIssuer", fields: [issuerUserId], references: [id], onDelete: Cascade)
+  role                   Role?               @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  usages                 InviteUsage[]
+  acceptedUsers          User[]              @relation("InviteAcceptedUsers")
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model InviteUsage {
+  id                     String              @id @default(cuid())
+  inviteId               String
+  userId                 String
+  invite                 Invite              @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usedAt                 DateTime            @default(now())
+
+  @@unique([inviteId, userId])
+  @@index([userId])
+}
+
+model Notification {
+  id                     String              @id @default(cuid())
+  userId                 String
+  channel                NotificationChannel
+  status                 NotificationStatus  @default(QUEUED)
+  title                  String
+  body                   String
+  payload                Json?
+  sentAt                 DateTime?
+  readAt                 DateTime?
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([userId, status])
+  @@index([channel, status])
+}
+
+model EmailVerification {
+  id                     String              @id @default(cuid())
+  userId                 String
+  email                  String
+  token                  String              @unique
+  status                 VerificationStatus  @default(PENDING)
+  expiresAt              DateTime
+  verifiedAt             DateTime?
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([userId, status])
+  @@index([email])
+}
+
+model PasswordReset {
+  id                     String              @id @default(cuid())
+  userId                 String
+  token                  String              @unique
+  status                 PasswordResetStatus @default(PENDING)
+  expiresAt              DateTime
+  usedAt                 DateTime?
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([userId, status])
+}
+
+model UserSession {
+  id                     String              @id @default(cuid())
+  userId                 String
+  tokenHash              String              @unique
+  expiresAt              DateTime
+  lastUsedAt             DateTime?
+  revokedAt              DateTime?
+  ipAddress              String?
+  userAgent              String?
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([userId, expiresAt])
+  @@index([revokedAt])
+}
+
+model Category {
+  id                     String              @id @default(cuid())
+  slug                   String              @unique
+  name                   String
+  description            String?
+  status                 CategoryStatus      @default(ACTIVE)
+  sortOrder              Int                 @default(0)
+  sources                Source[]
+  posts                  Post[]
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([status, sortOrder])
+}
+
+model Source {
+  id                     String              @id @default(cuid())
+  categoryId             String
+  slug                   String              @unique
+  name                   String
+  type                   SourceType
+  status                 SourceStatus        @default(ACTIVE)
+  url                    String?
+  handle                 String?
+  config                 Json?
+  lastFetchedAt          DateTime?
+  category               Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  posts                  Post[]
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([categoryId, status])
+  @@index([type, status])
+}
+
+model Post {
+  id                     String              @id @default(cuid())
+  categoryId             String?
+  sourceId               String?
+  authorUserId           String?
+  updatedByUserId        String?
+  slug                   String?             @unique
+  title                  String
+  content                String?
+  excerpt                String?
+  coverImageUrl          String?
+  status                 PostStatus          @default(DRAFT)
+  visibility             PostVisibility      @default(PRIVATE)
+  publishedAt            DateTime?
+  metadata               Json?
+  category               Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  source                 Source?             @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  author                 User?               @relation("PostAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  updatedBy              User?               @relation("PostUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  comments               Comment[]
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([status, visibility])
+  @@index([categoryId, status])
+  @@index([sourceId, status])
+  @@index([publishedAt])
+}
+
+model Comment {
+  id                     String              @id @default(cuid())
+  postId                 String
+  authorUserId           String?
+  parentId               String?
+  content                String
+  status                 CommentStatus       @default(ACTIVE)
+  post                   Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author                 User?               @relation("CommentAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  parent                 Comment?            @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies                Comment[]           @relation("CommentReplies")
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([postId, status])
+  @@index([authorUserId])
+  @@index([parentId])
+}
+
+model AuditLog {
+  id                     String              @id @default(cuid())
+  actorUserId            String?
+  actorType              AuditActorType
+  action                 String
+  entityType             String
+  entityId               String?
+  summary                String?
+  metadata               Json?
+  ipAddress              String?
+  userAgent              String?
+  actorUser              User?               @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  createdAt              DateTime            @default(now())
+
+  @@index([actorUserId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+}
