@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { SignJWT, jwtVerify } from "jose";
-import { env, isProduction } from "@/lib/env";
+import { env } from "@/lib/env";
 
 export const SESSION_COOKIE_NAME = "waraqhur_session";
 
@@ -8,6 +8,10 @@ const SESSION_TTL_DAYS = 30;
 
 function getSessionSecretKey(): Uint8Array {
   return new TextEncoder().encode(env.appSessionSecret);
+}
+
+function shouldUseSecureCookies() {
+  return env.appUrl.startsWith("https://");
 }
 
 export function generateSessionToken(): string {
@@ -68,7 +72,7 @@ export async function verifySignedSessionValue(value: string): Promise<{
 export function getSessionCookieOptions(expiresAt: Date) {
   return {
     httpOnly: true,
-    secure: isProduction(),
+    secure: shouldUseSecureCookies(),
     sameSite: "lax" as const,
     path: "/",
     expires: expiresAt,

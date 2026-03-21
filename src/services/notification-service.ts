@@ -40,7 +40,7 @@ export async function createInAppNotification(input: {
       status: NotificationStatus.SENT,
       title: input.title,
       body: input.body,
-      payload: input.payload as Prisma.InputJsonValue,
+      payload: input.payload as unknown as Prisma.InputJsonValue,
       sentAt: new Date(),
     },
   });

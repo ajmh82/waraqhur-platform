@@ -1,7 +1,13 @@
-import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { apiError, apiSuccess } from "@/lib/api-response";
+import { buildRateLimitKey, checkRateLimit } from "@/lib/rate-limit";
 import { registerSchema } from "@/services/auth-schemas";
 import { registerUser } from "@/services/auth-service";
+
+const REGISTER_RATE_LIMIT = {
+  limit: 5,
+  windowMs: 60_000,
+};
 
 export async function POST(request: Request) {
   const forwardedFor =
@@ -25,44 +31,32 @@ export async function POST(request: Request) {
       }
     );
   }
+
   try {
     const body = await request.json();
     const input = registerSchema.parse(body);
     const user = await registerUser(input);
 
-    return NextResponse.json(
+    return apiSuccess(
       {
-        success: true,
-        data: {
-          user,
-        },
+        user,
       },
       { status: 201 }
     );
   } catch (error) {
     if (error instanceof ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid registration payload",
-            details: error.flatten(),
-          },
-        },
-        { status: 400 }
+      return apiError(
+        "VALIDATION_ERROR",
+        "Invalid registration payload",
+        400,
+        error.flatten()
       );
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "REGISTER_FAILED",
-          message: error instanceof Error ? error.message : "Registration failed",
-        },
-      },
-      { status: 400 }
+    return apiError(
+      "REGISTER_FAILED",
+      error instanceof Error ? error.message : "Registration failed",
+      400
     );
   }
 }

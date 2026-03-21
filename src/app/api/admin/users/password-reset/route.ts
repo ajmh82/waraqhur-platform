@@ -18,11 +18,12 @@ export async function POST(request: Request) {
   const current = { user: guard.user };
 
   try {
-
     const body = await request.json();
     const input = adminPasswordResetSchema.parse(body);
 
-    await requestPasswordReset(input.email);
+    await requestPasswordReset({
+      email: input.email,
+    });
 
     await createAuditLog({
       actorUserId: current.user.id,
@@ -35,11 +36,12 @@ export async function POST(request: Request) {
       },
     });
 
-    return apiSuccess({
-      data: {
+    return apiSuccess(
+      {
         message: "Password reset email has been triggered",
       },
-    });
+      { status: 200 }
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return apiError(
@@ -52,7 +54,9 @@ export async function POST(request: Request) {
 
     return apiError(
       "ADMIN_PASSWORD_RESET_FAILED",
-      error instanceof Error ? error.message : "Failed to trigger admin password reset",
+      error instanceof Error
+        ? error.message
+        : "Failed to trigger admin password reset",
       400
     );
   }

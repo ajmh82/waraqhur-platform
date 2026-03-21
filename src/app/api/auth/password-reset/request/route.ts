@@ -1,7 +1,13 @@
-import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { passwordResetRequestSchema } from "@/services/auth-recovery-schemas";
+import { apiError, apiSuccess } from "@/lib/api-response";
+import { buildRateLimitKey, checkRateLimit } from "@/lib/rate-limit";
 import { requestPasswordReset } from "@/services/auth-recovery-service";
+import { passwordResetRequestSchema } from "@/services/auth-recovery-schemas";
+
+const PASSWORD_RESET_RATE_LIMIT = {
+  limit: 5,
+  windowMs: 60_000,
+};
 
 export async function POST(request: Request) {
   const forwardedFor =
@@ -25,42 +31,29 @@ export async function POST(request: Request) {
       }
     );
   }
+
   try {
     const body = await request.json();
     const input = passwordResetRequestSchema.parse(body);
     const result = await requestPasswordReset(input);
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-    });
+    return apiSuccess(result, { status: 200 });
   } catch (error) {
     if (error instanceof ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid password reset request payload",
-            details: error.flatten(),
-          },
-        },
-        { status: 400 }
+      return apiError(
+        "VALIDATION_ERROR",
+        "Invalid password reset request payload",
+        400,
+        error.flatten()
       );
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "PASSWORD_RESET_REQUEST_FAILED",
-          message:
-            error instanceof Error
-              ? error.message
-              : "Password reset request failed",
-        },
-      },
-      { status: 400 }
+    return apiError(
+      "PASSWORD_RESET_REQUEST_FAILED",
+      error instanceof Error
+        ? error.message
+        : "Password reset request failed",
+      400
     );
   }
 }

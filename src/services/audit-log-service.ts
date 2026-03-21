@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export interface CreateAuditLogInput {
@@ -6,7 +7,10 @@ export interface CreateAuditLogInput {
   action: string;
   targetType: string;
   targetId?: string | null;
+  summary?: string | null;
   metadata?: Record<string, unknown> | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
 }
 
 export async function createAuditLog(input: CreateAuditLogInput) {
@@ -15,9 +19,17 @@ export async function createAuditLog(input: CreateAuditLogInput) {
       actorUserId: input.actorUserId ?? null,
       actorType: input.actorType ?? "USER",
       action: input.action,
-      targetType: input.targetType,
-      targetId: input.targetId ?? null,
-      metadata: input.metadata ?? null,
+      entityType: input.targetType,
+      entityId: input.targetId ?? null,
+      summary: input.summary ?? null,
+      metadata:
+        input.metadata === undefined
+          ? undefined
+          : input.metadata === null
+            ? Prisma.JsonNull
+            : (input.metadata as unknown as Prisma.InputJsonValue),
+      ipAddress: input.ipAddress ?? null,
+      userAgent: input.userAgent ?? null,
     },
   });
 
@@ -26,9 +38,12 @@ export async function createAuditLog(input: CreateAuditLogInput) {
     actorUserId: auditLog.actorUserId,
     actorType: auditLog.actorType,
     action: auditLog.action,
-    targetType: auditLog.targetType,
-    targetId: auditLog.targetId,
+    targetType: auditLog.entityType,
+    targetId: auditLog.entityId,
+    summary: auditLog.summary,
     metadata: auditLog.metadata,
+    ipAddress: auditLog.ipAddress,
+    userAgent: auditLog.userAgent,
     createdAt: auditLog.createdAt.toISOString(),
   };
 }
@@ -54,9 +69,12 @@ export async function listAuditLogs() {
     actorUserId: entry.actorUserId,
     actorType: entry.actorType,
     action: entry.action,
-    targetType: entry.targetType,
-    targetId: entry.targetId,
+    targetType: entry.entityType,
+    targetId: entry.entityId,
+    summary: entry.summary,
     metadata: entry.metadata,
+    ipAddress: entry.ipAddress,
+    userAgent: entry.userAgent,
     createdAt: entry.createdAt.toISOString(),
     actorUser: entry.actorUser
       ? {

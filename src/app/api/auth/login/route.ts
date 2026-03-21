@@ -1,16 +1,15 @@
 import { cookies, headers } from "next/headers";
-import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { getSessionCookieOptions, SESSION_COOKIE_NAME } from "@/lib/auth-session";
-import { apiError } from "@/lib/api-response";
+import { apiError, apiSuccess } from "@/lib/api-response";
 import { buildRateLimitKey, checkRateLimit } from "@/lib/rate-limit";
 import { loginSchema } from "@/services/auth-schemas";
+import { loginUser } from "@/services/auth-service";
 
 const LOGIN_RATE_LIMIT = {
   limit: 5,
   windowMs: 60_000,
 };
-import { loginUser } from "@/services/auth-service";
 
 export async function POST(request: Request) {
   const forwardedFor =
@@ -34,6 +33,7 @@ export async function POST(request: Request) {
       }
     );
   }
+
   try {
     const body = await request.json();
     const input = loginSchema.parse(body);
@@ -51,37 +51,27 @@ export async function POST(request: Request) {
       getSessionCookieOptions(result.expiresAt)
     );
 
-    return NextResponse.json({
-      success: true,
-      data: {
+    return apiSuccess(
+      {
         user: result.user,
         expiresAt: result.expiresAt.toISOString(),
       },
-    });
+      { status: 200 }
+    );
   } catch (error) {
     if (error instanceof ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid login payload",
-            details: error.flatten(),
-          },
-        },
-        { status: 400 }
+      return apiError(
+        "VALIDATION_ERROR",
+        "Invalid login payload",
+        400,
+        error.flatten()
       );
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "LOGIN_FAILED",
-          message: error instanceof Error ? error.message : "Login failed",
-        },
-      },
-      { status: 401 }
+    return apiError(
+      "LOGIN_FAILED",
+      error instanceof Error ? error.message : "Login failed",
+      401
     );
   }
 }
