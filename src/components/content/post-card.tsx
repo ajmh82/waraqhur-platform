@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CategoryBadge } from "@/components/content/category-badge";
 import { SourceBadge } from "@/components/content/source-badge";
+import { BookmarkPostButton } from "@/components/social/bookmark-post-button";
 import { LikePostButton } from "@/components/social/like-post-button";
 
 interface PostCardProps {
@@ -66,6 +67,7 @@ export function PostCard({ post }: PostCardProps) {
           postId={post.id}
           initialLikesCount={post.likesCount ?? 0}
         />
+        <BookmarkPostButton postId={post.id} />
       </div>
     </article>
   );

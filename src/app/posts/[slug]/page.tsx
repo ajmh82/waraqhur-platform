@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CategoryBadge } from "@/components/content/category-badge";
 import { SourceBadge } from "@/components/content/source-badge";
 import { AppHeader } from "@/components/layout/app-header";
+import { BookmarkPostButton } from "@/components/social/bookmark-post-button";
 import { LikePostButton } from "@/components/social/like-post-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -207,11 +208,12 @@ export default async function PostPage({
             <span>{post.likesCount ?? 0} إعجاب</span>
           </div>
 
-          <div style={{ marginTop: "18px" }}>
+          <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
             <LikePostButton
               postId={post.id}
               initialLikesCount={post.likesCount ?? 0}
             />
+            <BookmarkPostButton postId={post.id} />
           </div>
 
           <div className="post-detail__content">

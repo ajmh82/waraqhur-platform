@@ -119,6 +119,7 @@ model User {
   updatedPosts           Post[]              @relation("PostUpdater")
   comments               Comment[]           @relation("CommentAuthor")
   likes                  Like[]
+  bookmarks              Bookmark[]
   auditLogs              AuditLog[]
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
@@ -359,6 +360,7 @@ model Post {
   updatedBy              User?               @relation("PostUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
   comments               Comment[]
   likes                  Like[]
+  bookmarks              Bookmark[]
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
@@ -366,6 +368,19 @@ model Post {
   @@index([categoryId, status])
   @@index([sourceId, status])
   @@index([publishedAt])
+}
+
+model Bookmark {
+  userId                 String
+  postId                 String
+  createdAt              DateTime            @default(now())
+
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post                   Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model Like {
