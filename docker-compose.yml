@@ -1,0 +1,27 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: waraqhur-app
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env.production
+    ports:
+      - "3002:3000"
+
+  db:
+    image: postgres:16-alpine
+    container_name: waraqhur-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: waraqhur
+      POSTGRES_USER: waraqhur
+      POSTGRES_PASSWORD: waraqhur_password
+    volumes:
+      - waraqhur_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  waraqhur_postgres_data:
