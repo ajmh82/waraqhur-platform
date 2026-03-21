@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CategoryBadge } from "@/components/content/category-badge";
 import { SourceBadge } from "@/components/content/source-badge";
 import { AppHeader } from "@/components/layout/app-header";
+import { LikePostButton } from "@/components/social/like-post-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiGet } from "@/lib/web-api";
@@ -16,6 +17,7 @@ interface PostsData {
     content: string | null;
     createdAt: string;
     commentsCount: number;
+    likesCount?: number;
     category: {
       id: string;
       name: string;
@@ -81,7 +83,7 @@ async function loadPostPageData(slug: string): Promise<PostPageResult> {
       post: null,
       comments: [],
       error:
-        error instanceof Error ? error.message : "Unable to load the post data.",
+        error instanceof Error ? error.message : "تعذر تحميل بيانات المنشور.",
     };
   }
 }
@@ -99,7 +101,7 @@ export default async function PostPage({
       <main className="page-stack">
         <div className="page-container">
           <AppHeader />
-          <ErrorState title="Failed to load post" description={error} />
+          <ErrorState title="تعذر تحميل المنشور" description={error} />
         </div>
       </main>
     );
@@ -116,49 +118,60 @@ export default async function PostPage({
 
         <article className="post-detail">
           <div className="post-detail__meta">
-            {post.category ? (
-              <CategoryBadge name={post.category.name} slug={post.category.slug} />
-            ) : null}
             {post.source ? (
               <SourceBadge name={post.source.name} slug={post.source.slug} />
+            ) : null}
+            {post.category ? (
+              <CategoryBadge name={post.category.name} slug={post.category.slug} />
             ) : null}
           </div>
 
           <h1 className="post-detail__title">{post.title}</h1>
 
           <p className="post-detail__summary">
-            {post.excerpt ?? "No excerpt available for this post."}
+            {post.excerpt ?? "لا يوجد ملخص لهذا المنشور."}
           </p>
 
           <div className="post-detail__info">
-            <span>{new Date(post.createdAt).toLocaleDateString("en-GB")}</span>
-            <span>{post.author?.username ?? "Unknown author"}</span>
-            <span>{comments.length} comments</span>
+            <span>{new Date(post.createdAt).toLocaleString("ar-BH")}</span>
+            <span>{post.author?.username ?? "كاتب غير معروف"}</span>
+            <span>{comments.length} تعليق</span>
+            <span>{post.likesCount ?? 0} إعجاب</span>
+          </div>
+
+          <div style={{ marginTop: "18px" }}>
+            <LikePostButton
+              postId={post.id}
+              initialLikesCount={post.likesCount ?? 0}
+            />
           </div>
 
           <div className="post-detail__content">
-            {post.content ?? "No content available."}
+            {post.content ?? "لا يوجد محتوى كامل لهذا المنشور حتى الآن."}
           </div>
         </article>
 
         <section className="page-section">
           <div className="section-heading">
-            <p className="section-heading__eyebrow">Discussion</p>
-            <h2>Comments</h2>
+            <p className="section-heading__eyebrow">النقاش</p>
+            <h2>التعليقات والردود</h2>
+            <p className="section-heading__description">
+              هذا القسم هو البداية الفعلية للطبقة الاجتماعية داخل ورق حر، وسيُطوَّر لاحقًا إلى ردود متداخلة وتفاعلات أوسع شبيهة بمنصات التواصل الحديثة.
+            </p>
           </div>
 
           {comments.length === 0 ? (
             <EmptyState
-              title="No comments yet"
-              description="This post exists, but no comments have been added yet."
+              title="لا توجد تعليقات بعد"
+              description="المنشور موجود، لكن لم تتم إضافة أي تعليق عليه حتى الآن."
             />
           ) : (
             <div className="comment-list">
               {comments.map((comment) => (
                 <article key={comment.id} className="comment-card">
                   <div className="comment-card__head">
-                    <strong>{comment.author?.username ?? "Unknown user"}</strong>
-                    <span>{new Date(comment.createdAt).toLocaleDateString("en-GB")}</span>
+                    <strong>{comment.author?.username ?? "مستخدم غير معروف"}</strong>
+                    <span>{new Date(comment.createdAt).toLocaleString("ar-BH")}</span>
                   </div>
                   <p>{comment.content}</p>
                 </article>
@@ -169,7 +182,7 @@ export default async function PostPage({
 
         <section className="page-section">
           <Link href="/timeline" className="back-link">
-            Back to timeline
+            العودة إلى الموجز
           </Link>
         </section>
       </div>

@@ -64,6 +64,7 @@ enum SourceType {
   RSS
   WEBSITE
   TWITTER
+  NITTER
   TELEGRAM
   YOUTUBE
   MANUAL
@@ -106,6 +107,8 @@ model User {
   invitedByInvite        Invite?             @relation("InviteAcceptedUsers", fields: [invitedByInviteId], references: [id], onDelete: SetNull)
   profile                Profile?
   userRoles              UserRole[]
+  following              Follow[]            @relation("UserFollowing")
+  followers              Follow[]            @relation("UserFollowers")
   issuedInvites          Invite[]            @relation("InviteIssuer")
   inviteUsages           InviteUsage[]
   notifications          Notification[]
@@ -115,11 +118,26 @@ model User {
   authoredPosts          Post[]              @relation("PostAuthor")
   updatedPosts           Post[]              @relation("PostUpdater")
   comments               Comment[]           @relation("CommentAuthor")
+  likes                  Like[]
   auditLogs              AuditLog[]
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
   @@index([status])
+}
+
+
+model Follow {
+  followerId             String
+  followingId            String
+  createdAt              DateTime            @default(now())
+
+  follower               User                @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following              User                @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId, createdAt])
+  @@index([followerId, createdAt])
 }
 
 model Profile {
@@ -340,6 +358,7 @@ model Post {
   author                 User?               @relation("PostAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
   updatedBy              User?               @relation("PostUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
   comments               Comment[]
+  likes                  Like[]
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
@@ -347,6 +366,19 @@ model Post {
   @@index([categoryId, status])
   @@index([sourceId, status])
   @@index([publishedAt])
+}
+
+model Like {
+  userId                 String
+  postId                 String
+  createdAt              DateTime            @default(now())
+
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post                   Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model Comment {

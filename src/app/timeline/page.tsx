@@ -44,7 +44,7 @@ async function loadTimelinePageData(): Promise<TimelinePageResult> {
     return {
       data: null,
       error:
-        error instanceof Error ? error.message : "Unable to load timeline data.",
+        error instanceof Error ? error.message : "تعذر تحميل بيانات الموجز.",
     };
   }
 }
@@ -57,7 +57,10 @@ export default async function TimelinePage() {
       <main className="page-stack">
         <div className="page-container">
           <AppHeader />
-          <ErrorState title="Failed to load timeline" description={error ?? "Unable to load timeline data."} />
+          <ErrorState
+            title="تعذر تحميل الموجز"
+            description={error ?? "تعذر تحميل بيانات الموجز."}
+          />
         </div>
       </main>
     );
@@ -70,15 +73,15 @@ export default async function TimelinePage() {
 
         <section className="page-section">
           <SectionHeading
-            eyebrow="Content Feed"
-            title="Timeline"
-            description="A mobile-first content timeline that lists posts in a reusable layout suitable for both web and app navigation."
+            eyebrow="التايم لاين"
+            title="موجزك الاجتماعي"
+            description="هذه الصفحة تعرض الآن التايم لاين المبني على المتابعة: منشوراتك ومنشورات الحسابات التي تتابعها، مع بقاء هوية ورق حر كموجز عربي منظم للمحتوى والمصادر والتصنيفات."
           />
 
           {data.posts.length === 0 ? (
             <EmptyState
-              title="Timeline is empty"
-              description="No posts are available yet. Create content from the API and return here."
+              title="الموجز فارغ حاليًا"
+              description="لا توجد منشورات كافية بعد. تابع مستخدمين أكثر أو أضف محتوى جديدًا ليظهر التدفق الكامل."
             />
           ) : (
             <TimelineList posts={data.posts} />

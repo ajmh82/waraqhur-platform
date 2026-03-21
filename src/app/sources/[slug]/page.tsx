@@ -29,6 +29,7 @@ interface PostsData {
     excerpt: string | null;
     createdAt: string;
     commentsCount: number;
+    likesCount?: number;
     category: {
       id: string;
       name: string;
@@ -93,7 +94,7 @@ async function loadSourcePageData(slug: string): Promise<SourcePageResult> {
       source: null,
       posts: [],
       error:
-        error instanceof Error ? error.message : "Unable to load source data.",
+        error instanceof Error ? error.message : "تعذر تحميل بيانات المصدر.",
     };
   }
 }
@@ -111,7 +112,7 @@ export default async function SourcePage({
       <main className="page-stack">
         <div className="page-container">
           <AppHeader />
-          <ErrorState title="Failed to load source" description={error} />
+          <ErrorState title="تعذر تحميل المصدر" description={error} />
         </div>
       </main>
     );
@@ -128,19 +129,19 @@ export default async function SourcePage({
 
         <section className="page-section">
           <SectionHeading
-            eyebrow={source.type}
+            eyebrow={`المصدر: ${source.type}`}
             title={source.name}
             description={
               source.url
-                ? `Source URL: ${source.url}`
-                : "Posts connected to this source are listed below."
+                ? `الرابط المرتبط بهذا المصدر: ${source.url}`
+                : "سيظهر هنا المحتوى المرتبط بهذا المصدر عند توفره."
             }
           />
 
           {posts.length === 0 ? (
             <EmptyState
-              title="No posts from this source"
-              description="This source exists, but it has not been linked to any post yet."
+              title="لا توجد منشورات مرتبطة بهذا المصدر بعد"
+              description="المصدر موجود داخل النظام، لكن لم يتم ربط أي منشور به حتى الآن."
             />
           ) : (
             <TimelineList posts={posts} />

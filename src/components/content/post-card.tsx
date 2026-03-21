@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CategoryBadge } from "@/components/content/category-badge";
 import { SourceBadge } from "@/components/content/source-badge";
+import { LikePostButton } from "@/components/social/like-post-button";
 
 interface PostCardProps {
   post: {
@@ -10,6 +11,7 @@ interface PostCardProps {
     excerpt: string | null;
     createdAt: string;
     commentsCount: number;
+    likesCount?: number;
     category: {
       id: string;
       name: string;
@@ -29,16 +31,16 @@ interface PostCardProps {
 }
 
 export function PostCard({ post }: PostCardProps) {
-  const href = post.slug ? `/posts/${post.slug}` : "#";
+  const href = post.slug ? `/posts/${post.slug}` : "/timeline";
 
   return (
     <article className="post-card">
       <div className="post-card__meta">
-        {post.category ? (
-          <CategoryBadge name={post.category.name} slug={post.category.slug} />
-        ) : null}
         {post.source ? (
           <SourceBadge name={post.source.name} slug={post.source.slug} />
+        ) : null}
+        {post.category ? (
+          <CategoryBadge name={post.category.name} slug={post.category.slug} />
         ) : null}
       </div>
 
@@ -47,13 +49,23 @@ export function PostCard({ post }: PostCardProps) {
       </Link>
 
       <p className="post-card__excerpt">
-        {post.excerpt ?? "No summary available for this post yet."}
+        {post.excerpt ?? "لا يوجد ملخص لهذا المنشور حتى الآن."}
       </p>
 
       <div className="post-card__footer">
-        <span>{new Date(post.createdAt).toLocaleDateString("en-GB")}</span>
-        <span>{post.commentsCount} comments</span>
-        <span>{post.author?.username ?? "Unknown author"}</span>
+        <span>{new Date(post.createdAt).toLocaleString("ar-BH")}</span>
+        <span>{post.commentsCount} تعليق</span>
+        {post.author ? (
+          <Link href={`/u/${post.author.username}`}>
+            {post.author.username}
+          </Link>
+        ) : (
+          <span>كاتب غير معروف</span>
+        )}
+        <LikePostButton
+          postId={post.id}
+          initialLikesCount={post.likesCount ?? 0}
+        />
       </div>
     </article>
   );

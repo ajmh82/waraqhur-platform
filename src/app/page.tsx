@@ -76,7 +76,7 @@ async function loadHomePageData(): Promise<HomePageResult> {
       error:
         error instanceof Error
           ? error.message
-          : "Unable to load the home page data.",
+          : "تعذر تحميل بيانات الصفحة الرئيسية.",
     };
   }
 }
@@ -90,13 +90,16 @@ export default async function HomePage() {
       <main className="page-stack">
         <div className="page-container">
           <AppHeader />
-          <ErrorState title="Failed to load home page" description={error ?? "Unable to load the home page data."} />
+          <ErrorState
+            title="تعذر تحميل الصفحة الرئيسية"
+            description={error ?? "تعذر تحميل بيانات الصفحة الرئيسية."}
+          />
         </div>
       </main>
     );
   }
 
-  const featuredPosts = postsData.posts.slice(0, 6);
+  const featuredPosts = postsData.posts.slice(0, 8);
 
   return (
     <main className="page-stack">
@@ -104,41 +107,43 @@ export default async function HomePage() {
         <AppHeader />
 
         <section className="hero-panel">
-          <p className="eyebrow">Waraqhur Platform</p>
-          <h1 className="hero-panel__title">A structured content timeline for modern publishing.</h1>
+          <p className="eyebrow">وراق حر</p>
+          <h1 className="hero-panel__title">
+            موجز عربي حديث يجمع الأخبار والمصادر والتصنيفات في واجهة واحدة.
+          </h1>
           <p className="hero-panel__description">
-            Browse the latest posts, explore curated sources, and move through
-            categories using clean, reusable interfaces built for web now and
-            ready for app screens later.
+            هذه النسخة من ورق حر تسير نحو أن تكون منصة أخبار اجتماعية عربية:
+            موجز سريع، مصادر واضحة، تصنيفات منظمة، وبنية قوية جاهزة للتوسع
+            لاحقًا نحو تجربة شبيهة بتويتر ولكن بهوية تحريرية أوضح وأكثر احترافية.
           </p>
 
           <div className="hero-metrics">
             <article className="hero-metric">
               <strong>{postsData.posts.length}</strong>
-              <span>Posts</span>
+              <span>منشور وخبر</span>
             </article>
             <article className="hero-metric">
               <strong>{categoriesData.categories.length}</strong>
-              <span>Categories</span>
+              <span>تصنيف</span>
             </article>
             <article className="hero-metric">
               <strong>{sourcesData.sources.length}</strong>
-              <span>Sources</span>
+              <span>مصدر</span>
             </article>
           </div>
         </section>
 
         <section className="page-section">
           <SectionHeading
-            eyebrow="Timeline"
-            title="Latest posts"
-            description="The home page surfaces the latest published content in a feed that can later map directly to a mobile home screen."
+            eyebrow="الموجز الرئيسي"
+            title="آخر الأخبار من المصادر النشطة"
+            description="هذه الصفحة مصممة لتكون واجهة القراءة اليومية السريعة: المصدر ظاهر، التصنيف واضح، والمحتوى معروض بطريقة مناسبة لمنصة أخبار اجتماعية عربية حديثة."
           />
 
           {featuredPosts.length === 0 ? (
             <EmptyState
-              title="No posts yet"
-              description="Create categories, sources, and posts from the API to populate the timeline."
+              title="لا توجد أخبار منشورة بعد"
+              description="أضف مصادر ومحتوى أكثر حتى يبدأ الموجز الرئيسي بالعمل بشكل فعلي."
             />
           ) : (
             <TimelineList posts={featuredPosts} />

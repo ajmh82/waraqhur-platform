@@ -4,12 +4,30 @@ import { ZodError } from "zod";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 import { createPostSchema } from "@/services/content-schemas";
-import { createPost, listPosts } from "@/services/content-service";
+import { createPost } from "@/services/content-service";
+import { listHomeTimeline } from "@/services/timeline-service";
 import { userHasPermission } from "@/services/authorization-service";
+
+async function getOptionalCurrentUserId() {
+  try {
+    const cookieStore = await cookies();
+    const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+    if (!sessionValue) {
+      return null;
+    }
+
+    const current = await getCurrentUserFromSession(sessionValue);
+    return current.user.id;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET() {
   try {
-    const posts = await listPosts();
+    const currentUserId = await getOptionalCurrentUserId();
+    const posts = await listHomeTimeline(currentUserId);
 
     return NextResponse.json({
       success: true,

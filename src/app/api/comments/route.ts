@@ -53,12 +53,12 @@ export async function POST(request: Request) {
 
   try {
     const current = await getCurrentUserFromSession(sessionValue);
-    const canReadComments = await userHasPermission(
-      current.user.id,
-      "comments.read"
-    );
+    const canCreateComments =
+      (await userHasPermission(current.user.id, "comments.create")) ||
+      (await userHasPermission(current.user.id, "comments.manage")) ||
+      (await userHasPermission(current.user.id, "posts.update"));
 
-    if (!canReadComments) {
+    if (!canCreateComments) {
       return NextResponse.json(
         {
           success: false,

@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+import { headers } from "next/headers";
+import { env } from "@/lib/env";
 
 interface ApiSuccess<T> {
   success: true;
@@ -16,6 +17,18 @@ interface ApiFailure {
 
 type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
 
+function getBaseUrl(host: string | null) {
+  if (env.appUrl) {
+    return env.appUrl;
+  }
+
+  if (!host) {
+    return "http://localhost:3000";
+  }
+
+  return `http://${host}`;
+}
+
 async function parseJsonSafely(response: Response) {
   try {
     return await response.json();
@@ -25,12 +38,17 @@ async function parseJsonSafely(response: Response) {
 }
 
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const headerStore = await headers();
+  const host = headerStore.get("host");
+  const cookie = headerStore.get("cookie") ?? "";
+
+  const response = await fetch(`${getBaseUrl(host)}${path}`, {
     ...init,
     method: "GET",
     cache: "no-store",
     headers: {
       "Content-Type": "application/json",
+      cookie,
       ...(init?.headers ?? {}),
     },
   });
