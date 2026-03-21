@@ -345,6 +345,8 @@ model Post {
   sourceId               String?
   authorUserId           String?
   updatedByUserId        String?
+  repostOfPostId         String?
+  quotedPostId           String?
   slug                   String?             @unique
   title                  String
   content                String?
@@ -358,6 +360,10 @@ model Post {
   source                 Source?             @relation(fields: [sourceId], references: [id], onDelete: SetNull)
   author                 User?               @relation("PostAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
   updatedBy              User?               @relation("PostUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  repostOfPost           Post?               @relation("PostReposts", fields: [repostOfPostId], references: [id], onDelete: SetNull)
+  reposts                Post[]              @relation("PostReposts")
+  quotedPost             Post?               @relation("PostQuotes", fields: [quotedPostId], references: [id], onDelete: SetNull)
+  quotes                 Post[]              @relation("PostQuotes")
   comments               Comment[]
   likes                  Like[]
   bookmarks              Bookmark[]
@@ -368,6 +374,8 @@ model Post {
   @@index([categoryId, status])
   @@index([sourceId, status])
   @@index([publishedAt])
+  @@index([repostOfPostId])
+  @@index([quotedPostId])
 }
 
 model Bookmark {
