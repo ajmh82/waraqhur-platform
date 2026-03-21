@@ -8,58 +8,100 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiGet } from "@/lib/web-api";
 
-interface PostsData {
-  posts: Array<{
+interface PostRecord {
+  id: string;
+  title: string;
+  slug: string | null;
+  excerpt: string | null;
+  content?: string | null;
+  createdAt: string;
+  commentsCount: number;
+  likesCount?: number;
+  category: {
     id: string;
-    title: string;
-    slug: string | null;
-    excerpt: string | null;
-    content: string | null;
-    createdAt: string;
-    commentsCount: number;
-    likesCount?: number;
-    category: {
-      id: string;
-      name: string;
-      slug: string;
-    } | null;
-    source: {
-      id: string;
-      name: string;
-      slug: string;
-    } | null;
-    author: {
-      id: string;
-      email: string;
-      username: string;
-    } | null;
-  }>;
+    name: string;
+    slug: string;
+  } | null;
+  source: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
+  author: {
+    id: string;
+    email: string;
+    username: string;
+  } | null;
+}
+
+interface PostsData {
+  posts: PostRecord[];
+}
+
+interface CommentNode {
+  id: string;
+  postId: string;
+  parentId: string | null;
+  content: string;
+  createdAt: string;
+  author: {
+    id: string;
+    email: string;
+    username: string;
+  } | null;
+  replies: CommentNode[];
 }
 
 interface CommentsData {
-  comments: Array<{
+  comments: CommentNode[];
+}
+
+interface SourceListData {
+  sources: Array<{
     id: string;
-    postId: string;
-    content: string;
-    createdAt: string;
-    author: {
-      id: string;
-      email: string;
-      username: string;
-    } | null;
+    slug: string;
   }>;
 }
 
+interface SourcePostsData {
+  posts: PostRecord[];
+}
+
 interface PostPageResult {
-  post: PostsData["posts"][number] | null;
+  post: PostRecord | null;
   comments: CommentsData["comments"];
   error: string | null;
 }
 
+async function loadPostBySlug(slug: string) {
+  const timelineData = await apiGet<PostsData>("/api/posts");
+  const directMatch = timelineData.posts.find((item) => item.slug === slug);
+
+  if (directMatch) {
+    return directMatch;
+  }
+
+  const sourcesData = await apiGet<SourceListData>("/api/sources");
+
+  for (const source of sourcesData.sources) {
+    try {
+      const sourceData = await apiGet<SourcePostsData>(`/sources/${source.slug}`);
+      const sourceMatch = sourceData.posts.find((item) => item.slug === slug);
+
+      if (sourceMatch) {
+        return sourceMatch;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
 async function loadPostPageData(slug: string): Promise<PostPageResult> {
   try {
-    const postsData = await apiGet<PostsData>("/api/posts");
-    const post = postsData.posts.find((item) => item.slug === slug);
+    const post = await loadPostBySlug(slug);
 
     if (!post) {
       return {
@@ -86,6 +128,32 @@ async function loadPostPageData(slug: string): Promise<PostPageResult> {
         error instanceof Error ? error.message : "تعذر تحميل بيانات المنشور.",
     };
   }
+}
+
+function CommentThread({ comments, depth = 0 }: { comments: CommentNode[]; depth?: number }) {
+  return (
+    <div className="comment-list">
+      {comments.map((comment) => (
+        <article
+          key={comment.id}
+          className="comment-card"
+          style={{ marginRight: `${depth * 24}px` }}
+        >
+          <div className="comment-card__head">
+            <strong>{comment.author?.username ?? "مستخدم غير معروف"}</strong>
+            <span>{new Date(comment.createdAt).toLocaleString("ar-BH")}</span>
+          </div>
+          <p>{comment.content}</p>
+
+          {comment.replies.length > 0 ? (
+            <div style={{ marginTop: "14px" }}>
+              <CommentThread comments={comment.replies} depth={depth + 1} />
+            </div>
+          ) : null}
+        </article>
+      ))}
+    </div>
+  );
 }
 
 export default async function PostPage({
@@ -135,7 +203,7 @@ export default async function PostPage({
           <div className="post-detail__info">
             <span>{new Date(post.createdAt).toLocaleString("ar-BH")}</span>
             <span>{post.author?.username ?? "كاتب غير معروف"}</span>
-            <span>{comments.length} تعليق</span>
+            <span>{comments.length} تعليق رئيسي</span>
             <span>{post.likesCount ?? 0} إعجاب</span>
           </div>
 
@@ -156,7 +224,7 @@ export default async function PostPage({
             <p className="section-heading__eyebrow">النقاش</p>
             <h2>التعليقات والردود</h2>
             <p className="section-heading__description">
-              هذا القسم هو البداية الفعلية للطبقة الاجتماعية داخل ورق حر، وسيُطوَّر لاحقًا إلى ردود متداخلة وتفاعلات أوسع شبيهة بمنصات التواصل الحديثة.
+              هذا القسم يدعم الآن الردود المتداخلة، وهو أقرب إلى أسلوب النقاش الاجتماعي الذي نحتاجه داخل ورق حر.
             </p>
           </div>
 
@@ -166,17 +234,7 @@ export default async function PostPage({
               description="المنشور موجود، لكن لم تتم إضافة أي تعليق عليه حتى الآن."
             />
           ) : (
-            <div className="comment-list">
-              {comments.map((comment) => (
-                <article key={comment.id} className="comment-card">
-                  <div className="comment-card__head">
-                    <strong>{comment.author?.username ?? "مستخدم غير معروف"}</strong>
-                    <span>{new Date(comment.createdAt).toLocaleString("ar-BH")}</span>
-                  </div>
-                  <p>{comment.content}</p>
-                </article>
-              ))}
-            </div>
+            <CommentThread comments={comments} />
           )}
         </section>
 

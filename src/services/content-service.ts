@@ -147,6 +147,51 @@ function mapComment(
   };
 }
 
+function buildCommentTree(
+  comments: Array<
+    ReturnType<typeof mapComment> & {
+      replies: Array<ReturnType<typeof mapComment>>;
+    }
+  >
+) {
+  const commentMap = new Map<
+    string,
+    ReturnType<typeof mapComment> & {
+      replies: Array<ReturnType<typeof mapComment>>;
+    }
+  >();
+
+  for (const comment of comments) {
+    commentMap.set(comment.id, {
+      ...comment,
+      replies: [],
+    });
+  }
+
+  const roots: Array<
+    ReturnType<typeof mapComment> & {
+      replies: Array<ReturnType<typeof mapComment>>;
+    }
+  > = [];
+
+  for (const comment of comments) {
+    const current = commentMap.get(comment.id)!;
+
+    if (comment.parentId) {
+      const parent = commentMap.get(comment.parentId);
+
+      if (parent) {
+        parent.replies.push(current);
+        continue;
+      }
+    }
+
+    roots.push(current);
+  }
+
+  return roots;
+}
+
 export async function createCategory(input: CreateCategoryInput) {
   const existing = await prisma.category.findFirst({
     where: {
@@ -445,7 +490,12 @@ export async function listComments(postId?: string) {
     },
   });
 
-  return comments.map(mapComment);
+  const mapped = comments.map((comment) => ({
+    ...mapComment(comment),
+    replies: [],
+  }));
+
+  return buildCommentTree(mapped);
 }
 
 export async function updateComment(commentId: string, input: UpdateCommentInput) {
