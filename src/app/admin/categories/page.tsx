@@ -73,6 +73,13 @@ export default async function AdminCategoriesPage({
   }
 
   const statuses = Array.from(new Set(data.categories.map((category) => category.status)));
+  const totalCategories = data.categories.length;
+  const activeCategories = data.categories.filter(
+    (category) => category.status === "ACTIVE"
+  ).length;
+  const archivedCategories = data.categories.filter(
+    (category) => category.status === "ARCHIVED"
+  ).length;
 
   const filteredCategories = data.categories.filter((category) => {
     const statusMatches =
@@ -93,6 +100,28 @@ export default async function AdminCategoriesPage({
         title="إدارة التصنيفات"
         description="عرض جميع التصنيفات وإدارتها من داخل لوحة الإدارة."
       />
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginBottom: "18px",
+        }}
+      >
+        <div className="state-card">
+          <strong>إجمالي التصنيفات</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{totalCategories}</p>
+        </div>
+        <div className="state-card">
+          <strong>التصنيفات النشطة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{activeCategories}</p>
+        </div>
+        <div className="state-card">
+          <strong>التصنيفات المؤرشفة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{archivedCategories}</p>
+        </div>
+      </div>
 
       <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link href="/admin/categories/new" className="btn primary">
