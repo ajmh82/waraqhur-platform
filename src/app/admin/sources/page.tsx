@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { AdminSourceIngestButton } from "@/components/admin/admin-source-ingest-button";
+import { AdminSourcePreviewButton } from "@/components/admin/admin-source-preview-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -86,6 +88,8 @@ export default async function AdminSourcesPage() {
                 <th>الرابط</th>
                 <th>المعرف</th>
                 <th>تاريخ الإنشاء</th>
+                <th>Preview</th>
+                <th>Ingest</th>
               </tr>
             </thead>
 
@@ -102,6 +106,18 @@ export default async function AdminSourcesPage() {
                   <td>{source.url ?? "-"}</td>
                   <td>{source.handle ?? "-"}</td>
                   <td>{new Date(source.createdAt).toLocaleString("ar-BH")}</td>
+                  <td>
+                    <AdminSourcePreviewButton
+                      sourceId={source.id}
+                      sourceType={source.type}
+                    />
+                  </td>
+                  <td>
+                    <AdminSourceIngestButton
+                      sourceId={source.id}
+                      sourceType={source.type}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
