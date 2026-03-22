@@ -92,6 +92,9 @@ export function PostCard({ post }: PostCardProps) {
       <div className="post-card__footer">
         <span>{new Date(post.createdAt).toLocaleString("ar-BH")}</span>
         <span>{post.commentsCount} تعليق</span>
+        {post.source ? (
+          <Link href={`/sources/${post.source.slug}`}>{post.source.name}</Link>
+        ) : null}
         {post.author ? (
           <Link href={`/u/${post.author.username}`}>
             {post.author.username}
