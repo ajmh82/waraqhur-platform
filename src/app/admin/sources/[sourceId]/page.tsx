@@ -144,6 +144,9 @@ export default async function AdminSourceDetailsPage({
           >
             فتح نفس الفلتر
           </Link>
+          <Link href={`/admin/sources/${source.id}/edit`} className="btn small">
+            Edit Source
+          </Link>
           <Link href={`/sources/${source.slug}`} className="btn small">
             فتح الصفحة العامة
           </Link>
