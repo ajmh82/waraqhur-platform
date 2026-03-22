@@ -50,7 +50,8 @@ async function loadAdminSourcePostsPageData(
       dashboardApiGet<{ posts: AdminPostRecord[] }>("/api/posts"),
     ]);
 
-    const source = sourcesData.sources.find((item) => item.id === sourceId) ?? null;
+    const source =
+      sourcesData.sources.find((item) => item.id === sourceId) ?? null;
 
     if (!source) {
       return {
@@ -77,11 +78,20 @@ async function loadAdminSourcePostsPageData(
   }
 }
 
-function buildFilterHref(sourceId: string, status: string, query: string) {
+function buildFilterHref(
+  sourceId: string,
+  status: string,
+  visibility: string,
+  query: string
+) {
   const params = new URLSearchParams();
 
   if (status !== "ALL") {
     params.set("status", status);
+  }
+
+  if (visibility !== "ALL") {
+    params.set("visibility", visibility);
   }
 
   if (query.trim()) {
@@ -99,7 +109,7 @@ export default async function AdminSourcePostsPage({
   searchParams,
 }: {
   params: Promise<{ sourceId: string }>;
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; visibility?: string }>;
 }) {
   const { sourceId } = await params;
   const { source, posts, error } = await loadAdminSourcePostsPageData(sourceId);
@@ -107,6 +117,7 @@ export default async function AdminSourcePostsPage({
 
   const query = currentSearchParams.q?.trim() ?? "";
   const selectedStatus = currentSearchParams.status?.trim() ?? "ALL";
+  const selectedVisibility = currentSearchParams.visibility?.trim() ?? "ALL";
   const normalizedQuery = query.toLowerCase();
 
   if (error) {
@@ -118,6 +129,7 @@ export default async function AdminSourcePostsPage({
   }
 
   const statuses = Array.from(new Set(posts.map((post) => post.status)));
+  const visibilities = Array.from(new Set(posts.map((post) => post.visibility)));
   const totalPosts = posts.length;
   const draftPosts = posts.filter((post) => post.status === "DRAFT").length;
   const publishedPosts = posts.filter((post) => post.status === "PUBLISHED").length;
@@ -127,12 +139,15 @@ export default async function AdminSourcePostsPage({
     const statusMatches =
       selectedStatus === "ALL" || post.status === selectedStatus;
 
+    const visibilityMatches =
+      selectedVisibility === "ALL" || post.visibility === selectedVisibility;
+
     const queryMatches =
       normalizedQuery.length === 0 ||
       post.title.toLowerCase().includes(normalizedQuery) ||
       (post.slug ?? "").toLowerCase().includes(normalizedQuery);
 
-    return statusMatches && queryMatches;
+    return statusMatches && visibilityMatches && queryMatches;
   });
 
   return (
@@ -177,19 +192,19 @@ export default async function AdminSourcePostsPage({
           Create Post Manually
         </Link>
         <Link
-          href={buildFilterHref(source.id, "DRAFT", query)}
+          href={buildFilterHref(source.id, "DRAFT", selectedVisibility, query)}
           className={`btn ${selectedStatus === "DRAFT" ? "primary" : "small"}`}
         >
           Draft Only
         </Link>
         <Link
-          href={buildFilterHref(source.id, "PUBLISHED", query)}
+          href={buildFilterHref(source.id, "PUBLISHED", selectedVisibility, query)}
           className={`btn ${selectedStatus === "PUBLISHED" ? "primary" : "small"}`}
         >
           Published Only
         </Link>
         <Link
-          href={buildFilterHref(source.id, "ARCHIVED", query)}
+          href={buildFilterHref(source.id, "ARCHIVED", selectedVisibility, query)}
           className={`btn ${selectedStatus === "ARCHIVED" ? "primary" : "small"}`}
         >
           Archived Only
@@ -203,6 +218,9 @@ export default async function AdminSourcePostsPage({
       >
         {selectedStatus !== "ALL" ? (
           <input type="hidden" name="status" value={selectedStatus} />
+        ) : null}
+        {selectedVisibility !== "ALL" ? (
+          <input type="hidden" name="visibility" value={selectedVisibility} />
         ) : null}
 
         <input
@@ -219,7 +237,7 @@ export default async function AdminSourcePostsPage({
         </button>
 
         <Link
-          href={buildFilterHref(source.id, selectedStatus, "")}
+          href={buildFilterHref(source.id, selectedStatus, selectedVisibility, "")}
           className="btn small"
         >
           Reset Search
@@ -228,7 +246,7 @@ export default async function AdminSourcePostsPage({
 
       <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link
-          href={buildFilterHref(source.id, "ALL", query)}
+          href={buildFilterHref(source.id, "ALL", selectedVisibility, query)}
           className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
         >
           All Statuses
@@ -237,10 +255,29 @@ export default async function AdminSourcePostsPage({
         {statuses.map((status) => (
           <Link
             key={status}
-            href={buildFilterHref(source.id, status, query)}
+            href={buildFilterHref(source.id, status, selectedVisibility, query)}
             className={`btn ${selectedStatus === status ? "primary" : "small"}`}
           >
             {status}
+          </Link>
+        ))}
+      </div>
+
+      <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <Link
+          href={buildFilterHref(source.id, selectedStatus, "ALL", query)}
+          className={`btn ${selectedVisibility === "ALL" ? "primary" : "small"}`}
+        >
+          All Visibility
+        </Link>
+
+        {visibilities.map((visibility) => (
+          <Link
+            key={visibility}
+            href={buildFilterHref(source.id, selectedStatus, visibility, query)}
+            className={`btn ${selectedVisibility === visibility ? "primary" : "small"}`}
+          >
+            {visibility}
           </Link>
         ))}
       </div>
