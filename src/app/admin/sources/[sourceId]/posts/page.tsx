@@ -209,6 +209,12 @@ export default async function AdminSourcePostsPage({
         >
           Archived Only
         </Link>
+        <Link
+          href={buildFilterHref(source.id, selectedStatus, "PUBLIC", query)}
+          className={`btn ${selectedVisibility === "PUBLIC" ? "primary" : "small"}`}
+        >
+          Public Only
+        </Link>
       </div>
 
       <form
