@@ -77,11 +77,7 @@ async function loadAdminSourcePostsPageData(
   }
 }
 
-function buildFilterHref(
-  sourceId: string,
-  status: string,
-  query: string
-) {
+function buildFilterHref(sourceId: string, status: string, query: string) {
   const params = new URLSearchParams();
 
   if (status !== "ALL") {
