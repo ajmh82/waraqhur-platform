@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminPostDeleteButton } from "@/components/admin/admin-post-delete-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -215,6 +216,7 @@ export default async function AdminSourcePostsPage({
                 <th>الظهور</th>
                 <th>التاريخ</th>
                 <th>Edit</th>
+                <th>Delete</th>
                 <th>Open</th>
               </tr>
             </thead>
@@ -235,6 +237,9 @@ export default async function AdminSourcePostsPage({
                     >
                       Edit Post
                     </Link>
+                  </td>
+                  <td>
+                    <AdminPostDeleteButton postId={post.id} />
                   </td>
                   <td>
                     <Link href={post.slug ? `/posts/${post.slug}` : "#"} className="btn small">
