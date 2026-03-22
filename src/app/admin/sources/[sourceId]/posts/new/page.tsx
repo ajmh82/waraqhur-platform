@@ -85,6 +85,9 @@ export default async function AdminSourceNewPostPage({
         <Link href={`/admin/sources/${source.id}`} className="btn small">
           العودة إلى تفاصيل المصدر
         </Link>
+        <Link href={`/admin/sources/${source.id}/posts`} className="btn small">
+          All Source Posts
+        </Link>
       </div>
 
       <AdminSourceNewPostForm source={source} />
