@@ -24,8 +24,15 @@ interface AdminSourceRecord {
   };
 }
 
+interface CategoryRecord {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 interface AdminSourceEditPageResult {
   source: AdminSourceRecord | null;
+  categories: CategoryRecord[];
   error: string | null;
 }
 
@@ -33,19 +40,24 @@ async function loadAdminSourceEditPageData(
   sourceId: string
 ): Promise<AdminSourceEditPageResult> {
   try {
-    const data = await dashboardApiGet<{
-      sources: AdminSourceRecord[];
-    }>("/api/sources");
+    const [sourcesData, categoriesData] = await Promise.all([
+      dashboardApiGet<{ sources: AdminSourceRecord[] }>("/api/sources"),
+      dashboardApiGet<{ categories: CategoryRecord[] }>("/api/categories"),
+    ]);
 
-    const source = data.sources.find((item) => item.id === sourceId) ?? null;
+    const source = sourcesData.sources.find((item) => item.id === sourceId) ?? null;
 
     return {
       source,
+      categories: Array.isArray(categoriesData.categories)
+        ? categoriesData.categories
+        : [],
       error: null,
     };
   } catch (error) {
     return {
       source: null,
+      categories: [],
       error:
         error instanceof Error ? error.message : "تعذر تحميل بيانات المصدر.",
     };
@@ -58,7 +70,7 @@ export default async function AdminSourceEditPage({
   params: Promise<{ sourceId: string }>;
 }) {
   const { sourceId } = await params;
-  const { source, error } = await loadAdminSourceEditPageData(sourceId);
+  const { source, categories, error } = await loadAdminSourceEditPageData(sourceId);
 
   if (error) {
     return (
@@ -87,7 +99,7 @@ export default async function AdminSourceEditPage({
         </Link>
       </div>
 
-      <AdminSourceEditForm source={source} />
+      <AdminSourceEditForm source={source} categories={categories} />
     </section>
   );
 }

@@ -18,9 +18,17 @@ interface AdminSourceEditFormProps {
       slug: string;
     };
   };
+  categories?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+  }>;
 }
 
-export function AdminSourceEditForm({ source }: AdminSourceEditFormProps) {
+export function AdminSourceEditForm({
+  source,
+  categories = [],
+}: AdminSourceEditFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +117,25 @@ export function AdminSourceEditForm({ source }: AdminSourceEditFormProps) {
           <option value="ARCHIVED">ARCHIVED</option>
         </select>
 
+        <select
+          className="search-input"
+          value={categoryId}
+          onChange={(event) => setCategoryId(event.target.value)}
+          required
+        >
+          {categories.length > 0 ? (
+            categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name} ({category.slug})
+              </option>
+            ))
+          ) : (
+            <option value={source.category.id}>
+              {source.category.name} ({source.category.slug})
+            </option>
+          )}
+        </select>
+
         <input
           className="search-input"
           value={url}
@@ -121,14 +148,6 @@ export function AdminSourceEditForm({ source }: AdminSourceEditFormProps) {
           value={handle}
           onChange={(event) => setHandle(event.target.value)}
           placeholder="المعرف"
-        />
-
-        <input
-          className="search-input"
-          value={categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
-          placeholder="categoryId"
-          required
         />
       </div>
 
