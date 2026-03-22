@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminIngestAllSourcesButton } from "@/components/admin/admin-ingest-all-sources-button";
+import { AdminSourceArchiveButton } from "@/components/admin/admin-source-archive-button";
 import { AdminSourceIngestButton } from "@/components/admin/admin-source-ingest-button";
 import { AdminSourcePreviewButton } from "@/components/admin/admin-source-preview-button";
 import { SectionHeading } from "@/components/content/section-heading";
@@ -218,6 +219,7 @@ export default async function AdminSourcesPage({
                 <th>تاريخ الإنشاء</th>
                 <th>Preview</th>
                 <th>Ingest</th>
+                <th>Archive</th>
                 <th>Open</th>
               </tr>
             </thead>
@@ -251,6 +253,12 @@ export default async function AdminSourcesPage({
                     <AdminSourceIngestButton
                       sourceId={source.id}
                       sourceType={source.type}
+                    />
+                  </td>
+                  <td>
+                    <AdminSourceArchiveButton
+                      sourceId={source.id}
+                      status={source.status}
                     />
                   </td>
                   <td>
