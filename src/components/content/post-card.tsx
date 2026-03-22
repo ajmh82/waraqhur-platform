@@ -3,6 +3,7 @@ import { CategoryBadge } from "@/components/content/category-badge";
 import { SourceBadge } from "@/components/content/source-badge";
 import { BookmarkPostButton } from "@/components/social/bookmark-post-button";
 import { LikePostButton } from "@/components/social/like-post-button";
+import { RepostPostButton } from "@/components/social/repost-post-button";
 
 interface PostCardProps {
   post: {
@@ -13,6 +14,24 @@ interface PostCardProps {
     createdAt: string;
     commentsCount: number;
     likesCount?: number;
+    repostOfPost?: {
+      id: string;
+      title: string;
+      slug: string | null;
+      author: {
+        id: string;
+        username: string;
+      } | null;
+    } | null;
+    quotedPost?: {
+      id: string;
+      title: string;
+      slug: string | null;
+      author: {
+        id: string;
+        username: string;
+      } | null;
+    } | null;
     category: {
       id: string;
       name: string;
@@ -36,6 +55,13 @@ export function PostCard({ post }: PostCardProps) {
 
   return (
     <article className="post-card">
+      {post.repostOfPost ? (
+        <p className="eyebrow" style={{ marginBottom: "10px" }}>
+          إعادة نشر
+          {post.repostOfPost.author ? ` من @${post.repostOfPost.author.username}` : ""}
+        </p>
+      ) : null}
+
       <div className="post-card__meta">
         {post.source ? (
           <SourceBadge name={post.source.name} slug={post.source.slug} />
@@ -53,6 +79,16 @@ export function PostCard({ post }: PostCardProps) {
         {post.excerpt ?? "لا يوجد ملخص لهذا المنشور حتى الآن."}
       </p>
 
+      {post.quotedPost ? (
+        <div className="comment-card" style={{ marginTop: "12px" }}>
+          <strong>
+            اقتباس من
+            {post.quotedPost.author ? ` @${post.quotedPost.author.username}` : ""}
+          </strong>
+          <p style={{ marginTop: "8px" }}>{post.quotedPost.title}</p>
+        </div>
+      ) : null}
+
       <div className="post-card__footer">
         <span>{new Date(post.createdAt).toLocaleString("ar-BH")}</span>
         <span>{post.commentsCount} تعليق</span>
@@ -68,6 +104,7 @@ export function PostCard({ post }: PostCardProps) {
           initialLikesCount={post.likesCount ?? 0}
         />
         <BookmarkPostButton postId={post.id} />
+        <RepostPostButton postId={post.repostOfPost?.id ?? post.id} />
       </div>
     </article>
   );

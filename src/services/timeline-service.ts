@@ -9,6 +9,16 @@ type TimelinePostRecord = Prisma.PostGetPayload<{
     updatedBy: true;
     comments: true;
     likes: true;
+    repostOfPost: {
+      include: {
+        author: true;
+      };
+    };
+    quotedPost: {
+      include: {
+        author: true;
+      };
+    };
   };
 }>;
 
@@ -55,6 +65,32 @@ function mapTimelinePost(post: TimelinePostRecord) {
       : null,
     commentsCount: post.comments.length,
     likesCount: post.likes.length,
+    repostOfPost: post.repostOfPost
+      ? {
+          id: post.repostOfPost.id,
+          title: post.repostOfPost.title,
+          slug: post.repostOfPost.slug,
+          author: post.repostOfPost.author
+            ? {
+                id: post.repostOfPost.author.id,
+                username: post.repostOfPost.author.username,
+              }
+            : null,
+        }
+      : null,
+    quotedPost: post.quotedPost
+      ? {
+          id: post.quotedPost.id,
+          title: post.quotedPost.title,
+          slug: post.quotedPost.slug,
+          author: post.quotedPost.author
+            ? {
+                id: post.quotedPost.author.id,
+                username: post.quotedPost.author.username,
+              }
+            : null,
+        }
+      : null,
   };
 }
 
@@ -65,6 +101,16 @@ const timelinePostInclude = {
   updatedBy: true,
   comments: true,
   likes: true,
+  repostOfPost: {
+    include: {
+      author: true,
+    },
+  },
+  quotedPost: {
+    include: {
+      author: true,
+    },
+  },
 } as const;
 
 export async function listHomeTimeline(viewerUserId?: string | null) {
@@ -97,6 +143,9 @@ export async function listHomeTimeline(viewerUserId?: string | null) {
     where: {
       authorUserId: {
         in: visibleAuthorIds,
+      },
+      status: {
+        not: "DELETED",
       },
     },
     include: timelinePostInclude,
