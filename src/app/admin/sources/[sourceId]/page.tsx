@@ -138,6 +138,12 @@ export default async function AdminSourceDetailsPage({
           <Link href="/admin/sources" className="btn small">
             العودة إلى المصادر
           </Link>
+          <Link
+            href={`/admin/sources?type=${encodeURIComponent(source.type)}&status=${encodeURIComponent(source.status)}&q=${encodeURIComponent(source.slug)}`}
+            className="btn small"
+          >
+            فتح نفس الفلتر
+          </Link>
           <Link href={`/sources/${source.slug}`} className="btn small">
             فتح الصفحة العامة
           </Link>
