@@ -48,8 +48,14 @@ async function loadAdminSourcesPageData(): Promise<AdminSourcesPageResult> {
   }
 }
 
-export default async function AdminSourcesPage() {
+export default async function AdminSourcesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string }>;
+}) {
   const { data, error } = await loadAdminSourcesPageData();
+  const params = await searchParams;
+  const selectedType = params.type?.trim() || "ALL";
 
   if (error || !data) {
     return (
@@ -59,6 +65,12 @@ export default async function AdminSourcesPage() {
       />
     );
   }
+
+  const availableTypes = Array.from(new Set(data.sources.map((source) => source.type)));
+  const filteredSources =
+    selectedType === "ALL"
+      ? data.sources
+      : data.sources.filter((source) => source.type === selectedType);
 
   return (
     <section className="dashboard-panel">
@@ -77,10 +89,31 @@ export default async function AdminSourcesPage() {
         <AdminIngestAllSourcesButton />
       </div>
 
-      {data.sources.length === 0 ? (
+      <div
+        style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}
+      >
+        <Link
+          href="/admin/sources"
+          className={`btn ${selectedType === "ALL" ? "primary" : "small"}`}
+        >
+          All
+        </Link>
+
+        {availableTypes.map((type) => (
+          <Link
+            key={type}
+            href={`/admin/sources?type=${encodeURIComponent(type)}`}
+            className={`btn ${selectedType === type ? "primary" : "small"}`}
+          >
+            {type}
+          </Link>
+        ))}
+      </div>
+
+      {filteredSources.length === 0 ? (
         <EmptyState
-          title="لا توجد مصادر بعد"
-          description="لم يتم إنشاء أي مصدر داخل النظام حتى الآن."
+          title="لا توجد مصادر مطابقة"
+          description="لا توجد مصادر من هذا النوع حاليًا."
         />
       ) : (
         <div className="admin-table-wrap">
@@ -103,7 +136,7 @@ export default async function AdminSourcesPage() {
             </thead>
 
             <tbody>
-              {data.sources.map((source) => (
+              {filteredSources.map((source) => (
                 <tr key={source.id}>
                   <td>
                     <div className="admin-table__primary">{source.name}</div>
