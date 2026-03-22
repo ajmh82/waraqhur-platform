@@ -183,6 +183,8 @@ export default async function AdminSourcePostsPage({
   const safePage = Math.min(currentPage, totalPages);
   const pageStart = (safePage - 1) * PAGE_SIZE;
   const paginatedPosts = filteredPosts.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleStart = totalFilteredPosts === 0 ? 0 : pageStart + 1;
+  const visibleEnd = pageStart + paginatedPosts.length;
 
   const activeFilters = [
     selectedStatus !== "ALL" ? `Status: ${selectedStatus}` : null,
@@ -378,7 +380,7 @@ export default async function AdminSourcePostsPage({
       </div>
 
       <p style={{ marginBottom: "12px" }}>
-        عرض {paginatedPosts.length} من أصل {totalFilteredPosts} نتيجة مطابقة
+        عرض النتائج {visibleStart} - {visibleEnd} من أصل {totalFilteredPosts}
       </p>
 
       {paginatedPosts.length === 0 ? (
