@@ -118,6 +118,10 @@ export default async function AdminSourcePostsPage({
   }
 
   const statuses = Array.from(new Set(posts.map((post) => post.status)));
+  const totalPosts = posts.length;
+  const draftPosts = posts.filter((post) => post.status === "DRAFT").length;
+  const publishedPosts = posts.filter((post) => post.status === "PUBLISHED").length;
+  const archivedPosts = posts.filter((post) => post.status === "ARCHIVED").length;
 
   const filteredPosts = posts.filter((post) => {
     const statusMatches =
@@ -148,8 +152,20 @@ export default async function AdminSourcePostsPage({
         }}
       >
         <div className="state-card">
-          <strong>إجمالي منشورات المصدر</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{posts.length}</p>
+          <strong>إجمالي المنشورات</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{totalPosts}</p>
+        </div>
+        <div className="state-card">
+          <strong>Draft</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{draftPosts}</p>
+        </div>
+        <div className="state-card">
+          <strong>Published</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{publishedPosts}</p>
+        </div>
+        <div className="state-card">
+          <strong>Archived</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{archivedPosts}</p>
         </div>
       </div>
 
