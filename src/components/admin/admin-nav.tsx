@@ -10,9 +10,18 @@ const adminLinks = [
 
 export function AdminNav() {
   return (
-    <nav className="dashboard-nav" aria-label="Admin panel">
+    <nav
+      className="dashboard-nav"
+      aria-label="Admin panel"
+      style={{ display: "grid", gap: "10px" }}
+    >
       {adminLinks.map((link) => (
-        <Link key={link.href} href={link.href} className="dashboard-nav__link">
+        <Link
+          key={link.href}
+          href={link.href}
+          className="dashboard-nav__link"
+          style={{ display: "block" }}
+        >
           {link.label}
         </Link>
       ))}
