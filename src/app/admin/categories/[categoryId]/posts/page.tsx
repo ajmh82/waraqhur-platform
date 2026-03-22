@@ -117,6 +117,10 @@ export default async function AdminCategoryPostsPage({
   }
 
   const statuses = Array.from(new Set(posts.map((post) => post.status)));
+  const totalPosts = posts.length;
+  const draftPosts = posts.filter((post) => post.status === "DRAFT").length;
+  const publishedPosts = posts.filter((post) => post.status === "PUBLISHED").length;
+  const archivedPosts = posts.filter((post) => post.status === "ARCHIVED").length;
 
   const filteredPosts = posts.filter((post) => {
     const statusMatches =
@@ -137,6 +141,32 @@ export default async function AdminCategoryPostsPage({
         title={`منشورات التصنيف: ${category.name}`}
         description="عرض جميع المنشورات المرتبطة بهذا التصنيف."
       />
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginBottom: "18px",
+        }}
+      >
+        <div className="state-card">
+          <strong>إجمالي المنشورات</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{totalPosts}</p>
+        </div>
+        <div className="state-card">
+          <strong>Draft</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{draftPosts}</p>
+        </div>
+        <div className="state-card">
+          <strong>Published</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{publishedPosts}</p>
+        </div>
+        <div className="state-card">
+          <strong>Archived</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{archivedPosts}</p>
+        </div>
+      </div>
 
       <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link href={`/admin/categories/${category.id}`} className="btn small">
