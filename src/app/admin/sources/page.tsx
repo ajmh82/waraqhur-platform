@@ -125,6 +125,14 @@ export default async function AdminSourcesPage({
     return queryString ? `/admin/sources?${queryString}` : "/admin/sources";
   }
 
+  const totalSources = data.sources.length;
+  const activeSources = data.sources.filter((source) => source.status === "ACTIVE").length;
+  const nitterSources = data.sources.filter((source) => source.type === "NITTER").length;
+  const totalPostsAcrossSources = data.sources.reduce(
+    (sum, source) => sum + source.postsCount,
+    0
+  );
+
   return (
     <section className="dashboard-panel">
       <SectionHeading
@@ -132,6 +140,32 @@ export default async function AdminSourcesPage({
         title="إدارة المصادر"
         description="هذه الصفحة تعرض جميع المصادر داخل النظام، بما فيها مصادر RSS وNITTER وغيرها، لتكون قاعدة لوحة إدارة المصادر لاحقًا."
       />
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginBottom: "18px",
+        }}
+      >
+        <div className="state-card">
+          <strong>إجمالي المصادر</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{totalSources}</p>
+        </div>
+        <div className="state-card">
+          <strong>المصادر النشطة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{activeSources}</p>
+        </div>
+        <div className="state-card">
+          <strong>مصادر NITTER</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{nitterSources}</p>
+        </div>
+        <div className="state-card">
+          <strong>إجمالي المنشورات</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{totalPostsAcrossSources}</p>
+        </div>
+      </div>
 
       <div
         style={{ marginBottom: "18px", display: "flex", gap: "12px", flexWrap: "wrap" }}
