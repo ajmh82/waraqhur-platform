@@ -194,6 +194,7 @@ export default async function AdminCategoriesPage({
                 <th>الترتيب</th>
                 <th>الوصف</th>
                 <th>تاريخ الإنشاء</th>
+                <th>Details</th>
                 <th>Edit</th>
                 <th>Archive</th>
               </tr>
@@ -207,6 +208,11 @@ export default async function AdminCategoriesPage({
                   <td>{category.sortOrder}</td>
                   <td>{category.description ?? "-"}</td>
                   <td>{new Date(category.createdAt).toLocaleString("ar-BH")}</td>
+                  <td>
+                    <Link href={`/admin/categories/${category.id}`} className="btn small">
+                      Category Details
+                    </Link>
+                  </td>
                   <td>
                     <Link href={`/admin/categories/${category.id}/edit`} className="btn small">
                       Edit Category
