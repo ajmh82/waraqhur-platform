@@ -123,6 +123,9 @@ export default async function AdminCategoryDetailsPage({
         <Link href={`/admin/categories/${category.id}/edit`} className="btn small">
           Edit Category
         </Link>
+        <Link href={`/admin/categories/${category.id}/sources`} className="btn small">
+          Category Sources
+        </Link>
       </div>
 
       <div className="state-card">
