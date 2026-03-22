@@ -180,7 +180,15 @@ export default async function AdminSourceDetailsPage({
                 <p style={{ marginTop: "8px", marginBottom: "10px" }}>
                   {new Date(post.createdAt).toLocaleString("ar-BH")}
                 </p>
-                <AdminPostDeleteButton postId={post.id} />
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <Link
+                    href={`/admin/sources/${source.id}/posts/${post.id}/edit`}
+                    className="btn small"
+                  >
+                    Edit Post
+                  </Link>
+                  <AdminPostDeleteButton postId={post.id} />
+                </div>
               </div>
             ))}
           </div>
