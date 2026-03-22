@@ -51,12 +51,13 @@ async function loadAdminSourcesPageData(): Promise<AdminSourcesPageResult> {
 export default async function AdminSourcesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; status?: string }>;
+  searchParams: Promise<{ type?: string; status?: string; q?: string }>;
 }) {
   const { data, error } = await loadAdminSourcesPageData();
   const params = await searchParams;
   const selectedType = params.type?.trim() || "ALL";
   const selectedStatus = params.status?.trim() || "ALL";
+  const query = params.q?.trim() || "";
 
   if (error || !data) {
     return (
@@ -72,26 +73,37 @@ export default async function AdminSourcesPage({
     new Set(data.sources.map((source) => source.status))
   );
 
+  const normalizedQuery = query.toLowerCase();
+
   const filteredSources = data.sources.filter((source) => {
     const typeMatches = selectedType === "ALL" || source.type === selectedType;
     const statusMatches =
       selectedStatus === "ALL" || source.status === selectedStatus;
+    const queryMatches =
+      normalizedQuery.length === 0 ||
+      source.name.toLowerCase().includes(normalizedQuery) ||
+      source.slug.toLowerCase().includes(normalizedQuery) ||
+      (source.handle ?? "").toLowerCase().includes(normalizedQuery);
 
-    return typeMatches && statusMatches;
+    return typeMatches && statusMatches && queryMatches;
   });
 
-  function buildFilterHref(type: string, status: string) {
-    const query = new URLSearchParams();
+  function buildFilterHref(type: string, status: string, nextQuery: string) {
+    const queryParams = new URLSearchParams();
 
     if (type !== "ALL") {
-      query.set("type", type);
+      queryParams.set("type", type);
     }
 
     if (status !== "ALL") {
-      query.set("status", status);
+      queryParams.set("status", status);
     }
 
-    const queryString = query.toString();
+    if (nextQuery.trim()) {
+      queryParams.set("q", nextQuery.trim());
+    }
+
+    const queryString = queryParams.toString();
     return queryString ? `/admin/sources?${queryString}` : "/admin/sources";
   }
 
@@ -112,11 +124,42 @@ export default async function AdminSourcesPage({
         <AdminIngestAllSourcesButton />
       </div>
 
+      <form
+        action="/admin/sources"
+        method="GET"
+        style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}
+      >
+        {selectedType !== "ALL" ? (
+          <input type="hidden" name="type" value={selectedType} />
+        ) : null}
+        {selectedStatus !== "ALL" ? (
+          <input type="hidden" name="status" value={selectedStatus} />
+        ) : null}
+
+        <input
+          type="text"
+          name="q"
+          defaultValue={query}
+          placeholder="ابحث بالاسم أو slug أو handle"
+          className="search-input"
+          style={{ minWidth: "280px" }}
+        />
+        <button type="submit" className="btn small">
+          Search
+        </button>
+        <Link
+          href={buildFilterHref(selectedType, selectedStatus, "")}
+          className="btn small"
+        >
+          Reset Search
+        </Link>
+      </form>
+
       <div
         style={{ marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}
       >
         <Link
-          href={buildFilterHref("ALL", selectedStatus)}
+          href={buildFilterHref("ALL", selectedStatus, query)}
           className={`btn ${selectedType === "ALL" ? "primary" : "small"}`}
         >
           All Types
@@ -125,7 +168,7 @@ export default async function AdminSourcesPage({
         {availableTypes.map((type) => (
           <Link
             key={type}
-            href={buildFilterHref(type, selectedStatus)}
+            href={buildFilterHref(type, selectedStatus, query)}
             className={`btn ${selectedType === type ? "primary" : "small"}`}
           >
             {type}
@@ -137,7 +180,7 @@ export default async function AdminSourcesPage({
         style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}
       >
         <Link
-          href={buildFilterHref(selectedType, "ALL")}
+          href={buildFilterHref(selectedType, "ALL", query)}
           className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
         >
           All Statuses
@@ -146,7 +189,7 @@ export default async function AdminSourcesPage({
         {availableStatuses.map((status) => (
           <Link
             key={status}
-            href={buildFilterHref(selectedType, status)}
+            href={buildFilterHref(selectedType, status, query)}
             className={`btn ${selectedStatus === status ? "primary" : "small"}`}
           >
             {status}
@@ -157,7 +200,7 @@ export default async function AdminSourcesPage({
       {filteredSources.length === 0 ? (
         <EmptyState
           title="لا توجد مصادر مطابقة"
-          description="لا توجد مصادر تطابق الفلاتر الحالية."
+          description="لا توجد مصادر تطابق الفلاتر الحالية أو البحث الحالي."
         />
       ) : (
         <div className="admin-table-wrap">
