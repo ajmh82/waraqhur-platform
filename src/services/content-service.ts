@@ -46,6 +46,16 @@ function mapSource(
     };
   }>
 ) {
+  const config =
+    source.config && typeof source.config === "object" && !Array.isArray(source.config)
+      ? source.config
+      : null;
+
+  const lastIngestedAt =
+    config && "lastIngestedAt" in config && typeof config.lastIngestedAt === "string"
+      ? config.lastIngestedAt
+      : null;
+
   return {
     id: source.id,
     categoryId: source.categoryId,
@@ -57,6 +67,7 @@ function mapSource(
     status: source.status,
     config: source.config,
     postsCount: source.posts.length,
+    lastIngestedAt,
     createdAt: source.createdAt.toISOString(),
     updatedAt: source.updatedAt.toISOString(),
     category: {
