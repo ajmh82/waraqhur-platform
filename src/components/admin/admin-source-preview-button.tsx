@@ -30,7 +30,14 @@ export function AdminSourcePreviewButton({
 
     startTransition(() => {
       if (!response.ok || !payload?.success) {
-        setResult(payload?.error?.message ?? "تعذر جلب المعاينة.");
+        const rawMessage = payload?.error?.message ?? "تعذر جلب المعاينة.";
+
+        if (rawMessage.includes("429")) {
+          setResult("المصدر الخارجي رفض الطلب مؤقتًا بسبب كثرة الطلبات. حاول لاحقًا.");
+          return;
+        }
+
+        setResult(rawMessage);
         return;
       }
 
