@@ -143,6 +143,20 @@ export default async function AdminSourcePostsPage({
         description="عرض جميع المنشورات المرتبطة بهذا المصدر من داخل لوحة الإدارة."
       />
 
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginBottom: "18px",
+        }}
+      >
+        <div className="state-card">
+          <strong>إجمالي منشورات المصدر</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{posts.length}</p>
+        </div>
+      </div>
+
       <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link href={`/admin/sources/${source.id}`} className="btn small">
           العودة إلى تفاصيل المصدر
