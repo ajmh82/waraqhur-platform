@@ -75,14 +75,38 @@ async function loadAdminCategoryPostsPageData(
   }
 }
 
+function buildFilterHref(categoryId: string, status: string, query: string) {
+  const params = new URLSearchParams();
+
+  if (status !== "ALL") {
+    params.set("status", status);
+  }
+
+  if (query.trim()) {
+    params.set("q", query.trim());
+  }
+
+  const queryString = params.toString();
+  return queryString
+    ? `/admin/categories/${categoryId}/posts?${queryString}`
+    : `/admin/categories/${categoryId}/posts`;
+}
+
 export default async function AdminCategoryPostsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ categoryId: string }>;
+  searchParams: Promise<{ q?: string; status?: string }>;
 }) {
   const { categoryId } = await params;
   const { category, posts, error } =
     await loadAdminCategoryPostsPageData(categoryId);
+  const currentSearchParams = await searchParams;
+
+  const query = currentSearchParams.q?.trim() ?? "";
+  const selectedStatus = currentSearchParams.status?.trim() ?? "ALL";
+  const normalizedQuery = query.toLowerCase();
 
   if (error) {
     return <ErrorState title="تعذر تحميل منشورات التصنيف" description={error} />;
@@ -91,6 +115,20 @@ export default async function AdminCategoryPostsPage({
   if (!category) {
     notFound();
   }
+
+  const statuses = Array.from(new Set(posts.map((post) => post.status)));
+
+  const filteredPosts = posts.filter((post) => {
+    const statusMatches =
+      selectedStatus === "ALL" || post.status === selectedStatus;
+
+    const queryMatches =
+      normalizedQuery.length === 0 ||
+      post.title.toLowerCase().includes(normalizedQuery) ||
+      (post.slug ?? "").toLowerCase().includes(normalizedQuery);
+
+    return statusMatches && queryMatches;
+  });
 
   return (
     <section className="dashboard-panel">
@@ -106,10 +144,59 @@ export default async function AdminCategoryPostsPage({
         </Link>
       </div>
 
-      {posts.length === 0 ? (
+      <form
+        action={`/admin/categories/${category.id}/posts`}
+        method="GET"
+        style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}
+      >
+        {selectedStatus !== "ALL" ? (
+          <input type="hidden" name="status" value={selectedStatus} />
+        ) : null}
+
+        <input
+          type="text"
+          name="q"
+          defaultValue={query}
+          placeholder="ابحث بالعنوان أو slug"
+          className="search-input"
+          style={{ minWidth: "280px" }}
+        />
+
+        <button type="submit" className="btn small">
+          Search
+        </button>
+
+        <Link
+          href={buildFilterHref(category.id, selectedStatus, "")}
+          className="btn small"
+        >
+          Reset Search
+        </Link>
+      </form>
+
+      <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <Link
+          href={buildFilterHref(category.id, "ALL", query)}
+          className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
+        >
+          All Statuses
+        </Link>
+
+        {statuses.map((status) => (
+          <Link
+            key={status}
+            href={buildFilterHref(category.id, status, query)}
+            className={`btn ${selectedStatus === status ? "primary" : "small"}`}
+          >
+            {status}
+          </Link>
+        ))}
+      </div>
+
+      {filteredPosts.length === 0 ? (
         <EmptyState
-          title="لا توجد منشورات"
-          description="لا توجد منشورات مرتبطة بهذا التصنيف حتى الآن."
+          title="لا توجد منشورات مطابقة"
+          description="لا توجد منشورات تطابق البحث الحالي أو الفلاتر الحالية."
         />
       ) : (
         <div className="admin-table-wrap">
@@ -125,7 +212,7 @@ export default async function AdminCategoryPostsPage({
               </tr>
             </thead>
             <tbody>
-              {posts.map((post) => (
+              {filteredPosts.map((post) => (
                 <tr key={post.id}>
                   <td>{post.title}</td>
                   <td>{post.slug ?? "-"}</td>
