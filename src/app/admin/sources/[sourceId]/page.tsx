@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminPostDeleteButton } from "@/components/admin/admin-post-delete-button";
 import { AdminSourceIngestButton } from "@/components/admin/admin-source-ingest-button";
 import { AdminSourcePreviewButton } from "@/components/admin/admin-source-preview-button";
 import { SectionHeading } from "@/components/content/section-heading";
@@ -169,16 +170,15 @@ export default async function AdminSourceDetailsPage({
         ) : (
           <div style={{ display: "grid", gap: "10px" }}>
             {posts.map((post) => (
-              <Link
-                key={post.id}
-                href={post.slug ? `/posts/${post.slug}` : "#"}
-                className="comment-card"
-              >
-                <strong>{post.title}</strong>
-                <p style={{ marginTop: "8px", marginBottom: 0 }}>
+              <div key={post.id} className="comment-card">
+                <Link href={post.slug ? `/posts/${post.slug}` : "#"}>
+                  <strong>{post.title}</strong>
+                </Link>
+                <p style={{ marginTop: "8px", marginBottom: "10px" }}>
                   {new Date(post.createdAt).toLocaleString("ar-BH")}
                 </p>
-              </Link>
+                <AdminPostDeleteButton postId={post.id} />
+              </div>
             ))}
           </div>
         )}
