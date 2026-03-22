@@ -176,6 +176,12 @@ export default async function AdminSourcePostsPage({
         <Link href={`/admin/sources/${source.id}/posts/new`} className="btn small">
           Create Post Manually
         </Link>
+        <Link
+          href={buildFilterHref(source.id, "PUBLISHED", query)}
+          className={`btn ${selectedStatus === "PUBLISHED" ? "primary" : "small"}`}
+        >
+          Published Only
+        </Link>
       </div>
 
       <form
