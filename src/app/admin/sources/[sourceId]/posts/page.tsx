@@ -41,6 +41,8 @@ interface AdminSourcePostsPageResult {
   error: string | null;
 }
 
+const PAGE_SIZE = 10;
+
 async function loadAdminSourcePostsPageData(
   sourceId: string
 ): Promise<AdminSourcePostsPageResult> {
@@ -83,7 +85,8 @@ function buildFilterHref(
   status: string,
   visibility: string,
   query: string,
-  sort: string
+  sort: string,
+  page: number
 ) {
   const params = new URLSearchParams();
 
@@ -103,6 +106,10 @@ function buildFilterHref(
     params.set("sort", sort);
   }
 
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
   const queryString = params.toString();
   return queryString
     ? `/admin/sources/${sourceId}/posts?${queryString}`
@@ -119,6 +126,7 @@ export default async function AdminSourcePostsPage({
     status?: string;
     visibility?: string;
     sort?: string;
+    page?: string;
   }>;
 }) {
   const { sourceId } = await params;
@@ -128,7 +136,9 @@ export default async function AdminSourcePostsPage({
   const query = currentSearchParams.q?.trim() ?? "";
   const selectedStatus = currentSearchParams.status?.trim() ?? "ALL";
   const selectedVisibility = currentSearchParams.visibility?.trim() ?? "ALL";
-  const selectedSort = currentSearchParams.sort?.trim() === "OLDEST" ? "OLDEST" : "LATEST";
+  const selectedSort =
+    currentSearchParams.sort?.trim() === "OLDEST" ? "OLDEST" : "LATEST";
+  const currentPage = Math.max(1, Number(currentSearchParams.page ?? "1") || 1);
   const normalizedQuery = query.toLowerCase();
 
   if (error) {
@@ -167,6 +177,12 @@ export default async function AdminSourcePostsPage({
 
       return selectedSort === "OLDEST" ? leftTime - rightTime : rightTime - leftTime;
     });
+
+  const totalFilteredPosts = filteredPosts.length;
+  const totalPages = Math.max(1, Math.ceil(totalFilteredPosts / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const paginatedPosts = filteredPosts.slice(pageStart, pageStart + PAGE_SIZE);
 
   const activeFilters = [
     selectedStatus !== "ALL" ? `Status: ${selectedStatus}` : null,
@@ -216,7 +232,7 @@ export default async function AdminSourcePostsPage({
           Create Post Manually
         </Link>
         <Link
-          href={buildFilterHref(source.id, "ALL", "ALL", "", "LATEST")}
+          href={buildFilterHref(source.id, "ALL", "ALL", "", "LATEST", 1)}
           className={`btn ${selectedStatus === "ALL" && selectedVisibility === "ALL" && !query && selectedSort === "LATEST" ? "primary" : "small"}`}
         >
           All Posts
@@ -225,37 +241,37 @@ export default async function AdminSourcePostsPage({
           Reset Filters
         </Link>
         <Link
-          href={buildFilterHref(source.id, "DRAFT", selectedVisibility, query, selectedSort)}
+          href={buildFilterHref(source.id, "DRAFT", selectedVisibility, query, selectedSort, 1)}
           className={`btn ${selectedStatus === "DRAFT" ? "primary" : "small"}`}
         >
           Draft Only
         </Link>
         <Link
-          href={buildFilterHref(source.id, "PUBLISHED", selectedVisibility, query, selectedSort)}
+          href={buildFilterHref(source.id, "PUBLISHED", selectedVisibility, query, selectedSort, 1)}
           className={`btn ${selectedStatus === "PUBLISHED" ? "primary" : "small"}`}
         >
           Published Only
         </Link>
         <Link
-          href={buildFilterHref(source.id, "ARCHIVED", selectedVisibility, query, selectedSort)}
+          href={buildFilterHref(source.id, "ARCHIVED", selectedVisibility, query, selectedSort, 1)}
           className={`btn ${selectedStatus === "ARCHIVED" ? "primary" : "small"}`}
         >
           Archived Only
         </Link>
         <Link
-          href={buildFilterHref(source.id, selectedStatus, "PUBLIC", query, selectedSort)}
+          href={buildFilterHref(source.id, selectedStatus, "PUBLIC", query, selectedSort, 1)}
           className={`btn ${selectedVisibility === "PUBLIC" ? "primary" : "small"}`}
         >
           Public Only
         </Link>
         <Link
-          href={buildFilterHref(source.id, selectedStatus, "PRIVATE", query, selectedSort)}
+          href={buildFilterHref(source.id, selectedStatus, "PRIVATE", query, selectedSort, 1)}
           className={`btn ${selectedVisibility === "PRIVATE" ? "primary" : "small"}`}
         >
           Private Only
         </Link>
         <Link
-          href={buildFilterHref(source.id, selectedStatus, "UNLISTED", query, selectedSort)}
+          href={buildFilterHref(source.id, selectedStatus, "UNLISTED", query, selectedSort, 1)}
           className={`btn ${selectedVisibility === "UNLISTED" ? "primary" : "small"}`}
         >
           Unlisted Only
@@ -291,7 +307,7 @@ export default async function AdminSourcePostsPage({
         </button>
 
         <Link
-          href={buildFilterHref(source.id, selectedStatus, selectedVisibility, "", selectedSort)}
+          href={buildFilterHref(source.id, selectedStatus, selectedVisibility, "", selectedSort, 1)}
           className="btn small"
         >
           Reset Search
@@ -310,7 +326,7 @@ export default async function AdminSourcePostsPage({
 
       <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link
-          href={buildFilterHref(source.id, "ALL", selectedVisibility, query, selectedSort)}
+          href={buildFilterHref(source.id, "ALL", selectedVisibility, query, selectedSort, 1)}
           className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
         >
           All Statuses
@@ -319,7 +335,7 @@ export default async function AdminSourcePostsPage({
         {statuses.map((status) => (
           <Link
             key={status}
-            href={buildFilterHref(source.id, status, selectedVisibility, query, selectedSort)}
+            href={buildFilterHref(source.id, status, selectedVisibility, query, selectedSort, 1)}
             className={`btn ${selectedStatus === status ? "primary" : "small"}`}
           >
             {status}
@@ -329,7 +345,7 @@ export default async function AdminSourcePostsPage({
 
       <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link
-          href={buildFilterHref(source.id, selectedStatus, "ALL", query, selectedSort)}
+          href={buildFilterHref(source.id, selectedStatus, "ALL", query, selectedSort, 1)}
           className={`btn ${selectedVisibility === "ALL" ? "primary" : "small"}`}
         >
           All Visibility
@@ -338,7 +354,7 @@ export default async function AdminSourcePostsPage({
         {visibilities.map((visibility) => (
           <Link
             key={visibility}
-            href={buildFilterHref(source.id, selectedStatus, visibility, query, selectedSort)}
+            href={buildFilterHref(source.id, selectedStatus, visibility, query, selectedSort, 1)}
             className={`btn ${selectedVisibility === visibility ? "primary" : "small"}`}
           >
             {visibility}
@@ -348,13 +364,13 @@ export default async function AdminSourcePostsPage({
 
       <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link
-          href={buildFilterHref(source.id, selectedStatus, selectedVisibility, query, "LATEST")}
+          href={buildFilterHref(source.id, selectedStatus, selectedVisibility, query, "LATEST", 1)}
           className={`btn ${selectedSort === "LATEST" ? "primary" : "small"}`}
         >
           Latest First
         </Link>
         <Link
-          href={buildFilterHref(source.id, selectedStatus, selectedVisibility, query, "OLDEST")}
+          href={buildFilterHref(source.id, selectedStatus, selectedVisibility, query, "OLDEST", 1)}
           className={`btn ${selectedSort === "OLDEST" ? "primary" : "small"}`}
         >
           Oldest First
@@ -362,10 +378,10 @@ export default async function AdminSourcePostsPage({
       </div>
 
       <p style={{ marginBottom: "12px" }}>
-        عرض {filteredPosts.length} من أصل {totalPosts} منشور
+        عرض {paginatedPosts.length} من أصل {totalFilteredPosts} نتيجة مطابقة
       </p>
 
-      {filteredPosts.length === 0 ? (
+      {paginatedPosts.length === 0 ? (
         <EmptyState
           title="لا توجد منشورات مطابقة"
           description="لا توجد منشورات تطابق البحث الحالي أو الفلاتر الحالية."
@@ -385,7 +401,7 @@ export default async function AdminSourcePostsPage({
               </tr>
             </thead>
             <tbody>
-              {filteredPosts.map((post) => (
+              {paginatedPosts.map((post) => (
                 <tr key={post.id}>
                   <td>
                     <div className="admin-table__primary">{post.title}</div>
@@ -416,6 +432,38 @@ export default async function AdminSourcePostsPage({
           </table>
         </div>
       )}
+
+      <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <Link
+          href={buildFilterHref(
+            source.id,
+            selectedStatus,
+            selectedVisibility,
+            query,
+            selectedSort,
+            Math.max(1, safePage - 1)
+          )}
+          className={`btn ${safePage === 1 ? "small" : "primary"}`}
+        >
+          Previous
+        </Link>
+        <div className="state-card" style={{ padding: "10px 14px" }}>
+          صفحة {safePage} من {totalPages}
+        </div>
+        <Link
+          href={buildFilterHref(
+            source.id,
+            selectedStatus,
+            selectedVisibility,
+            query,
+            selectedSort,
+            Math.min(totalPages, safePage + 1)
+          )}
+          className={`btn ${safePage === totalPages ? "small" : "primary"}`}
+        >
+          Next
+        </Link>
+      </div>
     </section>
   );
 }
