@@ -51,11 +51,12 @@ async function loadAdminSourcesPageData(): Promise<AdminSourcesPageResult> {
 export default async function AdminSourcesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; status?: string }>;
 }) {
   const { data, error } = await loadAdminSourcesPageData();
   const params = await searchParams;
   const selectedType = params.type?.trim() || "ALL";
+  const selectedStatus = params.status?.trim() || "ALL";
 
   if (error || !data) {
     return (
@@ -67,10 +68,32 @@ export default async function AdminSourcesPage({
   }
 
   const availableTypes = Array.from(new Set(data.sources.map((source) => source.type)));
-  const filteredSources =
-    selectedType === "ALL"
-      ? data.sources
-      : data.sources.filter((source) => source.type === selectedType);
+  const availableStatuses = Array.from(
+    new Set(data.sources.map((source) => source.status))
+  );
+
+  const filteredSources = data.sources.filter((source) => {
+    const typeMatches = selectedType === "ALL" || source.type === selectedType;
+    const statusMatches =
+      selectedStatus === "ALL" || source.status === selectedStatus;
+
+    return typeMatches && statusMatches;
+  });
+
+  function buildFilterHref(type: string, status: string) {
+    const query = new URLSearchParams();
+
+    if (type !== "ALL") {
+      query.set("type", type);
+    }
+
+    if (status !== "ALL") {
+      query.set("status", status);
+    }
+
+    const queryString = query.toString();
+    return queryString ? `/admin/sources?${queryString}` : "/admin/sources";
+  }
 
   return (
     <section className="dashboard-panel">
@@ -90,19 +113,19 @@ export default async function AdminSourcesPage({
       </div>
 
       <div
-        style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}
+        style={{ marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}
       >
         <Link
-          href="/admin/sources"
+          href={buildFilterHref("ALL", selectedStatus)}
           className={`btn ${selectedType === "ALL" ? "primary" : "small"}`}
         >
-          All
+          All Types
         </Link>
 
         {availableTypes.map((type) => (
           <Link
             key={type}
-            href={`/admin/sources?type=${encodeURIComponent(type)}`}
+            href={buildFilterHref(type, selectedStatus)}
             className={`btn ${selectedType === type ? "primary" : "small"}`}
           >
             {type}
@@ -110,10 +133,31 @@ export default async function AdminSourcesPage({
         ))}
       </div>
 
+      <div
+        style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}
+      >
+        <Link
+          href={buildFilterHref(selectedType, "ALL")}
+          className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
+        >
+          All Statuses
+        </Link>
+
+        {availableStatuses.map((status) => (
+          <Link
+            key={status}
+            href={buildFilterHref(selectedType, status)}
+            className={`btn ${selectedStatus === status ? "primary" : "small"}`}
+          >
+            {status}
+          </Link>
+        ))}
+      </div>
+
       {filteredSources.length === 0 ? (
         <EmptyState
           title="لا توجد مصادر مطابقة"
-          description="لا توجد مصادر من هذا النوع حاليًا."
+          description="لا توجد مصادر تطابق الفلاتر الحالية."
         />
       ) : (
         <div className="admin-table-wrap">
