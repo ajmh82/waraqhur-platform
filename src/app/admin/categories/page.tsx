@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminCategoryArchiveButton } from "@/components/admin/admin-category-archive-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -78,6 +79,7 @@ export default async function AdminCategoriesPage() {
                 <th>الوصف</th>
                 <th>تاريخ الإنشاء</th>
                 <th>Edit</th>
+                <th>Archive</th>
               </tr>
             </thead>
             <tbody>
@@ -93,6 +95,12 @@ export default async function AdminCategoriesPage() {
                     <Link href={`/admin/categories/${category.id}/edit`} className="btn small">
                       Edit Category
                     </Link>
+                  </td>
+                  <td>
+                    <AdminCategoryArchiveButton
+                      categoryId={category.id}
+                      status={category.status}
+                    />
                   </td>
                 </tr>
               ))}
