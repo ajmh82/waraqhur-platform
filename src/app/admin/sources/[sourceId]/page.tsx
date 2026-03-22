@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminSourceIngestButton } from "@/components/admin/admin-source-ingest-button";
+import { AdminSourcePreviewButton } from "@/components/admin/admin-source-preview-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
@@ -139,6 +141,14 @@ export default async function AdminSourceDetailsPage({
           <Link href={`/sources/${source.slug}`} className="btn small">
             فتح الصفحة العامة
           </Link>
+          <AdminSourcePreviewButton
+            sourceId={source.id}
+            sourceType={source.type}
+          />
+          <AdminSourceIngestButton
+            sourceId={source.id}
+            sourceType={source.type}
+          />
         </div>
       </div>
 
