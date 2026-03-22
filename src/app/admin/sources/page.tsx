@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminIngestAllSourcesButton } from "@/components/admin/admin-ingest-all-sources-button";
 import { AdminSourceIngestButton } from "@/components/admin/admin-source-ingest-button";
 import { AdminSourcePreviewButton } from "@/components/admin/admin-source-preview-button";
 import { SectionHeading } from "@/components/content/section-heading";
@@ -65,10 +66,13 @@ export default async function AdminSourcesPage() {
         description="هذه الصفحة تعرض جميع المصادر داخل النظام، بما فيها مصادر RSS وNITTER وغيرها، لتكون قاعدة لوحة إدارة المصادر لاحقًا."
       />
 
-      <div style={{ marginBottom: "18px" }}>
+      <div
+        style={{ marginBottom: "18px", display: "flex", gap: "12px", flexWrap: "wrap" }}
+      >
         <Link href="/admin/sources/new" className="btn primary">
           مصدر جديد
         </Link>
+        <AdminIngestAllSourcesButton />
       </div>
 
       {data.sources.length === 0 ? (
