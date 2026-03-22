@@ -222,7 +222,7 @@ export default async function AdminSourcesPage({
                 <th>Ingest</th>
                 <th>Archive</th>
                 <th>Restore</th>
-                <th>Details</th>
+                <th>Admin Details</th>
                 <th>Open</th>
               </tr>
             </thead>
