@@ -90,6 +90,7 @@ export default async function AdminSourcesPage() {
                 <th>تاريخ الإنشاء</th>
                 <th>Preview</th>
                 <th>Ingest</th>
+                <th>Open</th>
               </tr>
             </thead>
 
@@ -117,6 +118,11 @@ export default async function AdminSourcesPage() {
                       sourceId={source.id}
                       sourceType={source.type}
                     />
+                  </td>
+                  <td>
+                    <Link href={`/sources/${source.slug}`} className="btn small">
+                      Open
+                    </Link>
                   </td>
                 </tr>
               ))}
