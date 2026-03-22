@@ -150,6 +150,12 @@ export default async function AdminSourcePostsPage({
     return statusMatches && visibilityMatches && queryMatches;
   });
 
+  const activeFilters = [
+    selectedStatus !== "ALL" ? `Status: ${selectedStatus}` : null,
+    selectedVisibility !== "ALL" ? `Visibility: ${selectedVisibility}` : null,
+    query ? `Search: ${query}` : null,
+  ].filter(Boolean);
+
   return (
     <section className="dashboard-panel">
       <SectionHeading
@@ -264,6 +270,12 @@ export default async function AdminSourcePostsPage({
           Reset Search
         </Link>
       </form>
+
+      {activeFilters.length > 0 ? (
+        <p style={{ marginBottom: "12px" }}>
+          الفلاتر النشطة: {activeFilters.join(" | ")}
+        </p>
+      ) : null}
 
       <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link
