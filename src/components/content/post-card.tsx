@@ -14,6 +14,13 @@ interface PostCardProps {
     createdAt: string;
     commentsCount: number;
     likesCount?: number;
+    metadata?: {
+      ingestion?: {
+        provider?: string;
+        fetchedAt?: string;
+        originalUrl?: string | null;
+      };
+    } | null;
     repostOfPost?: {
       id: string;
       title: string;
@@ -52,6 +59,7 @@ interface PostCardProps {
 
 export function PostCard({ post }: PostCardProps) {
   const href = post.slug ? `/posts/${post.slug}` : "/timeline";
+  const originalUrl = post.metadata?.ingestion?.originalUrl ?? null;
 
   return (
     <article className="post-card">
@@ -108,6 +116,16 @@ export function PostCard({ post }: PostCardProps) {
         />
         <BookmarkPostButton postId={post.id} />
         <RepostPostButton postId={post.repostOfPost?.id ?? post.id} />
+        {originalUrl ? (
+          <a
+            href={originalUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="btn small"
+          >
+            Open Original
+          </a>
+        ) : null}
       </div>
     </article>
   );
