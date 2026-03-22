@@ -148,6 +148,9 @@ export default async function AdminSourceDetailsPage({
           <Link href={`/admin/sources/${source.id}/edit`} className="btn small">
             Edit Source
           </Link>
+          <Link href={`/admin/sources/${source.id}/posts/new`} className="btn small">
+            Create Post Manually
+          </Link>
           <Link href={`/sources/${source.slug}`} className="btn small">
             فتح الصفحة العامة
           </Link>
