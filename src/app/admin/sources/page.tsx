@@ -222,6 +222,7 @@ export default async function AdminSourcesPage({
                 <th>Ingest</th>
                 <th>Archive</th>
                 <th>Restore</th>
+                <th>Details</th>
                 <th>Open</th>
               </tr>
             </thead>
@@ -268,6 +269,11 @@ export default async function AdminSourcesPage({
                       sourceId={source.id}
                       status={source.status}
                     />
+                  </td>
+                  <td>
+                    <Link href={`/admin/sources/${source.id}`} className="btn small">
+                      Details
+                    </Link>
                   </td>
                   <td>
                     <Link href={`/sources/${source.slug}`} className="btn small">
