@@ -215,6 +215,18 @@ export default async function AdminSourcePostsPage({
         >
           Public Only
         </Link>
+        <Link
+          href={buildFilterHref(source.id, selectedStatus, "PRIVATE", query)}
+          className={`btn ${selectedVisibility === "PRIVATE" ? "primary" : "small"}`}
+        >
+          Private Only
+        </Link>
+        <Link
+          href={buildFilterHref(source.id, selectedStatus, "UNLISTED", query)}
+          className={`btn ${selectedVisibility === "UNLISTED" ? "primary" : "small"}`}
+        >
+          Unlisted Only
+        </Link>
       </div>
 
       <form
@@ -287,6 +299,10 @@ export default async function AdminSourcePostsPage({
           </Link>
         ))}
       </div>
+
+      <p style={{ marginBottom: "12px" }}>
+        عرض {filteredPosts.length} من أصل {totalPosts} منشور
+      </p>
 
       {filteredPosts.length === 0 ? (
         <EmptyState
