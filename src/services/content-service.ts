@@ -42,19 +42,21 @@ function mapSource(
   source: Prisma.SourceGetPayload<{
     include: {
       category: true;
+      posts: true;
     };
   }>
 ) {
   return {
     id: source.id,
+    categoryId: source.categoryId,
     name: source.name,
     slug: source.slug,
     type: source.type,
-    status: source.status,
     url: source.url,
     handle: source.handle,
+    status: source.status,
     config: source.config,
-    lastFetchedAt: source.lastFetchedAt?.toISOString() ?? null,
+    postsCount: source.posts.length,
     createdAt: source.createdAt.toISOString(),
     updatedAt: source.updatedAt.toISOString(),
     category: {
@@ -86,6 +88,7 @@ function mapPost(
     status: post.status,
     visibility: post.visibility,
     publishedAt: post.publishedAt?.toISOString() ?? null,
+    metadata: post.metadata,
     createdAt: post.createdAt.toISOString(),
     updatedAt: post.updatedAt.toISOString(),
     category: post.category
@@ -117,6 +120,7 @@ function mapPost(
         }
       : null,
     commentsCount: post.comments.length,
+    likesCount: 0,
   };
 }
 
@@ -147,69 +151,43 @@ function mapComment(
   };
 }
 
-function buildCommentTree(
-  comments: Array<
-    ReturnType<typeof mapComment> & {
-      replies: Array<ReturnType<typeof mapComment>>;
-    }
-  >
-) {
-  const commentMap = new Map<
-    string,
-    ReturnType<typeof mapComment> & {
-      replies: Array<ReturnType<typeof mapComment>>;
-    }
-  >();
+function buildCommentTree<
+  T extends {
+    id: string;
+    parentId: string | null;
+    replies: T[];
+  },
+>(comments: T[]) {
+  const byId = new Map<string, T>();
+  const roots: T[] = [];
 
   for (const comment of comments) {
-    commentMap.set(comment.id, {
-      ...comment,
-      replies: [],
-    });
+    byId.set(comment.id, comment);
   }
 
-  const roots: Array<
-    ReturnType<typeof mapComment> & {
-      replies: Array<ReturnType<typeof mapComment>>;
-    }
-  > = [];
-
   for (const comment of comments) {
-    const current = commentMap.get(comment.id)!;
-
     if (comment.parentId) {
-      const parent = commentMap.get(comment.parentId);
-
+      const parent = byId.get(comment.parentId);
       if (parent) {
-        parent.replies.push(current);
+        parent.replies.push(comment);
         continue;
       }
     }
 
-    roots.push(current);
+    roots.push(comment);
   }
 
   return roots;
 }
 
 export async function createCategory(input: CreateCategoryInput) {
-  const existing = await prisma.category.findFirst({
-    where: {
-      OR: [{ slug: input.slug }, { name: input.name }],
-    },
-  });
-
-  if (existing) {
-    throw new Error("Category with the same name or slug already exists");
-  }
-
   const category = await prisma.category.create({
     data: {
       name: input.name,
       slug: input.slug,
       description: normalizeNullableString(input.description),
-      sortOrder: input.sortOrder,
       status: CategoryStatus.ACTIVE,
+      sortOrder: input.sortOrder,
     },
   });
 
@@ -254,39 +232,20 @@ export async function deleteCategory(categoryId: string) {
 }
 
 export async function createSource(input: CreateSourceInput) {
-  const existing = await prisma.source.findFirst({
-    where: {
-      slug: input.slug,
-    },
-  });
-
-  if (existing) {
-    throw new Error("Source slug already exists");
-  }
-
-  const category = await prisma.category.findUnique({
-    where: {
-      id: input.categoryId,
-    },
-  });
-
-  if (!category) {
-    throw new Error("Category not found");
-  }
-
   const source = await prisma.source.create({
     data: {
       categoryId: input.categoryId,
       name: input.name,
       slug: input.slug,
       type: input.type,
-      status: SourceStatus.ACTIVE,
       url: normalizeNullableString(input.url),
       handle: normalizeNullableString(input.handle),
       config: (input.config ?? null) as Prisma.InputJsonValue,
+      status: SourceStatus.ACTIVE,
     },
     include: {
       category: true,
+      posts: true,
     },
   });
 
@@ -297,6 +256,7 @@ export async function listSources() {
   const sources = await prisma.source.findMany({
     include: {
       category: true,
+      posts: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -325,6 +285,7 @@ export async function updateSource(sourceId: string, input: UpdateSourceInput) {
     },
     include: {
       category: true,
+      posts: true,
     },
   });
 
@@ -341,6 +302,7 @@ export async function deleteSource(sourceId: string) {
     },
     include: {
       category: true,
+      posts: true,
     },
   });
 

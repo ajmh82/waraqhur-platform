@@ -16,6 +16,7 @@ interface AdminSourcesResponse {
     status: string;
     url: string | null;
     handle: string | null;
+    postsCount: number;
     createdAt: string;
     updatedAt: string;
     category: {
@@ -89,6 +90,7 @@ export default async function AdminSourcesPage() {
                 <th>النوع</th>
                 <th>التصنيف</th>
                 <th>الحالة</th>
+                <th>المنشورات</th>
                 <th>الرابط</th>
                 <th>المعرف</th>
                 <th>تاريخ الإنشاء</th>
@@ -108,6 +110,7 @@ export default async function AdminSourcesPage() {
                   <td>{source.type}</td>
                   <td>{source.category.name}</td>
                   <td>{source.status}</td>
+                  <td>{source.postsCount}</td>
                   <td>{source.url ?? "-"}</td>
                   <td>{source.handle ?? "-"}</td>
                   <td>{new Date(source.createdAt).toLocaleString("ar-BH")}</td>

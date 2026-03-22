@@ -1,11 +1,9 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
-import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
-import { getCurrentUserFromSession } from "@/services/auth-service";
 import { createSourceSchema } from "@/services/content-schemas";
-import { createSource, listSources } from "@/services/content-service";
-import { userHasPermission } from "@/services/authorization-service";
+import {
+  createSource,
+  listSources,
+} from "@/services/content-service";
 
 export async function GET() {
   try {
@@ -22,8 +20,9 @@ export async function GET() {
       {
         success: false,
         error: {
-          code: "SOURCE_LIST_FAILED",
-          message: error instanceof Error ? error.message : "Source list failed",
+          code: "LIST_SOURCES_FAILED",
+          message:
+            error instanceof Error ? error.message : "Failed to load sources",
         },
       },
       { status: 400 }
@@ -32,44 +31,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const cookieStore = await cookies();
-  const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-  if (!sessionValue) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      },
-      { status: 401 }
-    );
-  }
-
   try {
-    const current = await getCurrentUserFromSession(sessionValue);
-    const canManageSources = await userHasPermission(
-      current.user.id,
-      "sources.manage"
-    );
-
-    if (!canManageSources) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "FORBIDDEN",
-            message: "You do not have permission to manage sources",
-          },
-        },
-        { status: 403 }
-      );
-    }
-
-    const body = await request.json();
-    const input = createSourceSchema.parse(body);
+    const json = await request.json();
+    const input = createSourceSchema.parse(json);
     const source = await createSource(input);
 
     return NextResponse.json(
@@ -82,27 +46,13 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid source payload",
-            details: error.flatten(),
-          },
-        },
-        { status: 400 }
-      );
-    }
-
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: "SOURCE_CREATE_FAILED",
+          code: "CREATE_SOURCE_FAILED",
           message:
-            error instanceof Error ? error.message : "Source creation failed",
+            error instanceof Error ? error.message : "Failed to create source",
         },
       },
       { status: 400 }
