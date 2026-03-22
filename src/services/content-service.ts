@@ -287,6 +287,7 @@ export async function updateSource(sourceId: string, input: UpdateSourceInput) {
       name: input.name,
       slug: input.slug,
       type: input.type,
+      status: input.status,
       url: normalizeNullableString(input.url),
       handle: normalizeNullableString(input.handle),
       config:
