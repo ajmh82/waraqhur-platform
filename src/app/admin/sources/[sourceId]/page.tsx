@@ -4,29 +4,42 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
-interface AdminSourceDetailsResponse {
-  source: {
+interface AdminSourceRecord {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  status: string;
+  url: string | null;
+  handle: string | null;
+  postsCount: number;
+  lastIngestedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  category: {
     id: string;
     name: string;
     slug: string;
-    type: string;
-    status: string;
-    url: string | null;
-    handle: string | null;
-    postsCount: number;
-    lastIngestedAt: string | null;
-    createdAt: string;
-    updatedAt: string;
-    category: {
-      id: string;
-      name: string;
-      slug: string;
-    };
   };
 }
 
+interface PostsResponse {
+  posts: Array<{
+    id: string;
+    title: string;
+    slug: string | null;
+    createdAt: string;
+    source: {
+      id: string;
+      name: string;
+      slug: string;
+    } | null;
+  }>;
+}
+
 interface AdminSourcePageResult {
-  data: AdminSourceDetailsResponse | null;
+  source: AdminSourceRecord | null;
+  posts: PostsResponse["posts"];
   error: string | null;
 }
 
@@ -34,26 +47,35 @@ async function loadAdminSourcePageData(
   sourceId: string
 ): Promise<AdminSourcePageResult> {
   try {
-    const data = await dashboardApiGet<{
-      sources: AdminSourceDetailsResponse["source"][];
+    const sourcesData = await dashboardApiGet<{
+      sources: AdminSourceRecord[];
     }>("/api/sources");
 
-    const source = data.sources.find((item) => item.id === sourceId);
+    const source = sourcesData.sources.find((item) => item.id === sourceId);
 
     if (!source) {
       return {
-        data: null,
+        source: null,
+        posts: [],
         error: null,
       };
     }
 
+    const postsData = await dashboardApiGet<PostsResponse>("/api/posts");
+
+    const posts = postsData.posts
+      .filter((post) => post.source?.id === source.id)
+      .slice(0, 10);
+
     return {
-      data: { source },
+      source,
+      posts,
       error: null,
     };
   } catch (error) {
     return {
-      data: null,
+      source: null,
+      posts: [],
       error:
         error instanceof Error ? error.message : "تعذر تحميل بيانات المصدر.",
     };
@@ -66,29 +88,22 @@ export default async function AdminSourceDetailsPage({
   params: Promise<{ sourceId: string }>;
 }) {
   const { sourceId } = await params;
-  const { data, error } = await loadAdminSourcePageData(sourceId);
+  const { source, posts, error } = await loadAdminSourcePageData(sourceId);
 
   if (error) {
-    return (
-      <ErrorState
-        title="تعذر تحميل المصدر"
-        description={error}
-      />
-    );
+    return <ErrorState title="تعذر تحميل المصدر" description={error} />;
   }
 
-  if (!data) {
+  if (!source) {
     notFound();
   }
-
-  const { source } = data;
 
   return (
     <section className="dashboard-panel">
       <SectionHeading
         eyebrow="Admin"
         title={source.name}
-        description="صفحة إدارية مفصلة للمصدر، تعرض أهم بياناته التشغيلية الحالية."
+        description="صفحة إدارية مفصلة للمصدر، تعرض أهم بياناته التشغيلية الحالية وآخر منشوراته."
       />
 
       <div className="state-card">
@@ -125,6 +140,29 @@ export default async function AdminSourceDetailsPage({
             فتح الصفحة العامة
           </Link>
         </div>
+      </div>
+
+      <div className="state-card" style={{ marginTop: "18px" }}>
+        <h2 style={{ marginTop: 0 }}>آخر المنشورات</h2>
+
+        {posts.length === 0 ? (
+          <p style={{ marginBottom: 0 }}>لا توجد منشورات مرتبطة بهذا المصدر داخل الموجز الحالي.</p>
+        ) : (
+          <div style={{ display: "grid", gap: "10px" }}>
+            {posts.map((post) => (
+              <Link
+                key={post.id}
+                href={post.slug ? `/posts/${post.slug}` : "#"}
+                className="comment-card"
+              >
+                <strong>{post.title}</strong>
+                <p style={{ marginTop: "8px", marginBottom: 0 }}>
+                  {new Date(post.createdAt).toLocaleString("ar-BH")}
+                </p>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
