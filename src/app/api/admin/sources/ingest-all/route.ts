@@ -190,18 +190,6 @@ export async function POST() {
       }
     }
 
-    await prisma.source.update({
-      where: {
-        id: source.id,
-      },
-      data: {
-        config: {
-          ...(typeof source.config === "object" && source.config ? source.config : {}),
-          lastIngestedAt: new Date().toISOString(),
-        },
-      },
-    });
-
     return NextResponse.json({
       success: true,
       data: {
