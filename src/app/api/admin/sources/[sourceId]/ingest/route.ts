@@ -11,9 +11,10 @@ function buildPostSlug(sourceSlug: string, text: string, index: number) {
   const base = text
     .toLowerCase()
     .replace(/&amp;/g, "and")
-    .replace(/[^a-z0-9\\s-]/g, " ")
+    .replace(/[^a-z0-9\s-]/g, " ")
     .trim()
-    .replace(/\\s+/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
     .slice(0, 48)
     .replace(/^-+|-+$/g, "");
 
