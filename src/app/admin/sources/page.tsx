@@ -3,6 +3,7 @@ import { AdminIngestAllSourcesButton } from "@/components/admin/admin-ingest-all
 import { AdminSourceArchiveButton } from "@/components/admin/admin-source-archive-button";
 import { AdminSourceIngestButton } from "@/components/admin/admin-source-ingest-button";
 import { AdminSourcePreviewButton } from "@/components/admin/admin-source-preview-button";
+import { AdminSourceRestoreButton } from "@/components/admin/admin-source-restore-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -220,6 +221,7 @@ export default async function AdminSourcesPage({
                 <th>Preview</th>
                 <th>Ingest</th>
                 <th>Archive</th>
+                <th>Restore</th>
                 <th>Open</th>
               </tr>
             </thead>
@@ -257,6 +259,12 @@ export default async function AdminSourcesPage({
                   </td>
                   <td>
                     <AdminSourceArchiveButton
+                      sourceId={source.id}
+                      status={source.status}
+                    />
+                  </td>
+                  <td>
+                    <AdminSourceRestoreButton
                       sourceId={source.id}
                       status={source.status}
                     />
