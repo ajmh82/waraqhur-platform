@@ -15,6 +15,13 @@ interface PostRecord {
   slug: string | null;
   excerpt: string | null;
   content?: string | null;
+  metadata?: {
+    ingestion?: {
+      provider?: string;
+      fetchedAt?: string;
+      originalUrl?: string | null;
+    };
+  } | null;
   createdAt: string;
   commentsCount: number;
   likesCount?: number;
@@ -131,7 +138,13 @@ async function loadPostPageData(slug: string): Promise<PostPageResult> {
   }
 }
 
-function CommentThread({ comments, depth = 0 }: { comments: CommentNode[]; depth?: number }) {
+function CommentThread({
+  comments,
+  depth = 0,
+}: {
+  comments: CommentNode[];
+  depth?: number;
+}) {
   return (
     <div className="comment-list">
       {comments.map((comment) => (
@@ -180,6 +193,8 @@ export default async function PostPage({
     notFound();
   }
 
+  const originalUrl = post.metadata?.ingestion?.originalUrl ?? null;
+
   return (
     <main className="page-stack">
       <div className="page-container">
@@ -208,12 +223,24 @@ export default async function PostPage({
             <span>{post.likesCount ?? 0} إعجاب</span>
           </div>
 
-          <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <div
+            style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}
+          >
             <LikePostButton
               postId={post.id}
               initialLikesCount={post.likesCount ?? 0}
             />
             <BookmarkPostButton postId={post.id} />
+            {originalUrl ? (
+              <a
+                href={originalUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn small"
+              >
+                Open Original
+              </a>
+            ) : null}
           </div>
 
           <div className="post-detail__content">
