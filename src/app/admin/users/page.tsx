@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AdminUserActions } from "@/components/admin/admin-user-actions";
 import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -80,6 +81,7 @@ export default async function AdminUsersPage() {
                 <th>Status</th>
                 <th>Registered</th>
                 <th>Last activity</th>
+                <th>Details</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -101,6 +103,11 @@ export default async function AdminUsersPage() {
                     {user.lastActivityAt
                       ? new Date(user.lastActivityAt).toLocaleString("en-GB")
                       : "No activity"}
+                  </td>
+                  <td>
+                    <Link href={`/admin/users/${user.id}`} className="btn small">
+                      User Details
+                    </Link>
                   </td>
                   <td>
                     <AdminUserActions
