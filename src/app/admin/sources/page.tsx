@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminSourceArchiveButton } from "@/components/admin/admin-source-archive-button";
+import { AdminSourceRestoreButton } from "@/components/admin/admin-source-restore-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -271,6 +272,7 @@ export default async function AdminSourcesPage({
                 <th>Details</th>
                 <th>Edit</th>
                 <th>Archive</th>
+                <th>Restore</th>
               </tr>
             </thead>
             <tbody>
@@ -296,6 +298,12 @@ export default async function AdminSourcesPage({
                   </td>
                   <td>
                     <AdminSourceArchiveButton
+                      sourceId={source.id}
+                      status={source.status}
+                    />
+                  </td>
+                  <td>
+                    <AdminSourceRestoreButton
                       sourceId={source.id}
                       status={source.status}
                     />

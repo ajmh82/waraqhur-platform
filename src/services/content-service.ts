@@ -42,32 +42,19 @@ function mapSource(
   source: Prisma.SourceGetPayload<{
     include: {
       category: true;
-      posts: true;
     };
   }>
 ) {
-  const config =
-    source.config && typeof source.config === "object" && !Array.isArray(source.config)
-      ? source.config
-      : null;
-
-  const lastIngestedAt =
-    config && "lastIngestedAt" in config && typeof config.lastIngestedAt === "string"
-      ? config.lastIngestedAt
-      : null;
-
   return {
     id: source.id,
-    categoryId: source.categoryId,
     name: source.name,
     slug: source.slug,
     type: source.type,
+    status: source.status,
     url: source.url,
     handle: source.handle,
-    status: source.status,
     config: source.config,
-    postsCount: source.posts.length,
-    lastIngestedAt,
+    lastFetchedAt: source.lastFetchedAt?.toISOString() ?? null,
     createdAt: source.createdAt.toISOString(),
     updatedAt: source.updatedAt.toISOString(),
     category: {
@@ -99,7 +86,6 @@ function mapPost(
     status: post.status,
     visibility: post.visibility,
     publishedAt: post.publishedAt?.toISOString() ?? null,
-    metadata: post.metadata,
     createdAt: post.createdAt.toISOString(),
     updatedAt: post.updatedAt.toISOString(),
     category: post.category
@@ -131,7 +117,6 @@ function mapPost(
         }
       : null,
     commentsCount: post.comments.length,
-    likesCount: 0,
   };
 }
 
@@ -162,43 +147,24 @@ function mapComment(
   };
 }
 
-function buildCommentTree<
-  T extends {
-    id: string;
-    parentId: string | null;
-    replies: T[];
-  },
->(comments: T[]) {
-  const byId = new Map<string, T>();
-  const roots: T[] = [];
-
-  for (const comment of comments) {
-    byId.set(comment.id, comment);
-  }
-
-  for (const comment of comments) {
-    if (comment.parentId) {
-      const parent = byId.get(comment.parentId);
-      if (parent) {
-        parent.replies.push(comment);
-        continue;
-      }
-    }
-
-    roots.push(comment);
-  }
-
-  return roots;
-}
-
 export async function createCategory(input: CreateCategoryInput) {
+  const existing = await prisma.category.findFirst({
+    where: {
+      OR: [{ slug: input.slug }, { name: input.name }],
+    },
+  });
+
+  if (existing) {
+    throw new Error("Category with the same name or slug already exists");
+  }
+
   const category = await prisma.category.create({
     data: {
       name: input.name,
       slug: input.slug,
       description: normalizeNullableString(input.description),
-      status: CategoryStatus.ACTIVE,
       sortOrder: input.sortOrder,
+      status: CategoryStatus.ACTIVE,
     },
   });
 
@@ -243,20 +209,39 @@ export async function deleteCategory(categoryId: string) {
 }
 
 export async function createSource(input: CreateSourceInput) {
+  const existing = await prisma.source.findFirst({
+    where: {
+      slug: input.slug,
+    },
+  });
+
+  if (existing) {
+    throw new Error("Source slug already exists");
+  }
+
+  const category = await prisma.category.findUnique({
+    where: {
+      id: input.categoryId,
+    },
+  });
+
+  if (!category) {
+    throw new Error("Category not found");
+  }
+
   const source = await prisma.source.create({
     data: {
       categoryId: input.categoryId,
       name: input.name,
       slug: input.slug,
       type: input.type,
+      status: SourceStatus.ACTIVE,
       url: normalizeNullableString(input.url),
       handle: normalizeNullableString(input.handle),
       config: (input.config ?? null) as Prisma.InputJsonValue,
-      status: SourceStatus.ACTIVE,
     },
     include: {
       category: true,
-      posts: true,
     },
   });
 
@@ -267,7 +252,6 @@ export async function listSources() {
   const sources = await prisma.source.findMany({
     include: {
       category: true,
-      posts: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -297,7 +281,6 @@ export async function updateSource(sourceId: string, input: UpdateSourceInput) {
     },
     include: {
       category: true,
-      posts: true,
     },
   });
 
@@ -314,7 +297,6 @@ export async function deleteSource(sourceId: string) {
     },
     include: {
       category: true,
-      posts: true,
     },
   });
 
@@ -341,8 +323,6 @@ export async function createPost(input: CreatePostInput, authorUserId: string) {
       coverImageUrl: normalizeNullableString(input.coverImageUrl),
       categoryId: normalizeNullableString(input.categoryId),
       sourceId: normalizeNullableString(input.sourceId),
-      repostOfPostId: normalizeNullableString(input.repostOfPostId),
-      quotedPostId: normalizeNullableString(input.quotedPostId),
       visibility: input.visibility,
       status: input.status,
       authorUserId,
@@ -395,8 +375,6 @@ export async function updatePost(
       coverImageUrl: normalizeNullableString(input.coverImageUrl),
       categoryId: normalizeNullableString(input.categoryId),
       sourceId: normalizeNullableString(input.sourceId),
-      repostOfPostId: normalizeNullableString(input.repostOfPostId),
-      quotedPostId: normalizeNullableString(input.quotedPostId),
       visibility: input.visibility,
       status: input.status,
       updatedByUserId,
@@ -442,7 +420,7 @@ export async function createComment(input: CreateCommentInput, authorUserId: str
       postId: input.postId,
       parentId: normalizeNullableString(input.parentId),
       content: input.content,
-      status: CommentStatus.ACTIVE,
+      status: CommentStatus.VISIBLE,
       authorUserId,
     },
     include: {
@@ -454,26 +432,18 @@ export async function createComment(input: CreateCommentInput, authorUserId: str
   return mapComment(comment);
 }
 
-export async function listComments(postId?: string) {
+export async function listComments() {
   const comments = await prisma.comment.findMany({
-    where: {
-      postId,
-    },
     include: {
       author: true,
       replies: true,
     },
     orderBy: {
-      createdAt: "asc",
+      createdAt: "desc",
     },
   });
 
-  const mapped = comments.map((comment) => ({
-    ...mapComment(comment),
-    replies: [],
-  }));
-
-  return buildCommentTree(mapped);
+  return comments.map(mapComment);
 }
 
 export async function updateComment(commentId: string, input: UpdateCommentInput) {
@@ -499,7 +469,7 @@ export async function deleteComment(commentId: string) {
       id: commentId,
     },
     data: {
-      status: CommentStatus.DELETED,
+      status: CommentStatus.HIDDEN,
     },
     include: {
       author: true,

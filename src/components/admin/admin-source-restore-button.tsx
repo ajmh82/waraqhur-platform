@@ -14,14 +14,14 @@ export function AdminSourceRestoreButton({
 }: AdminSourceRestoreButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   if (status !== "ARCHIVED") {
-    return null;
+    return <span className="btn small">Active</span>;
   }
 
   async function handleRestore() {
-    setResult(null);
+    setError(null);
 
     const response = await fetch(`/api/sources/${sourceId}`, {
       method: "PATCH",
@@ -36,13 +36,12 @@ export function AdminSourceRestoreButton({
 
     const payload = await response.json().catch(() => null);
 
-    startTransition(() => {
-      if (!response.ok || !payload?.success) {
-        setResult(payload?.error?.message ?? "تعذر استعادة المصدر.");
-        return;
-      }
+    if (!response.ok || !payload?.success) {
+      setError(payload?.error?.message ?? "تعذر استعادة المصدر.");
+      return;
+    }
 
-      setResult("تمت استعادة المصدر");
+    startTransition(() => {
       router.refresh();
     });
   }
@@ -58,8 +57,8 @@ export function AdminSourceRestoreButton({
         {isPending ? "..." : "Restore"}
       </button>
 
-      {result ? (
-        <p className="admin-actions__message">{result}</p>
+      {error ? (
+        <p style={{ color: "#ff7b7b", margin: 0, fontSize: "13px" }}>{error}</p>
       ) : null}
     </div>
   );

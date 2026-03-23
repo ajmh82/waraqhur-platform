@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminSourceArchiveButton } from "@/components/admin/admin-source-archive-button";
+import { AdminSourceRestoreButton } from "@/components/admin/admin-source-restore-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
@@ -106,7 +107,10 @@ export default async function AdminSourceDetailsPage({
 
       <div className="state-card">
         <h2 style={{ marginTop: 0 }}>Actions</h2>
-        <AdminSourceArchiveButton sourceId={source.id} status={source.status} />
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <AdminSourceArchiveButton sourceId={source.id} status={source.status} />
+          <AdminSourceRestoreButton sourceId={source.id} status={source.status} />
+        </div>
       </div>
     </section>
   );
