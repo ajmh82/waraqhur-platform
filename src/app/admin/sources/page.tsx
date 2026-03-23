@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { AdminIngestAllSourcesButton } from "@/components/admin/admin-ingest-all-sources-button";
 import { AdminSourceArchiveButton } from "@/components/admin/admin-source-archive-button";
+import { AdminSourceIngestButton } from "@/components/admin/admin-source-ingest-button";
+import { AdminSourcePreviewButton } from "@/components/admin/admin-source-preview-button";
 import { AdminSourceRestoreButton } from "@/components/admin/admin-source-restore-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminSourcesData {
   sources: Array<{
@@ -15,6 +19,7 @@ interface AdminSourcesData {
     status: string;
     url: string | null;
     handle: string | null;
+    lastFetchedAt: string | null;
     createdAt: string;
     updatedAt: string;
     category: {
@@ -140,6 +145,12 @@ export default async function AdminSourcesPage({
   const archivedSources = data.sources.filter(
     (source) => source.status === "ARCHIVED"
   ).length;
+  const fetchedSources = data.sources.filter(
+    (source) => source.lastFetchedAt !== null
+  ).length;
+  const nitterSources = data.sources.filter((source) => source.type === "NITTER").length;
+  const rssSources = data.sources.filter((source) => source.type === "RSS").length;
+  const manualSources = data.sources.filter((source) => source.type === "MANUAL").length;
 
   const types = Array.from(new Set(data.sources.map((source) => source.type))).sort();
   const statuses = Array.from(
@@ -185,11 +196,13 @@ export default async function AdminSourcesPage({
           display: "flex",
           gap: "10px",
           flexWrap: "wrap",
+          alignItems: "flex-start",
         }}
       >
         <Link href="/admin/sources/new" className="btn primary">
           New Source
         </Link>
+        <AdminIngestAllSourcesButton />
       </div>
 
       <div
@@ -211,6 +224,22 @@ export default async function AdminSourcesPage({
         <div className="state-card">
           <strong>المصادر المؤرشفة</strong>
           <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{archivedSources}</p>
+        </div>
+        <div className="state-card">
+          <strong>تم fetched لها</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{fetchedSources}</p>
+        </div>
+        <div className="state-card">
+          <strong>NITTER</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{nitterSources}</p>
+        </div>
+        <div className="state-card">
+          <strong>RSS</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{rssSources}</p>
+        </div>
+        <div className="state-card">
+          <strong>MANUAL</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{manualSources}</p>
         </div>
       </div>
 
@@ -256,6 +285,34 @@ export default async function AdminSourcesPage({
           Reset Search
         </Link>
       </form>
+
+      <div
+        style={{
+          marginBottom: "12px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
+        <Link href={buildFilterHref("NITTER", selectedStatus, query, selectedSort, 1)} className="btn small">
+          NITTER Only
+        </Link>
+        <Link href={buildFilterHref("RSS", selectedStatus, query, selectedSort, 1)} className="btn small">
+          RSS Only
+        </Link>
+        <Link href={buildFilterHref("MANUAL", selectedStatus, query, selectedSort, 1)} className="btn small">
+          MANUAL Only
+        </Link>
+        <Link href={buildFilterHref(selectedType, "ACTIVE", query, selectedSort, 1)} className="btn small">
+          Active Only
+        </Link>
+        <Link href={buildFilterHref(selectedType, "ARCHIVED", query, selectedSort, 1)} className="btn small">
+          Archived Only
+        </Link>
+        <Link href={buildFilterHref("ALL", "ALL", "", "newest", 1)} className="btn small">
+          Reset Filters
+        </Link>
+      </div>
 
       <div
         style={{
@@ -361,9 +418,12 @@ export default async function AdminSourcesPage({
                   <th>Category</th>
                   <th>Handle</th>
                   <th>URL</th>
+                  <th>Last Fetched</th>
                   <th>Created</th>
                   <th>Details</th>
                   <th>Edit</th>
+                  <th>Preview</th>
+                  <th>Ingest</th>
                   <th>Archive</th>
                   <th>Restore</th>
                 </tr>
@@ -378,7 +438,12 @@ export default async function AdminSourcesPage({
                     <td>{source.category.name}</td>
                     <td>{source.handle ?? "-"}</td>
                     <td>{source.url ?? "-"}</td>
-                    <td>{new Date(source.createdAt).toLocaleString("ar-BH")}</td>
+                    <td>
+                      {source.lastFetchedAt
+                        ? formatDateTimeInMakkah(source.lastFetchedAt, "ar-BH")
+                        : "-"}
+                    </td>
+                    <td>{formatDateTimeInMakkah(source.createdAt, "ar-BH")}</td>
                     <td>
                       <Link href={`/admin/sources/${source.id}`} className="btn small">
                         Source Details
@@ -388,6 +453,12 @@ export default async function AdminSourcesPage({
                       <Link href={`/admin/sources/${source.id}/edit`} className="btn small">
                         Edit Source
                       </Link>
+                    </td>
+                    <td>
+                      <AdminSourcePreviewButton sourceId={source.id} />
+                    </td>
+                    <td>
+                      <AdminSourceIngestButton sourceId={source.id} />
                     </td>
                     <td>
                       <AdminSourceArchiveButton

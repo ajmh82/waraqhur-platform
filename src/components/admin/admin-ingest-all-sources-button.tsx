@@ -1,13 +1,23 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 export function AdminIngestAllSourcesButton() {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<string | null>(null);
 
   async function handleIngestAll() {
     setResult(null);
+
+    const confirmed = window.confirm(
+      "هل تريد تنفيذ ingestion لكل مصادر NITTER الآن؟"
+    );
+
+    if (!confirmed) {
+      return;
+    }
 
     const response = await fetch("/api/admin/sources/ingest-all", {
       method: "POST",
@@ -16,15 +26,15 @@ export function AdminIngestAllSourcesButton() {
 
     const payload = await response.json().catch(() => null);
 
-    startTransition(() => {
-      if (!response.ok || !payload?.success) {
-        setResult(payload?.error?.message ?? "تعذر تنفيذ ingestion الجماعية.");
-        return;
-      }
+    if (!response.ok || !payload?.success) {
+      setResult(payload?.error?.message ?? "تعذر تنفيذ ingestion الجماعية.");
+      return;
+    }
 
-      setResult(
-        `تم إنشاء ${payload.data.totalCreatedCount} وتخطي ${payload.data.totalSkippedCount} عبر ${payload.data.totalSources} مصدر`
-      );
+    setResult("تم تنفيذ ingestion الجماعية بنجاح.");
+
+    startTransition(() => {
+      router.refresh();
     });
   }
 
@@ -32,7 +42,7 @@ export function AdminIngestAllSourcesButton() {
     <div style={{ display: "grid", gap: "8px" }}>
       <button
         type="button"
-        className="btn"
+        className="btn small"
         onClick={handleIngestAll}
         disabled={isPending}
       >
@@ -40,7 +50,9 @@ export function AdminIngestAllSourcesButton() {
       </button>
 
       {result ? (
-        <p className="admin-actions__message">{result}</p>
+        <p style={{ margin: 0, color: "#a9b7c9", fontSize: "13px" }}>
+          {result}
+        </p>
       ) : null}
     </div>
   );
