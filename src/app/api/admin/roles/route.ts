@@ -17,7 +17,11 @@ export async function GET() {
             permission: true,
           },
         },
-        userRoles: true,
+        userRoles: {
+          include: {
+            user: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "asc",
@@ -33,6 +37,13 @@ export async function GET() {
           description: role.description,
           isSystem: role.isSystem,
           usersCount: role.userRoles.length,
+          users: role.userRoles.map((entry) => ({
+            id: entry.user.id,
+            email: entry.user.email,
+            username: entry.user.username,
+            status: entry.user.status,
+            assignedAt: entry.assignedAt.toISOString(),
+          })),
           permissions: role.rolePermissions
             .map((entry) => entry.permission.key)
             .sort(),
