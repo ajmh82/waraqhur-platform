@@ -43,6 +43,10 @@ interface AdminCommentsPageResult {
   error: string | null;
 }
 
+type SortKey = "newest" | "oldest";
+
+const PAGE_SIZE = 10;
+
 async function loadAdminCommentsPageData(): Promise<AdminCommentsPageResult> {
   try {
     const data = await dashboardApiGet<AdminCommentsData>("/api/comments");
@@ -56,7 +60,12 @@ async function loadAdminCommentsPageData(): Promise<AdminCommentsPageResult> {
   }
 }
 
-function buildFilterHref(status: string, query: string) {
+function buildFilterHref(
+  status: string,
+  query: string,
+  sort: SortKey,
+  page: number
+) {
   const params = new URLSearchParams();
 
   if (status !== "ALL") {
@@ -67,20 +76,49 @@ function buildFilterHref(status: string, query: string) {
     params.set("q", query.trim());
   }
 
+  if (sort !== "newest") {
+    params.set("sort", sort);
+  }
+
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
   const queryString = params.toString();
   return queryString ? `/admin/comments?${queryString}` : "/admin/comments";
+}
+
+function getSortedComments(
+  comments: AdminCommentsData["comments"],
+  sort: SortKey
+) {
+  const nextComments = [...comments];
+
+  nextComments.sort((a, b) => {
+    const aTime = new Date(a.createdAt).getTime();
+    const bTime = new Date(b.createdAt).getTime();
+    return sort === "oldest" ? aTime - bTime : bTime - aTime;
+  });
+
+  return nextComments;
+}
+
+function getSortLabel(sort: SortKey) {
+  return sort === "oldest" ? "Oldest First" : "Newest First";
 }
 
 export default async function AdminCommentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; sort?: string; page?: string }>;
 }) {
   const { data, error } = await loadAdminCommentsPageData();
   const currentSearchParams = await searchParams;
 
   const query = currentSearchParams.q?.trim() ?? "";
   const selectedStatus = currentSearchParams.status?.trim() ?? "ALL";
+  const selectedSort = (currentSearchParams.sort?.trim() as SortKey) ?? "newest";
+  const currentPage = Math.max(1, Number(currentSearchParams.page ?? "1") || 1);
   const normalizedQuery = query.toLowerCase();
 
   if (error || !data) {
@@ -115,6 +153,15 @@ export default async function AdminCommentsPage({
 
     return statusMatches && queryMatches;
   });
+
+  const sortedComments = getSortedComments(filteredComments, selectedSort);
+  const totalPages = Math.max(1, Math.ceil(sortedComments.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
+  const paginatedComments = sortedComments.slice(startIndex, endIndex);
+  const visibleFrom = sortedComments.length === 0 ? 0 : startIndex + 1;
+  const visibleTo = Math.min(endIndex, sortedComments.length);
 
   return (
     <section className="dashboard-panel">
@@ -155,6 +202,10 @@ export default async function AdminCommentsPage({
           <input type="hidden" name="status" value={selectedStatus} />
         ) : null}
 
+        {selectedSort !== "newest" ? (
+          <input type="hidden" name="sort" value={selectedSort} />
+        ) : null}
+
         <input
           type="text"
           name="q"
@@ -168,14 +219,17 @@ export default async function AdminCommentsPage({
           Search
         </button>
 
-        <Link href={buildFilterHref(selectedStatus, "")} className="btn small">
+        <Link
+          href={buildFilterHref(selectedStatus, "", selectedSort, 1)}
+          className="btn small"
+        >
           Reset Search
         </Link>
       </form>
 
-      <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+      <div style={{ marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link
-          href={buildFilterHref("ALL", query)}
+          href={buildFilterHref("ALL", query, selectedSort, 1)}
           className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
         >
           All Statuses
@@ -184,7 +238,7 @@ export default async function AdminCommentsPage({
         {statuses.map((status) => (
           <Link
             key={status}
-            href={buildFilterHref(status, query)}
+            href={buildFilterHref(status, query, selectedSort, 1)}
             className={`btn ${selectedStatus === status ? "primary" : "small"}`}
           >
             {status}
@@ -192,47 +246,121 @@ export default async function AdminCommentsPage({
         ))}
       </div>
 
-      {filteredComments.length === 0 ? (
+      <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <Link
+          href={buildFilterHref(selectedStatus, query, "newest", 1)}
+          className={`btn ${selectedSort === "newest" ? "primary" : "small"}`}
+        >
+          Newest First
+        </Link>
+        <Link
+          href={buildFilterHref(selectedStatus, query, "oldest", 1)}
+          className={`btn ${selectedSort === "oldest" ? "primary" : "small"}`}
+        >
+          Oldest First
+        </Link>
+      </div>
+
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> status={selectedStatus}, search={query || "none"}, sort={getSortLabel(selectedSort)}
+        </p>
+      </div>
+
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Showing:</strong> {visibleFrom}-{visibleTo} of {sortedComments.length}
+        </p>
+      </div>
+
+      {paginatedComments.length === 0 ? (
         <EmptyState
           title="لا توجد تعليقات"
           description="لا توجد تعليقات تطابق البحث أو الفلاتر الحالية."
         />
       ) : (
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Comment</th>
-                <th>Author</th>
-                <th>Post ID</th>
-                <th>Replies</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredComments.map((comment) => (
-                <tr key={comment.id}>
-                  <td style={{ maxWidth: "420px" }}>{comment.content}</td>
-                  <td>{comment.author?.username ?? "-"}</td>
-                  <td>{comment.postId}</td>
-                  <td>{comment.repliesCount}</td>
-                  <td>{comment.status}</td>
-                  <td>{new Date(comment.createdAt).toLocaleString("ar-BH")}</td>
-                  <td>
-                    <AdminCommentActions
-                      comment={{
-                        id: comment.id,
-                        status: comment.status,
-                      }}
-                    />
-                  </td>
+        <>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Comment</th>
+                  <th>Author</th>
+                  <th>Post ID</th>
+                  <th>Replies</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Details</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {paginatedComments.map((comment) => (
+                  <tr key={comment.id}>
+                    <td style={{ maxWidth: "420px" }}>{comment.content}</td>
+                    <td>{comment.author?.username ?? "-"}</td>
+                    <td>{comment.postId}</td>
+                    <td>{comment.repliesCount}</td>
+                    <td>{comment.status}</td>
+                    <td>{new Date(comment.createdAt).toLocaleString("ar-BH")}</td>
+                    <td>
+                      <Link href={`/admin/comments/${comment.id}`} className="btn small">
+                        Comment Details
+                      </Link>
+                    </td>
+                    <td>
+                      <AdminCommentActions
+                        comment={{
+                          id: comment.id,
+                          status: comment.status,
+                        }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div
+            style={{
+              marginTop: "18px",
+              display: "flex",
+              gap: "10px",
+              flexWrap: "wrap",
+            }}
+          >
+            <Link
+              href={buildFilterHref(
+                selectedStatus,
+                query,
+                selectedSort,
+                Math.max(1, safePage - 1)
+              )}
+              className="btn small"
+              aria-disabled={safePage <= 1}
+            >
+              Previous
+            </Link>
+
+            <span className="btn small">
+              Page {safePage} / {totalPages}
+            </span>
+
+            <Link
+              href={buildFilterHref(
+                selectedStatus,
+                query,
+                selectedSort,
+                Math.min(totalPages, safePage + 1)
+              )}
+              className="btn small"
+              aria-disabled={safePage >= totalPages}
+            >
+              Next
+            </Link>
+          </div>
+        </>
       )}
     </section>
   );
