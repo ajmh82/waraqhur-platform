@@ -10,7 +10,6 @@ export async function GET() {
   }
 
   try {
-
     const users = await prisma.user.findMany({
       include: {
         profile: true,
@@ -26,7 +25,6 @@ export async function GET() {
           orderBy: {
             lastUsedAt: "desc",
           },
-          take: 1,
         },
       },
       orderBy: {
@@ -52,6 +50,12 @@ export async function GET() {
             key: entry.role.key,
             name: entry.role.name,
             assignedAt: entry.assignedAt.toISOString(),
+          })),
+          sessions: user.sessions.map((session) => ({
+            id: session.id,
+            createdAt: session.createdAt.toISOString(),
+            lastUsedAt: session.lastUsedAt.toISOString(),
+            expiresAt: session.expiresAt.toISOString(),
           })),
           lastActivityAt: user.sessions[0]?.lastUsedAt
             ? user.sessions[0].lastUsedAt.toISOString()

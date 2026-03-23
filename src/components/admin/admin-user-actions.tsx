@@ -117,29 +117,6 @@ export function AdminUserActions({ user }: AdminUserActionsProps) {
         {loading === "reset" ? "Working..." : "Send reset"}
       </button>
 
-      <button
-        type="button"
-        className="admin-action-button"
-        onClick={() =>
-          runAction(
-            "role",
-            fetch("/api/admin/users/roles", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                userId: user.id,
-                roleKey: "admin",
-              }),
-            })
-          )
-        }
-        disabled={loading !== null}
-      >
-        {loading === "role" ? "Working..." : "Assign admin"}
-      </button>
-
       {message ? <p className="admin-actions__message">{message}</p> : null}
     </div>
   );

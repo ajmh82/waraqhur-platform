@@ -7,27 +7,35 @@ import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
 interface AdminUsersResponse {
-  users: Array<{
-    id: string;
-    email: string;
-    username: string;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-    profile: {
-      displayName: string;
-    } | null;
-    roles: Array<{
-      key: string;
-      name: string;
-      assignedAt: string;
+  data: {
+    users: Array<{
+      id: string;
+      email: string;
+      username: string;
+      status: string;
+      createdAt: string;
+      updatedAt: string;
+      profile: {
+        displayName: string;
+      } | null;
+      roles: Array<{
+        key: string;
+        name: string;
+        assignedAt: string;
+      }>;
+      sessions: Array<{
+        id: string;
+        createdAt: string;
+        lastUsedAt: string;
+        expiresAt: string;
+      }>;
+      lastActivityAt: string | null;
     }>;
-    lastActivityAt: string | null;
-  }>;
+  };
 }
 
 interface AdminUserDetailsPageResult {
-  user: AdminUsersResponse["users"][number] | null;
+  user: AdminUsersResponse["data"]["users"][number] | null;
   error: string | null;
 }
 
@@ -35,8 +43,8 @@ async function loadAdminUserDetailsPageData(
   userId: string
 ): Promise<AdminUserDetailsPageResult> {
   try {
-    const data = await dashboardApiGet<AdminUsersResponse>("/api/admin/users");
-    const user = data.users.find((item) => item.id === userId) ?? null;
+    const response = await dashboardApiGet<AdminUsersResponse>("/api/admin/users");
+    const user = response.data.users.find((item) => item.id === userId) ?? null;
 
     return {
       user,
@@ -75,9 +83,31 @@ export default async function AdminUserDetailsPage({
         description="تفاصيل المستخدم من داخل لوحة الإدارة."
       />
 
-      <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+      <div
+        style={{
+          marginBottom: "18px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
         <Link href="/admin/users" className="btn small">
           العودة إلى المستخدمين
+        </Link>
+        <Link href={`/admin/users/${user.id}/roles`} className="btn small">
+          User Roles
+        </Link>
+        <Link href={`/admin/users/${user.id}/permissions`} className="btn small">
+          User Permissions
+        </Link>
+        <Link href={`/admin/users/${user.id}/activity`} className="btn small">
+          User Activity
+        </Link>
+        <Link href={`/admin/users/${user.id}/sessions`} className="btn small">
+          User Sessions
+        </Link>
+        <Link href={`/admin/users/${user.id}/assign-role`} className="btn small">
+          Assign Role
         </Link>
       </div>
 
@@ -87,6 +117,7 @@ export default async function AdminUserDetailsPage({
           <p><strong>الاسم الظاهر:</strong> {user.profile?.displayName ?? "-"}</p>
           <p><strong>البريد الإلكتروني:</strong> {user.email}</p>
           <p><strong>الحالة:</strong> {user.status}</p>
+          <p><strong>عدد الجلسات:</strong> {user.sessions.length}</p>
           <p>
             <strong>آخر نشاط:</strong>{" "}
             {user.lastActivityAt
