@@ -7,6 +7,7 @@ import { AdminSourceRestoreButton } from "@/components/admin/admin-source-restor
 import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminSourcesData {
   sources: Array<{
@@ -28,8 +29,21 @@ interface AdminSourcesData {
   }>;
 }
 
+interface AdminPostsData {
+  posts: Array<{
+    id: string;
+    status: string;
+    source: {
+      id: string;
+      name: string;
+      slug: string;
+    } | null;
+  }>;
+}
+
 interface AdminSourceDetailsPageResult {
   source: AdminSourcesData["sources"][number] | null;
+  posts: AdminPostsData["posts"];
   error: string | null;
 }
 
@@ -37,16 +51,23 @@ async function loadAdminSourceDetailsPageData(
   sourceId: string
 ): Promise<AdminSourceDetailsPageResult> {
   try {
-    const data = await dashboardApiGet<AdminSourcesData>("/api/sources");
-    const source = data.sources.find((item) => item.id === sourceId) ?? null;
+    const [sourcesData, postsData] = await Promise.all([
+      dashboardApiGet<AdminSourcesData>("/api/sources"),
+      dashboardApiGet<AdminPostsData>("/api/posts"),
+    ]);
+
+    const source = sourcesData.sources.find((item) => item.id === sourceId) ?? null;
+    const posts = postsData.posts.filter((post) => post.source?.id === sourceId);
 
     return {
       source,
+      posts,
       error: null,
     };
   } catch (error) {
     return {
       source: null,
+      posts: [],
       error:
         error instanceof Error ? error.message : "Unable to load source details.",
     };
@@ -59,7 +80,7 @@ export default async function AdminSourceDetailsPage({
   params: Promise<{ sourceId: string }>;
 }) {
   const { sourceId } = await params;
-  const { source, error } = await loadAdminSourceDetailsPageData(sourceId);
+  const { source, posts, error } = await loadAdminSourceDetailsPageData(sourceId);
 
   if (error) {
     return <ErrorState title="Failed to load source" description={error} />;
@@ -68,6 +89,11 @@ export default async function AdminSourceDetailsPage({
   if (!source) {
     notFound();
   }
+
+  const totalPosts = posts.length;
+  const draftPosts = posts.filter((post) => post.status === "DRAFT").length;
+  const publishedPosts = posts.filter((post) => post.status === "PUBLISHED").length;
+  const archivedPosts = posts.filter((post) => post.status === "ARCHIVED").length;
 
   return (
     <section className="dashboard-panel">
@@ -94,6 +120,35 @@ export default async function AdminSourceDetailsPage({
         <Link href={`/admin/sources/${source.id}/posts`} className="btn small">
           Source Posts
         </Link>
+        <Link href={`/admin/sources/${source.id}/posts/new`} className="btn small">
+          Create Post Manually
+        </Link>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginBottom: "18px",
+        }}
+      >
+        <div className="state-card">
+          <strong>إجمالي المنشورات</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{totalPosts}</p>
+        </div>
+        <div className="state-card">
+          <strong>Draft</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{draftPosts}</p>
+        </div>
+        <div className="state-card">
+          <strong>Published</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{publishedPosts}</p>
+        </div>
+        <div className="state-card">
+          <strong>Archived</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{archivedPosts}</p>
+        </div>
       </div>
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
@@ -109,11 +164,11 @@ export default async function AdminSourceDetailsPage({
           <p>
             <strong>Last Fetched At:</strong>{" "}
             {source.lastFetchedAt
-              ? new Date(source.lastFetchedAt).toLocaleString("ar-BH")
+              ? formatDateTimeInMakkah(source.lastFetchedAt, "ar-BH")
               : "-"}
           </p>
-          <p><strong>Created At:</strong> {new Date(source.createdAt).toLocaleString("ar-BH")}</p>
-          <p><strong>Updated At:</strong> {new Date(source.updatedAt).toLocaleString("ar-BH")}</p>
+          <p><strong>Created At:</strong> {formatDateTimeInMakkah(source.createdAt, "ar-BH")}</p>
+          <p><strong>Updated At:</strong> {formatDateTimeInMakkah(source.updatedAt, "ar-BH")}</p>
         </div>
       </div>
 
