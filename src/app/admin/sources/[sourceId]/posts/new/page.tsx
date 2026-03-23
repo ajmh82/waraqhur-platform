@@ -90,6 +90,15 @@ export default async function AdminSourceNewPostPage({
         </Link>
       </div>
 
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <div style={{ display: "grid", gap: "12px" }}>
+          <p><strong>اسم المصدر:</strong> {source.name}</p>
+          <p><strong>Slug:</strong> {source.slug}</p>
+          <p><strong>النوع:</strong> {source.type}</p>
+          <p><strong>التصنيف:</strong> {source.category.name}</p>
+        </div>
+      </div>
+
       <AdminSourceNewPostForm source={source} />
     </section>
   );
