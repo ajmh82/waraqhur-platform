@@ -25,8 +25,11 @@ export function AdminSourceNewPostForm({
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
+  const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
+  const [coverImageUrl, setCoverImageUrl] = useState("");
   const [visibility, setVisibility] = useState("PRIVATE");
+  const [status, setStatus] = useState("DRAFT");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,10 +44,13 @@ export function AdminSourceNewPostForm({
       body: JSON.stringify({
         title,
         slug,
+        excerpt: excerpt || null,
         content,
+        coverImageUrl: coverImageUrl || null,
         categoryId: source.category.id,
         sourceId: source.id,
         visibility,
+        status,
       }),
     });
 
@@ -80,6 +86,13 @@ export function AdminSourceNewPostForm({
           required
         />
 
+        <input
+          className="search-input"
+          value={excerpt}
+          onChange={(event) => setExcerpt(event.target.value)}
+          placeholder="المقتطف"
+        />
+
         <textarea
           className="search-input"
           value={content}
@@ -87,6 +100,13 @@ export function AdminSourceNewPostForm({
           placeholder="محتوى المنشور"
           rows={10}
           required
+        />
+
+        <input
+          className="search-input"
+          value={coverImageUrl}
+          onChange={(event) => setCoverImageUrl(event.target.value)}
+          placeholder="رابط الصورة"
         />
 
         <select
@@ -98,6 +118,16 @@ export function AdminSourceNewPostForm({
           <option value="PUBLIC">PUBLIC</option>
           <option value="UNLISTED">UNLISTED</option>
         </select>
+
+        <select
+          className="search-input"
+          value={status}
+          onChange={(event) => setStatus(event.target.value)}
+        >
+          <option value="DRAFT">DRAFT</option>
+          <option value="PUBLISHED">PUBLISHED</option>
+          <option value="ARCHIVED">ARCHIVED</option>
+        </select>
       </div>
 
       {error ? (
@@ -106,7 +136,14 @@ export function AdminSourceNewPostForm({
         </p>
       ) : null}
 
-      <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+      <div
+        style={{
+          marginTop: "18px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
         <button type="submit" className="btn primary" disabled={isPending}>
           {isPending ? "جارٍ الإنشاء..." : "إنشاء المنشور"}
         </button>
