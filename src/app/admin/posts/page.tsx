@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminPostDeleteButton } from "@/components/admin/admin-post-delete-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -321,7 +322,9 @@ export default async function AdminPostsPage({
                   <th>Visibility</th>
                   <th>Comments</th>
                   <th>Created</th>
+                  <th>Details</th>
                   <th>Open</th>
+                  <th>Delete</th>
                 </tr>
               </thead>
               <tbody>
@@ -336,6 +339,11 @@ export default async function AdminPostsPage({
                     <td>{post.commentsCount}</td>
                     <td>{new Date(post.createdAt).toLocaleString("ar-BH")}</td>
                     <td>
+                      <Link href={`/admin/posts/${post.id}`} className="btn small">
+                        Post Details
+                      </Link>
+                    </td>
+                    <td>
                       {post.slug ? (
                         <Link href={`/posts/${post.slug}`} className="btn small">
                           Open Post
@@ -343,6 +351,9 @@ export default async function AdminPostsPage({
                       ) : (
                         "-"
                       )}
+                    </td>
+                    <td>
+                      <AdminPostDeleteButton postId={post.id} />
                     </td>
                   </tr>
                 ))}
