@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminSourceArchiveButton } from "@/components/admin/admin-source-archive-button";
+import { AdminSourceIngestButton } from "@/components/admin/admin-source-ingest-button";
+import { AdminSourcePreviewButton } from "@/components/admin/admin-source-preview-button";
 import { AdminSourceRestoreButton } from "@/components/admin/admin-source-restore-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
@@ -15,6 +17,7 @@ interface AdminSourcesData {
     status: string;
     url: string | null;
     handle: string | null;
+    lastFetchedAt: string | null;
     createdAt: string;
     updatedAt: string;
     category: {
@@ -88,6 +91,9 @@ export default async function AdminSourceDetailsPage({
         <Link href={`/admin/sources/${source.id}/edit`} className="btn small">
           Edit Source
         </Link>
+        <Link href={`/admin/sources/${source.id}/posts`} className="btn small">
+          Source Posts
+        </Link>
       </div>
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
@@ -100,6 +106,12 @@ export default async function AdminSourceDetailsPage({
           <p><strong>Category:</strong> {source.category.name}</p>
           <p><strong>Handle:</strong> {source.handle ?? "-"}</p>
           <p><strong>URL:</strong> {source.url ?? "-"}</p>
+          <p>
+            <strong>Last Fetched At:</strong>{" "}
+            {source.lastFetchedAt
+              ? new Date(source.lastFetchedAt).toLocaleString("ar-BH")
+              : "-"}
+          </p>
           <p><strong>Created At:</strong> {new Date(source.createdAt).toLocaleString("ar-BH")}</p>
           <p><strong>Updated At:</strong> {new Date(source.updatedAt).toLocaleString("ar-BH")}</p>
         </div>
@@ -108,6 +120,8 @@ export default async function AdminSourceDetailsPage({
       <div className="state-card">
         <h2 style={{ marginTop: 0 }}>Actions</h2>
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <AdminSourcePreviewButton sourceId={source.id} />
+          <AdminSourceIngestButton sourceId={source.id} />
           <AdminSourceArchiveButton sourceId={source.id} status={source.status} />
           <AdminSourceRestoreButton sourceId={source.id} status={source.status} />
         </div>
