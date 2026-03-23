@@ -33,6 +33,7 @@ interface AdminPostsData {
   posts: Array<{
     id: string;
     status: string;
+    visibility: string;
     source: {
       id: string;
       name: string;
@@ -94,6 +95,8 @@ export default async function AdminSourceDetailsPage({
   const draftPosts = posts.filter((post) => post.status === "DRAFT").length;
   const publishedPosts = posts.filter((post) => post.status === "PUBLISHED").length;
   const archivedPosts = posts.filter((post) => post.status === "ARCHIVED").length;
+  const publicPosts = posts.filter((post) => post.visibility === "PUBLIC").length;
+  const privatePosts = posts.filter((post) => post.visibility === "PRIVATE").length;
 
   return (
     <section className="dashboard-panel">
@@ -149,6 +152,40 @@ export default async function AdminSourceDetailsPage({
           <strong>Archived</strong>
           <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{archivedPosts}</p>
         </div>
+      </div>
+
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> source={source.name}, type={source.type}, status={source.status}, totalPosts={totalPosts}, publicPosts={publicPosts}, privatePosts={privatePosts}
+        </p>
+      </div>
+
+      <div
+        style={{
+          marginBottom: "18px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
+        <Link href={`/admin/sources/${source.id}/posts`} className="btn small">
+          All Posts
+        </Link>
+        <Link href={`/admin/sources/${source.id}/posts?status=DRAFT`} className="btn small">
+          Draft Only
+        </Link>
+        <Link href={`/admin/sources/${source.id}/posts?status=PUBLISHED`} className="btn small">
+          Published Only
+        </Link>
+        <Link href={`/admin/sources/${source.id}/posts?status=ARCHIVED`} className="btn small">
+          Archived Only
+        </Link>
+        <Link href={`/admin/sources/${source.id}/posts?visibility=PUBLIC`} className="btn small">
+          Public Only
+        </Link>
+        <Link href={`/admin/sources/${source.id}/posts?visibility=PRIVATE`} className="btn small">
+          Private Only
+        </Link>
       </div>
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
