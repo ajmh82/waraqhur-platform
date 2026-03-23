@@ -22,6 +22,8 @@ export function AdminSourceCreateForm() {
   const [url, setUrl] = useState("");
   const [handle, setHandle] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [lang, setLang] = useState("ar");
+  const [timeline, setTimeline] = useState("news");
 
   useEffect(() => {
     let isMounted = true;
@@ -78,6 +80,14 @@ export function AdminSourceCreateForm() {
     event.preventDefault();
     setError(null);
 
+    const config =
+      type === "NITTER"
+        ? {
+            lang,
+            timeline,
+          }
+        : {};
+
     const response = await fetch("/api/sources", {
       method: "POST",
       headers: {
@@ -91,7 +101,7 @@ export function AdminSourceCreateForm() {
         type,
         url: url || null,
         handle: handle || null,
-        config: {},
+        config,
       }),
     });
 
@@ -177,6 +187,26 @@ export function AdminSourceCreateForm() {
             ))
           )}
         </select>
+
+        {type === "NITTER" ? (
+          <>
+            <input
+              className="search-input"
+              placeholder="اللغة داخل config، مثل ar"
+              value={lang}
+              onChange={(event) => setLang(event.target.value)}
+              required
+            />
+
+            <input
+              className="search-input"
+              placeholder="timeline داخل config، مثل news"
+              value={timeline}
+              onChange={(event) => setTimeline(event.target.value)}
+              required
+            />
+          </>
+        ) : null}
       </div>
 
       {error ? (
