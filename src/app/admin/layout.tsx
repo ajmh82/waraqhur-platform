@@ -5,7 +5,7 @@ import { AppHeader } from "@/components/layout/app-header";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
-import { userHasPermission } from "@/services/authorization-service";
+import { userHasAnyPermission } from "@/services/authorization-service";
 
 interface AdminAccessResult {
   allowed: boolean;
@@ -25,12 +25,18 @@ async function checkAdminAccess(): Promise<AdminAccessResult> {
 
   try {
     const current = await getCurrentUserFromSession(sessionValue);
-    const canManageUsers = await userHasPermission(
-      current.user.id,
-      "users.manage"
-    );
+    const hasAdminAccess = await userHasAnyPermission(current.user.id, [
+      "users.manage",
+      "invites.read",
+      "roles.read",
+      "sources.manage",
+      "comments.moderate",
+      "audit.read",
+      "categories.manage",
+      "posts.update",
+    ]);
 
-    if (!canManageUsers) {
+    if (!hasAdminAccess) {
       return {
         allowed: false,
         redirectTo: "/dashboard/profile",
@@ -71,8 +77,8 @@ export default async function AdminLayout({
               <p className="section-heading__eyebrow">Admin Panel</p>
               <h1 className="dashboard-shell__title">Administration workspace</h1>
               <p className="dashboard-shell__description">
-                Manage users, invitations, and role access from one protected
-                admin surface built to grow later without restructuring.
+                Manage users, invitations, roles, sources, comments, and audit
+                activity from one protected admin surface.
               </p>
             </div>
 
