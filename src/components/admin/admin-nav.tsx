@@ -7,6 +7,7 @@ const adminLinks = [
   { href: "/admin/sources", label: "Sources" },
   { href: "/admin/posts", label: "Posts" },
   { href: "/admin/comments", label: "Comments" },
+  { href: "/admin/comment-replies", label: "Comment Replies" },
   { href: "/admin/audit-logs", label: "Audit Logs" },
 ] as const;
 
