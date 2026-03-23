@@ -52,8 +52,7 @@ async function loadAdminPostsPageData(): Promise<AdminPostsPageResult> {
   } catch (error) {
     return {
       data: null,
-      error:
-        error instanceof Error ? error.message : "Unable to load posts.",
+      error: error instanceof Error ? error.message : "Unable to load posts.",
     };
   }
 }
@@ -140,6 +139,8 @@ export default async function AdminPostsPage({
   const totalPosts = data.posts.length;
   const publishedPosts = data.posts.filter((post) => post.status === "PUBLISHED").length;
   const draftPosts = data.posts.filter((post) => post.status === "DRAFT").length;
+  const archivedPosts = data.posts.filter((post) => post.status === "ARCHIVED").length;
+  const publicPosts = data.posts.filter((post) => post.visibility === "PUBLIC").length;
   const statuses = Array.from(new Set(data.posts.map((post) => post.status))).sort();
   const visibilities = Array.from(new Set(data.posts.map((post) => post.visibility))).sort();
 
@@ -198,6 +199,14 @@ export default async function AdminPostsPage({
           <strong>المسودات</strong>
           <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{draftPosts}</p>
         </div>
+        <div className="state-card">
+          <strong>المؤرشفة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{archivedPosts}</p>
+        </div>
+        <div className="state-card">
+          <strong>العامة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{publicPosts}</p>
+        </div>
       </div>
 
       <form
@@ -237,6 +246,45 @@ export default async function AdminPostsPage({
           Reset Search
         </Link>
       </form>
+
+      <div style={{ marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <Link
+          href={buildFilterHref("PUBLISHED", selectedVisibility, query, selectedSort, 1)}
+          className="btn small"
+        >
+          Published Only
+        </Link>
+        <Link
+          href={buildFilterHref("DRAFT", selectedVisibility, query, selectedSort, 1)}
+          className="btn small"
+        >
+          Draft Only
+        </Link>
+        <Link
+          href={buildFilterHref("ARCHIVED", selectedVisibility, query, selectedSort, 1)}
+          className="btn small"
+        >
+          Archived Only
+        </Link>
+        <Link
+          href={buildFilterHref(selectedStatus, "PUBLIC", query, selectedSort, 1)}
+          className="btn small"
+        >
+          Public Only
+        </Link>
+        <Link
+          href={buildFilterHref(selectedStatus, "PRIVATE", query, selectedSort, 1)}
+          className="btn small"
+        >
+          Private Only
+        </Link>
+        <Link
+          href={buildFilterHref("ALL", "ALL", "", "newest", 1)}
+          className="btn small"
+        >
+          Reset Filters
+        </Link>
+      </div>
 
       <div style={{ marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link
@@ -293,7 +341,7 @@ export default async function AdminPostsPage({
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> status={selectedStatus}, visibility={selectedVisibility}, search={query || "none"}, sort={getSortLabel(selectedSort)}
+          <strong>Current view:</strong> status={selectedStatus}, visibility={selectedVisibility}, search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
         </p>
       </div>
 
@@ -321,8 +369,11 @@ export default async function AdminPostsPage({
                   <th>Status</th>
                   <th>Visibility</th>
                   <th>Comments</th>
+                  <th>Likes</th>
+                  <th>Published</th>
                   <th>Created</th>
                   <th>Details</th>
+                  <th>Edit</th>
                   <th>Open</th>
                   <th>Delete</th>
                 </tr>
@@ -337,10 +388,17 @@ export default async function AdminPostsPage({
                     <td>{post.status}</td>
                     <td>{post.visibility}</td>
                     <td>{post.commentsCount}</td>
+                    <td>{post.likesCount}</td>
+                    <td>{post.publishedAt ? new Date(post.publishedAt).toLocaleString("ar-BH") : "-"}</td>
                     <td>{new Date(post.createdAt).toLocaleString("ar-BH")}</td>
                     <td>
                       <Link href={`/admin/posts/${post.id}`} className="btn small">
                         Post Details
+                      </Link>
+                    </td>
+                    <td>
+                      <Link href={`/admin/posts/${post.id}/edit`} className="btn small">
+                        Edit Post
                       </Link>
                     </td>
                     <td>
