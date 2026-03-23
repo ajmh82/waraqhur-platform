@@ -1,86 +1,50 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdminPostDeleteButton } from "@/components/admin/admin-post-delete-button";
-import { AdminSourceIngestButton } from "@/components/admin/admin-source-ingest-button";
-import { AdminSourcePreviewButton } from "@/components/admin/admin-source-preview-button";
+import { AdminSourceArchiveButton } from "@/components/admin/admin-source-archive-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
-interface AdminSourceRecord {
-  id: string;
-  name: string;
-  slug: string;
-  type: string;
-  status: string;
-  url: string | null;
-  handle: string | null;
-  postsCount: number;
-  lastIngestedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  category: {
+interface AdminSourcesData {
+  sources: Array<{
     id: string;
     name: string;
     slug: string;
-  };
-}
-
-interface PostsResponse {
-  posts: Array<{
-    id: string;
-    title: string;
-    slug: string | null;
+    type: string;
+    status: string;
+    url: string | null;
+    handle: string | null;
     createdAt: string;
-    source: {
+    updatedAt: string;
+    category: {
       id: string;
       name: string;
       slug: string;
-    } | null;
+    };
   }>;
 }
 
-interface AdminSourcePageResult {
-  source: AdminSourceRecord | null;
-  posts: PostsResponse["posts"];
+interface AdminSourceDetailsPageResult {
+  source: AdminSourcesData["sources"][number] | null;
   error: string | null;
 }
 
-async function loadAdminSourcePageData(
+async function loadAdminSourceDetailsPageData(
   sourceId: string
-): Promise<AdminSourcePageResult> {
+): Promise<AdminSourceDetailsPageResult> {
   try {
-    const sourcesData = await dashboardApiGet<{
-      sources: AdminSourceRecord[];
-    }>("/api/sources");
-
-    const source = sourcesData.sources.find((item) => item.id === sourceId);
-
-    if (!source) {
-      return {
-        source: null,
-        posts: [],
-        error: null,
-      };
-    }
-
-    const postsData = await dashboardApiGet<PostsResponse>("/api/posts");
-
-    const posts = postsData.posts
-      .filter((post) => post.source?.id === source.id)
-      .slice(0, 10);
+    const data = await dashboardApiGet<AdminSourcesData>("/api/sources");
+    const source = data.sources.find((item) => item.id === sourceId) ?? null;
 
     return {
       source,
-      posts,
       error: null,
     };
   } catch (error) {
     return {
       source: null,
-      posts: [],
       error:
-        error instanceof Error ? error.message : "تعذر تحميل بيانات المصدر.",
+        error instanceof Error ? error.message : "Unable to load source details.",
     };
   }
 }
@@ -91,10 +55,10 @@ export default async function AdminSourceDetailsPage({
   params: Promise<{ sourceId: string }>;
 }) {
   const { sourceId } = await params;
-  const { source, posts, error } = await loadAdminSourcePageData(sourceId);
+  const { source, error } = await loadAdminSourceDetailsPageData(sourceId);
 
   if (error) {
-    return <ErrorState title="تعذر تحميل المصدر" description={error} />;
+    return <ErrorState title="Failed to load source" description={error} />;
   }
 
   if (!source) {
@@ -106,96 +70,43 @@ export default async function AdminSourceDetailsPage({
       <SectionHeading
         eyebrow="Admin"
         title={source.name}
-        description="صفحة إدارية مفصلة للمصدر، تعرض أهم بياناته التشغيلية الحالية وآخر منشوراته."
+        description="تفاصيل المصدر من داخل لوحة الإدارة."
       />
 
-      <div className="state-card">
-        <div style={{ display: "grid", gap: "12px" }}>
-          <p><strong>الاسم:</strong> {source.name}</p>
-          <p><strong>Slug:</strong> {source.slug}</p>
-          <p><strong>النوع:</strong> {source.type}</p>
-          <p><strong>الحالة:</strong> {source.status}</p>
-          <p><strong>التصنيف:</strong> {source.category.name}</p>
-          <p><strong>الرابط:</strong> {source.url ?? "-"}</p>
-          <p><strong>المعرف:</strong> {source.handle ?? "-"}</p>
-          <p><strong>عدد المنشورات:</strong> {source.postsCount}</p>
-          <p>
-            <strong>آخر ingest:</strong>{" "}
-            {source.lastIngestedAt
-              ? new Date(source.lastIngestedAt).toLocaleString("ar-BH")
-              : "-"}
-          </p>
-          <p>
-            <strong>تاريخ الإنشاء:</strong>{" "}
-            {new Date(source.createdAt).toLocaleString("ar-BH")}
-          </p>
-          <p>
-            <strong>آخر تحديث:</strong>{" "}
-            {new Date(source.updatedAt).toLocaleString("ar-BH")}
-          </p>
-        </div>
+      <div
+        style={{
+          marginBottom: "18px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
+        <Link href="/admin/sources" className="btn small">
+          العودة إلى المصادر
+        </Link>
+        <Link href={`/admin/sources/${source.id}/edit`} className="btn small">
+          Edit Source
+        </Link>
+      </div>
 
-        <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <Link href="/admin/sources" className="btn small">
-            العودة إلى المصادر
-          </Link>
-          <Link
-            href={`/admin/sources?type=${encodeURIComponent(source.type)}&status=${encodeURIComponent(source.status)}&q=${encodeURIComponent(source.slug)}`}
-            className="btn small"
-          >
-            فتح نفس الفلتر
-          </Link>
-          <Link href={`/admin/sources/${source.id}/edit`} className="btn small">
-            Edit Source
-          </Link>
-          <Link href={`/admin/sources/${source.id}/posts`} className="btn small">
-            All Source Posts
-          </Link>
-          <Link href={`/admin/sources/${source.id}/posts/new`} className="btn small">
-            Create Post Manually
-          </Link>
-          <Link href={`/sources/${source.slug}`} className="btn small">
-            فتح الصفحة العامة
-          </Link>
-          <AdminSourcePreviewButton
-            sourceId={source.id}
-            sourceType={source.type}
-          />
-          <AdminSourceIngestButton
-            sourceId={source.id}
-            sourceType={source.type}
-          />
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <div style={{ display: "grid", gap: "12px" }}>
+          <p><strong>Source ID:</strong> {source.id}</p>
+          <p><strong>Name:</strong> {source.name}</p>
+          <p><strong>Slug:</strong> {source.slug}</p>
+          <p><strong>Type:</strong> {source.type}</p>
+          <p><strong>Status:</strong> {source.status}</p>
+          <p><strong>Category:</strong> {source.category.name}</p>
+          <p><strong>Handle:</strong> {source.handle ?? "-"}</p>
+          <p><strong>URL:</strong> {source.url ?? "-"}</p>
+          <p><strong>Created At:</strong> {new Date(source.createdAt).toLocaleString("ar-BH")}</p>
+          <p><strong>Updated At:</strong> {new Date(source.updatedAt).toLocaleString("ar-BH")}</p>
         </div>
       </div>
 
-      <div className="state-card" style={{ marginTop: "18px" }}>
-        <h2 style={{ marginTop: 0 }}>آخر المنشورات</h2>
-
-        {posts.length === 0 ? (
-          <p style={{ marginBottom: 0 }}>لا توجد منشورات مرتبطة بهذا المصدر داخل الموجز الحالي.</p>
-        ) : (
-          <div style={{ display: "grid", gap: "10px" }}>
-            {posts.map((post) => (
-              <div key={post.id} className="comment-card">
-                <Link href={post.slug ? `/posts/${post.slug}` : "#"}>
-                  <strong>{post.title}</strong>
-                </Link>
-                <p style={{ marginTop: "8px", marginBottom: "10px" }}>
-                  {new Date(post.createdAt).toLocaleString("ar-BH")}
-                </p>
-                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                  <Link
-                    href={`/admin/sources/${source.id}/posts/${post.id}/edit`}
-                    className="btn small"
-                  >
-                    Edit Post
-                  </Link>
-                  <AdminPostDeleteButton postId={post.id} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="state-card">
+        <h2 style={{ marginTop: 0 }}>Actions</h2>
+        <AdminSourceArchiveButton sourceId={source.id} status={source.status} />
       </div>
     </section>
   );

@@ -5,34 +5,27 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
-interface AdminSourceRecord {
-  id: string;
-  name: string;
-  slug: string;
-  type: string;
-  status: string;
-  url: string | null;
-  handle: string | null;
-  postsCount: number;
-  lastIngestedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  category: {
+interface AdminSourcesData {
+  sources: Array<{
     id: string;
     name: string;
     slug: string;
-  };
-}
-
-interface CategoryRecord {
-  id: string;
-  name: string;
-  slug: string;
+    type: string;
+    status: string;
+    url: string | null;
+    handle: string | null;
+    createdAt: string;
+    updatedAt: string;
+    category: {
+      id: string;
+      name: string;
+      slug: string;
+    };
+  }>;
 }
 
 interface AdminSourceEditPageResult {
-  source: AdminSourceRecord | null;
-  categories: CategoryRecord[];
+  source: AdminSourcesData["sources"][number] | null;
   error: string | null;
 }
 
@@ -40,26 +33,18 @@ async function loadAdminSourceEditPageData(
   sourceId: string
 ): Promise<AdminSourceEditPageResult> {
   try {
-    const [sourcesData, categoriesData] = await Promise.all([
-      dashboardApiGet<{ sources: AdminSourceRecord[] }>("/api/sources"),
-      dashboardApiGet<{ categories: CategoryRecord[] }>("/api/categories"),
-    ]);
-
-    const source = sourcesData.sources.find((item) => item.id === sourceId) ?? null;
+    const data = await dashboardApiGet<AdminSourcesData>("/api/sources");
+    const source = data.sources.find((item) => item.id === sourceId) ?? null;
 
     return {
       source,
-      categories: Array.isArray(categoriesData.categories)
-        ? categoriesData.categories
-        : [],
       error: null,
     };
   } catch (error) {
     return {
       source: null,
-      categories: [],
       error:
-        error instanceof Error ? error.message : "تعذر تحميل بيانات المصدر.",
+        error instanceof Error ? error.message : "Unable to load source edit page.",
     };
   }
 }
@@ -70,15 +55,10 @@ export default async function AdminSourceEditPage({
   params: Promise<{ sourceId: string }>;
 }) {
   const { sourceId } = await params;
-  const { source, categories, error } = await loadAdminSourceEditPageData(sourceId);
+  const { source, error } = await loadAdminSourceEditPageData(sourceId);
 
   if (error) {
-    return (
-      <ErrorState
-        title="تعذر تحميل المصدر"
-        description={error}
-      />
-    );
+    return <ErrorState title="Failed to load source" description={error} />;
   }
 
   if (!source) {
@@ -93,13 +73,33 @@ export default async function AdminSourceEditPage({
         description="تعديل بيانات المصدر من داخل لوحة الإدارة."
       />
 
-      <div style={{ marginBottom: "18px" }}>
+      <div
+        style={{
+          marginBottom: "18px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
+        <Link href="/admin/sources" className="btn small">
+          العودة إلى المصادر
+        </Link>
         <Link href={`/admin/sources/${source.id}`} className="btn small">
-          العودة إلى تفاصيل المصدر
+          Source Details
         </Link>
       </div>
 
-      <AdminSourceEditForm source={source} categories={categories} />
+      <AdminSourceEditForm
+        source={{
+          id: source.id,
+          name: source.name,
+          slug: source.slug,
+          type: source.type,
+          url: source.url,
+          handle: source.handle,
+          category: source.category,
+        }}
+      />
     </section>
   );
 }
