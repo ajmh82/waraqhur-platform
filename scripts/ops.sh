@@ -30,6 +30,12 @@ case "$command_name" in
   self-test|test|t)
     ./scripts/self-test-ops.sh
     ;;
+  report|rp)
+    ./scripts/system-report.sh
+    ;;
+  write-report|wr)
+    ./scripts/write-report.sh
+    ;;
   health|h)
     ./scripts/health-check.sh
     ;;
@@ -121,6 +127,8 @@ case "$command_name" in
     echo "  maintenance | mt"
     echo "  env | env-check | ec"
     echo "  self-test | test | t"
+    echo "  report | rp"
+    echo "  write-report | wr"
     echo "  health | h"
     echo "  smoke | sm"
     echo "  smoke-admin | sma"

@@ -15,6 +15,10 @@
 - `./scripts/ops.sh self-test`
 - `./scripts/ops.sh test`
 - `./scripts/ops.sh t`
+- `./scripts/ops.sh report`
+- `./scripts/ops.sh rp`
+- `./scripts/ops.sh write-report`
+- `./scripts/ops.sh wr`
 - `./scripts/ops.sh health`
 - `./scripts/ops.sh h`
 - `./scripts/ops.sh smoke`
@@ -48,6 +52,10 @@
 - `./scripts/ops.sh logs`
 - `./scripts/ops.sh restart`
 - `./scripts/ops.sh recreate`
+
+## Reports
+- `./scripts/system-report.sh`
+- `./scripts/write-report.sh`
 
 ## Daily checks
 - `./scripts/status-check.sh`
