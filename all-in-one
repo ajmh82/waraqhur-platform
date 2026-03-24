@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -e
+
+cd /home/docker/apps/waraqhur-platform
+
+echo "===== DOCTOR ====="
+./doctor
+
+echo "===== VERIFY ====="
+./verify
+
+echo "===== RELEASE ====="
+./release
+
+echo "===== LATEST ====="
+./latest

@@ -18,6 +18,12 @@ case "$command_name" in
   doctor|dr)
     ./scripts/doctor.sh
     ;;
+  root-check|rchk)
+    ./scripts/root-shortcuts-check.sh
+    ;;
+  update|upd)
+    ./scripts/update-and-verify.sh
+    ;;
   clean|cl)
     shift
     ./scripts/clean-reports.sh "${1:-5}"
@@ -150,6 +156,8 @@ case "$command_name" in
     echo "  quick | q"
     echo "  latest | la"
     echo "  doctor | dr"
+    echo "  root-check | rchk"
+    echo "  update | upd"
     echo "  clean | cl <keep-count>"
     echo "  archive | ar"
     echo "  lint"
