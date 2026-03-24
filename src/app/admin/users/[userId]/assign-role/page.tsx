@@ -71,8 +71,14 @@ async function loadAdminAssignRolePageData(
       dashboardApiGet<AdminRolesResponse>("/api/admin/roles"),
     ]);
 
-    const user =
-      usersResponse.data.users.find((item) => item.id === userId) ?? null;
+    const users = Array.isArray(usersResponse.data.users)
+      ? usersResponse.data.users
+      : [];
+    const allRoles = Array.isArray(rolesResponse.data.roles)
+      ? rolesResponse.data.roles
+      : [];
+
+    const user = users.find((item) => item.id === userId) ?? null;
 
     if (!user) {
       return {
@@ -86,7 +92,7 @@ async function loadAdminAssignRolePageData(
 
     return {
       user,
-      roles: rolesResponse.data.roles
+      roles: allRoles
         .filter((role) => !assignedRoleKeys.has(role.key))
         .map((role) => ({
           id: role.id,
@@ -132,6 +138,30 @@ export default async function AdminAssignRolePage({
 
       <div
         style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginBottom: "18px",
+        }}
+      >
+        <div className="state-card">
+          <strong>الأدوار المتاحة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{roles.length}</p>
+        </div>
+        <div className="state-card">
+          <strong>أدوار المستخدم الحالية</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{user.roles.length}</p>
+        </div>
+      </div>
+
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> user={user.username}, assignedRoles={user.roles.length}, availableRoles={roles.length}
+        </p>
+      </div>
+
+      <div
+        style={{
           marginBottom: "18px",
           display: "flex",
           gap: "10px",
@@ -143,6 +173,9 @@ export default async function AdminAssignRolePage({
         </Link>
         <Link href={`/admin/users/${user.id}/roles`} className="btn small">
           User Roles
+        </Link>
+        <Link href={`/admin/users/${user.id}/permissions`} className="btn small">
+          User Permissions
         </Link>
       </div>
 

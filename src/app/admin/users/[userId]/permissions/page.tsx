@@ -65,8 +65,14 @@ async function loadAdminUserPermissionsPageData(
       dashboardApiGet<AdminRolesResponse>("/api/admin/roles"),
     ]);
 
-    const user =
-      usersResponse.data.users.find((item) => item.id === userId) ?? null;
+    const users = Array.isArray(usersResponse.data.users)
+      ? usersResponse.data.users
+      : [];
+    const roles = Array.isArray(rolesResponse.data.roles)
+      ? rolesResponse.data.roles
+      : [];
+
+    const user = users.find((item) => item.id === userId) ?? null;
 
     if (!user) {
       return {
@@ -79,7 +85,7 @@ async function loadAdminUserPermissionsPageData(
     const userRoleKeys = new Set(user.roles.map((role) => role.key));
     const permissions = Array.from(
       new Set(
-        rolesResponse.data.roles
+        roles
           .filter((role) => userRoleKeys.has(role.key))
           .flatMap((role) => role.permissions)
       )
@@ -122,6 +128,8 @@ export default async function AdminUserPermissionsPage({
     notFound();
   }
 
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+
   return (
     <section className="dashboard-panel">
       <SectionHeading
@@ -144,6 +152,18 @@ export default async function AdminUserPermissionsPage({
             {permissions.length}
           </p>
         </div>
+        <div className="state-card">
+          <strong>عدد الأدوار</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
+            {roles.length}
+          </p>
+        </div>
+      </div>
+
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> user={user.username}, roles={roles.length}, permissions={permissions.length}
+        </p>
       </div>
 
       <div
@@ -159,6 +179,9 @@ export default async function AdminUserPermissionsPage({
         </Link>
         <Link href={`/admin/users/${user.id}/roles`} className="btn small">
           User Roles
+        </Link>
+        <Link href={`/admin/users/${user.id}/assign-role`} className="btn small">
+          Assign Role
         </Link>
       </div>
 
