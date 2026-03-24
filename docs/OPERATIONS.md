@@ -1,6 +1,8 @@
 # Operations
 
 ## Root shortcuts
+- `./inventory`
+- `./all-in-one`
 - `./housekeeping`
 - `./evening`
 - `./morning`

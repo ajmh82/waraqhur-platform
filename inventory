@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -e
+
+cd /home/docker/apps/waraqhur-platform
+
+echo "===== ROOT EXECUTABLES ====="
+find . -maxdepth 1 -type f -perm -111 ! -name '.*' | sed 's#^\./##' | sort
+
+echo
+echo "===== SCRIPT EXECUTABLES ====="
+find scripts -maxdepth 1 -type f -perm -111 | sed 's#^#./#' | sort
