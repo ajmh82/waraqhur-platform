@@ -39,6 +39,10 @@
 - `./dbrestore backups/<file>.sql`
 - `./report-now`
 - `./doctor-full`
+- `./cleanall 5`
+- `./archive`
+- `./snapshot-now`
+- `./maintain`
 
 ## Main entry
 - `./ops update`
