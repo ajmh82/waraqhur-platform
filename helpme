@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -e
+
+cd /home/docker/apps/waraqhur-platform
+
+cat <<'TXT'
+Core daily commands:
+  ./doctor
+  ./check
+  ./quick
+  ./status
+  ./health
+  ./verify
+  ./build
+  ./smoke
+  ./logs
+  ./backup
+  ./dbs
+  ./dbt
+  ./release
+  ./shortcuts
+TXT

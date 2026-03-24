@@ -1,6 +1,7 @@
 # Operations
 
 ## Root shortcuts
+- `./helpme`
 - `./shortcuts`
 - `./doctor`
 - `./check`
