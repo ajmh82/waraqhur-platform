@@ -5,6 +5,22 @@
 - `./check`
 - `./backup`
 - `./report`
+- `./quick`
+- `./logs`
+- `./shell`
+- `./db`
+- `./release`
+- `./up`
+- `./down`
+- `./restart`
+- `./verify`
+- `./build`
+- `./smoke`
+- `./latest`
+- `./health`
+- `./status`
+- `./env`
+- `./artifacts`
 
 ## Main entry
 - `./ops help`
