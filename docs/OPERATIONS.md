@@ -17,6 +17,8 @@
 - `./scripts/ops.sh pd`
 - `./scripts/ops.sh bootstrap`
 - `./scripts/ops.sh boot`
+- `./scripts/ops.sh db-backup`
+- `./scripts/ops.sh dbb`
 - `./scripts/ops.sh logs`
 - `./scripts/ops.sh restart`
 - `./scripts/ops.sh recreate`
@@ -32,6 +34,9 @@
 - `./scripts/smoke-admin-guest.sh`
 - `./scripts/pre-deploy-check.sh`
 - `./scripts/bootstrap-dev.sh`
+
+## Backups
+- `./scripts/db-backup.sh`
 
 ## Logs and shell
 - `./scripts/logs-app.sh`

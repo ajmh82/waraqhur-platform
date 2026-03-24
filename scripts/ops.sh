@@ -36,6 +36,9 @@ case "$command_name" in
   bootstrap|boot)
     ./scripts/bootstrap-dev.sh
     ;;
+  db-backup|dbb)
+    ./scripts/db-backup.sh
+    ;;
   logs|log)
     ./scripts/logs-app.sh
     ;;
@@ -81,6 +84,7 @@ case "$command_name" in
     echo "  smoke-admin | sma"
     echo "  pre-deploy | pd"
     echo "  bootstrap | boot"
+    echo "  db-backup | dbb"
     echo "  logs | log"
     echo "  restart | rs"
     echo "  up"
