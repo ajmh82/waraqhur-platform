@@ -189,6 +189,7 @@ export async function updateCategory(categoryId: string, input: UpdateCategoryIn
       slug: input.slug,
       description: normalizeNullableString(input.description),
       sortOrder: input.sortOrder,
+      status: input.status,
     },
   });
 

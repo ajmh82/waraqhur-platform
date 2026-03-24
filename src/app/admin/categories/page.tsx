@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminCategoryArchiveButton } from "@/components/admin/admin-category-archive-button";
+import { AdminCategoryRestoreButton } from "@/components/admin/admin-category-restore-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -280,6 +281,7 @@ export default async function AdminCategoriesPage({
                   <th>Details</th>
                   <th>Edit</th>
                   <th>Archive</th>
+                  <th>Restore</th>
                 </tr>
               </thead>
               <tbody>
@@ -303,6 +305,12 @@ export default async function AdminCategoriesPage({
                     </td>
                     <td>
                       <AdminCategoryArchiveButton
+                        categoryId={category.id}
+                        status={category.status}
+                      />
+                    </td>
+                    <td>
+                      <AdminCategoryRestoreButton
                         categoryId={category.id}
                         status={category.status}
                       />

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminCategoryArchiveButton } from "@/components/admin/admin-category-archive-button";
+import { AdminCategoryRestoreButton } from "@/components/admin/admin-category-restore-button";
 import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
@@ -203,7 +205,7 @@ export default async function AdminCategoryDetailsPage({
         </Link>
       </div>
 
-      <div className="state-card">
+      <div className="state-card" style={{ marginBottom: "18px" }}>
         <div style={{ display: "grid", gap: "12px" }}>
           <p><strong>الاسم:</strong> {category.name}</p>
           <p><strong>Slug:</strong> {category.slug}</p>
@@ -214,6 +216,20 @@ export default async function AdminCategoryDetailsPage({
           <p><strong>عدد المنشورات:</strong> {postsCount}</p>
           <p><strong>تاريخ الإنشاء:</strong> {formatDateTimeInMakkah(category.createdAt, "ar-BH")}</p>
           <p><strong>آخر تحديث:</strong> {formatDateTimeInMakkah(category.updatedAt, "ar-BH")}</p>
+        </div>
+      </div>
+
+      <div className="state-card">
+        <h2 style={{ marginTop: 0 }}>Actions</h2>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <AdminCategoryArchiveButton
+            categoryId={category.id}
+            status={category.status}
+          />
+          <AdminCategoryRestoreButton
+            categoryId={category.id}
+            status={category.status}
+          />
         </div>
       </div>
     </section>
