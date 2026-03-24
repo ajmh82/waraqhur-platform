@@ -22,7 +22,7 @@ export async function DELETE(request: Request) {
     const body = await request.json();
     const input = revokeUserSessionSchema.parse(body);
 
-    const session = await prisma.session.findFirst({
+    const session = await prisma.userSession.findFirst({
       where: {
         id: input.sessionId,
         userId: input.userId,
@@ -37,7 +37,7 @@ export async function DELETE(request: Request) {
       return apiError("SESSION_NOT_FOUND", "Session not found", 404);
     }
 
-    await prisma.session.delete({
+    await prisma.userSession.delete({
       where: {
         id: session.id,
       },

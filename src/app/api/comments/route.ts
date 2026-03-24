@@ -7,11 +7,9 @@ import { createCommentSchema } from "@/services/content-schemas";
 import { createComment, listComments } from "@/services/content-service";
 import { userHasPermission } from "@/services/authorization-service";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const postId = searchParams.get("postId") ?? undefined;
-    const comments = await listComments(postId);
+    const comments = await listComments();
 
     return NextResponse.json({
       success: true,

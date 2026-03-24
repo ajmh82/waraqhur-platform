@@ -37,7 +37,7 @@ export const updateSourceSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   slug: slugSchema.optional(),
   type: z.enum(["RSS", "WEBSITE", "TWITTER", "NITTER", "TELEGRAM", "YOUTUBE", "MANUAL"]).optional(),
-  status: z.enum(["ACTIVE", "ARCHIVED", "DISABLED"]).optional(),
+  status: z.enum(["ACTIVE", "PAUSED", "ARCHIVED"]).optional(),
   url: z.string().trim().url().nullable().optional(),
   handle: z.string().trim().max(120).nullable().optional(),
   config: z.record(z.string(), z.unknown()).nullable().optional(),

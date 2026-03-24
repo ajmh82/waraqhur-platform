@@ -212,8 +212,11 @@ export default async function AdminSourceDetailsPage({
       <div className="state-card">
         <h2 style={{ marginTop: 0 }}>Actions</h2>
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <AdminSourcePreviewButton sourceId={source.id} />
-          <AdminSourceIngestButton sourceId={source.id} />
+          <AdminSourcePreviewButton
+            sourceId={source.id}
+            sourceType={source.type}
+          />
+          <AdminSourceIngestButton sourceId={source.id} sourceType={source.type} />
           <AdminSourceArchiveButton sourceId={source.id} status={source.status} />
           <AdminSourceRestoreButton sourceId={source.id} status={source.status} />
         </div>

@@ -54,7 +54,7 @@ export async function GET() {
           sessions: user.sessions.map((session) => ({
             id: session.id,
             createdAt: session.createdAt.toISOString(),
-            lastUsedAt: session.lastUsedAt.toISOString(),
+            lastUsedAt: session.lastUsedAt ? session.lastUsedAt.toISOString() : null,
             expiresAt: session.expiresAt.toISOString(),
           })),
           lastActivityAt: user.sessions[0]?.lastUsedAt

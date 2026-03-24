@@ -421,7 +421,7 @@ export async function createComment(input: CreateCommentInput, authorUserId: str
       postId: input.postId,
       parentId: normalizeNullableString(input.parentId),
       content: input.content,
-      status: CommentStatus.VISIBLE,
+      status: CommentStatus.ACTIVE,
       authorUserId,
     },
     include: {

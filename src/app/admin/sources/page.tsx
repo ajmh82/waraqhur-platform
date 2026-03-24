@@ -455,10 +455,10 @@ export default async function AdminSourcesPage({
                       </Link>
                     </td>
                     <td>
-                      <AdminSourcePreviewButton sourceId={source.id} />
+                      <AdminSourcePreviewButton sourceId={source.id} sourceType={source.type} />
                     </td>
                     <td>
-                      <AdminSourceIngestButton sourceId={source.id} />
+                      <AdminSourceIngestButton sourceId={source.id} sourceType={source.type} />
                     </td>
                     <td>
                       <AdminSourceArchiveButton
