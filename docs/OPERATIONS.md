@@ -23,12 +23,16 @@
 - `./scripts/ops.sh dbbl`
 - `./scripts/ops.sh db-backup-latest`
 - `./scripts/ops.sh dbbt`
+- `./scripts/ops.sh db-backup-prune 5`
+- `./scripts/ops.sh dbbp 5`
 - `./scripts/ops.sh db-restore backups/<file>.sql`
 - `./scripts/ops.sh dbr backups/<file>.sql`
 - `./scripts/ops.sh db-status`
 - `./scripts/ops.sh dbs`
 - `./scripts/ops.sh db-tables`
 - `./scripts/ops.sh dbt`
+- `./scripts/ops.sh db-tools`
+- `./scripts/ops.sh dbx`
 - `./scripts/ops.sh docker-status`
 - `./scripts/ops.sh dps`
 - `./scripts/ops.sh logs`
@@ -51,11 +55,13 @@
 - `./scripts/db-backup.sh`
 - `./scripts/db-backup-list.sh`
 - `./scripts/db-backup-latest.sh`
+- `./scripts/db-backup-prune.sh 5`
 - `./scripts/db-restore.sh backups/<file>.sql`
 
 ## Database
 - `./scripts/db-status.sh`
 - `./scripts/db-tables.sh`
+- `./scripts/db-tools-check.sh`
 - `./scripts/prisma-generate.sh`
 - `./scripts/prisma-migrate.sh`
 - `./scripts/prisma-seed.sh`

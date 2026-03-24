@@ -45,6 +45,10 @@ case "$command_name" in
   db-backup-latest|dbbt)
     ./scripts/db-backup-latest.sh
     ;;
+  db-backup-prune|dbbp)
+    shift
+    ./scripts/db-backup-prune.sh "$@"
+    ;;
   db-restore|dbr)
     shift
     ./scripts/db-restore.sh "$@"
@@ -54,6 +58,9 @@ case "$command_name" in
     ;;
   db-tables|dbt)
     ./scripts/db-tables.sh
+    ;;
+  db-tools|dbx)
+    ./scripts/db-tools-check.sh
     ;;
   docker-status|dps)
     ./scripts/docker-status.sh
@@ -106,9 +113,11 @@ case "$command_name" in
     echo "  db-backup | dbb"
     echo "  db-backup-list | dbbl"
     echo "  db-backup-latest | dbbt"
+    echo "  db-backup-prune | dbbp <keep-count>"
     echo "  db-restore | dbr <backup-file>"
     echo "  db-status | dbs"
     echo "  db-tables | dbt"
+    echo "  db-tools | dbx"
     echo "  docker-status | dps"
     echo "  logs | log"
     echo "  restart | rs"
