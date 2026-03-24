@@ -19,6 +19,12 @@
 - `./scripts/ops.sh rp`
 - `./scripts/ops.sh write-report`
 - `./scripts/ops.sh wr`
+- `./scripts/ops.sh release-check`
+- `./scripts/ops.sh rel`
+- `./scripts/ops.sh api-preview`
+- `./scripts/ops.sh ap`
+- `./scripts/ops.sh public-preview`
+- `./scripts/ops.sh pp`
 - `./scripts/ops.sh health`
 - `./scripts/ops.sh h`
 - `./scripts/ops.sh smoke`
@@ -56,6 +62,11 @@
 ## Reports
 - `./scripts/system-report.sh`
 - `./scripts/write-report.sh`
+- `./scripts/release-check.sh`
+
+## Preview
+- `./scripts/api-preview.sh`
+- `./scripts/public-preview.sh`
 
 ## Daily checks
 - `./scripts/status-check.sh`

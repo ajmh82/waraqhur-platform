@@ -36,6 +36,15 @@ case "$command_name" in
   write-report|wr)
     ./scripts/write-report.sh
     ;;
+  release-check|rel)
+    ./scripts/release-check.sh
+    ;;
+  api-preview|ap)
+    ./scripts/api-preview.sh
+    ;;
+  public-preview|pp)
+    ./scripts/public-preview.sh
+    ;;
   health|h)
     ./scripts/health-check.sh
     ;;
@@ -129,6 +138,9 @@ case "$command_name" in
     echo "  self-test | test | t"
     echo "  report | rp"
     echo "  write-report | wr"
+    echo "  release-check | rel"
+    echo "  api-preview | ap"
+    echo "  public-preview | pp"
     echo "  health | h"
     echo "  smoke | sm"
     echo "  smoke-admin | sma"
