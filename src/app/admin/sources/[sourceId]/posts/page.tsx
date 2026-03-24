@@ -5,6 +5,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminSourceRecord {
   id: string;
@@ -40,6 +41,8 @@ interface AdminSourcePostsPageResult {
   posts: AdminPostRecord[];
   error: string | null;
 }
+
+type SortKey = "LATEST" | "OLDEST";
 
 const PAGE_SIZE = 10;
 
@@ -85,7 +88,7 @@ function buildFilterHref(
   status: string,
   visibility: string,
   query: string,
-  sort: string,
+  sort: SortKey,
   page: number
 ) {
   const params = new URLSearchParams();
@@ -114,6 +117,10 @@ function buildFilterHref(
   return queryString
     ? `/admin/sources/${sourceId}/posts?${queryString}`
     : `/admin/sources/${sourceId}/posts`;
+}
+
+function getSortLabel(sort: SortKey) {
+  return sort === "OLDEST" ? "Oldest First" : "Latest First";
 }
 
 export default async function AdminSourcePostsPage({
@@ -149,8 +156,8 @@ export default async function AdminSourcePostsPage({
     notFound();
   }
 
-  const statuses = Array.from(new Set(posts.map((post) => post.status)));
-  const visibilities = Array.from(new Set(posts.map((post) => post.visibility)));
+  const statuses = Array.from(new Set(posts.map((post) => post.status))).sort();
+  const visibilities = Array.from(new Set(posts.map((post) => post.visibility))).sort();
   const totalPosts = posts.length;
   const draftPosts = posts.filter((post) => post.status === "DRAFT").length;
   const publishedPosts = posts.filter((post) => post.status === "PUBLISHED").length;
@@ -318,15 +325,15 @@ export default async function AdminSourcePostsPage({
 
       {activeFilters.length > 0 ? (
         <p style={{ marginBottom: "12px" }}>
-          الفلاتر النشطة: {activeFilters.join(" | ")}
+          <strong>Active filters:</strong> {activeFilters.join(" | ")}
         </p>
       ) : null}
 
       <p style={{ marginBottom: "12px" }}>
-        الترتيب الحالي: {selectedSort === "OLDEST" ? "Oldest First" : "Latest First"}
+        <strong>الترتيب الحالي:</strong> {getSortLabel(selectedSort)}
       </p>
 
-      <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+      <div style={{ marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link
           href={buildFilterHref(source.id, "ALL", selectedVisibility, query, selectedSort, 1)}
           className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
@@ -345,7 +352,7 @@ export default async function AdminSourcePostsPage({
         ))}
       </div>
 
-      <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+      <div style={{ marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link
           href={buildFilterHref(source.id, selectedStatus, "ALL", query, selectedSort, 1)}
           className={`btn ${selectedVisibility === "ALL" ? "primary" : "small"}`}
@@ -379,9 +386,17 @@ export default async function AdminSourcePostsPage({
         </Link>
       </div>
 
-      <p style={{ marginBottom: "12px" }}>
-        عرض النتائج {visibleStart} - {visibleEnd} من أصل {totalFilteredPosts}
-      </p>
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> status={selectedStatus}, visibility={selectedVisibility}, search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
+        </p>
+      </div>
+
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Showing:</strong> {visibleStart}-{visibleEnd} of {totalFilteredPosts}
+        </p>
+      </div>
 
       {paginatedPosts.length === 0 ? (
         <EmptyState
@@ -389,83 +404,86 @@ export default async function AdminSourcePostsPage({
           description="لا توجد منشورات تطابق البحث الحالي أو الفلاتر الحالية."
         />
       ) : (
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>العنوان</th>
-                <th>الحالة</th>
-                <th>الظهور</th>
-                <th>التاريخ</th>
-                <th>Edit</th>
-                <th>Delete</th>
-                <th>Open</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedPosts.map((post) => (
-                <tr key={post.id}>
-                  <td>
-                    <div className="admin-table__primary">{post.title}</div>
-                    <div className="admin-table__secondary">{post.slug ?? "-"}</div>
-                  </td>
-                  <td>{post.status}</td>
-                  <td>{post.visibility}</td>
-                  <td>{new Date(post.createdAt).toLocaleString("ar-BH")}</td>
-                  <td>
-                    <Link
-                      href={`/admin/sources/${source.id}/posts/${post.id}/edit`}
-                      className="btn small"
-                    >
-                      Edit Post
-                    </Link>
-                  </td>
-                  <td>
-                    <AdminPostDeleteButton postId={post.id} />
-                  </td>
-                  <td>
-                    <Link href={post.slug ? `/posts/${post.slug}` : "#"} className="btn small">
-                      Open
-                    </Link>
-                  </td>
+        <>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>العنوان</th>
+                  <th>Slug</th>
+                  <th>الحالة</th>
+                  <th>الظهور</th>
+                  <th>التاريخ</th>
+                  <th>Open</th>
+                  <th>Delete</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {paginatedPosts.map((post) => (
+                  <tr key={post.id}>
+                    <td>{post.title}</td>
+                    <td>{post.slug ?? "-"}</td>
+                    <td>{post.status}</td>
+                    <td>{post.visibility}</td>
+                    <td>{formatDateTimeInMakkah(post.createdAt, "ar-BH")}</td>
+                    <td>
+                      <Link href={post.slug ? `/posts/${post.slug}` : "#"} className="btn small">
+                        Open Post
+                      </Link>
+                    </td>
+                    <td>
+                      <AdminPostDeleteButton postId={post.id} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-        <Link
-          href={buildFilterHref(
-            source.id,
-            selectedStatus,
-            selectedVisibility,
-            query,
-            selectedSort,
-            Math.max(1, safePage - 1)
-          )}
-          className={`btn ${safePage === 1 ? "small" : "primary"}`}
-        >
-          Previous
-        </Link>
-        <div className="state-card" style={{ padding: "10px 14px" }}>
-          صفحة {safePage} من {totalPages}
-        </div>
-        <Link
-          href={buildFilterHref(
-            source.id,
-            selectedStatus,
-            selectedVisibility,
-            query,
-            selectedSort,
-            Math.min(totalPages, safePage + 1)
-          )}
-          className={`btn ${safePage === totalPages ? "small" : "primary"}`}
-        >
-          Next
-        </Link>
-      </div>
+          <div
+            style={{
+              marginTop: "18px",
+              display: "flex",
+              gap: "10px",
+              flexWrap: "wrap",
+            }}
+          >
+            <Link
+              href={buildFilterHref(
+                source.id,
+                selectedStatus,
+                selectedVisibility,
+                query,
+                selectedSort,
+                Math.max(1, safePage - 1)
+              )}
+              className="btn small"
+              aria-disabled={safePage <= 1}
+            >
+              Previous
+            </Link>
+
+            <span className="btn small">
+              Page {safePage} / {totalPages}
+            </span>
+
+            <Link
+              href={buildFilterHref(
+                source.id,
+                selectedStatus,
+                selectedVisibility,
+                query,
+                selectedSort,
+                Math.min(totalPages, safePage + 1)
+              )}
+              className="btn small"
+              aria-disabled={safePage >= totalPages}
+            >
+              Next
+            </Link>
+          </div>
+        </>
+      )}
     </section>
   );
 }

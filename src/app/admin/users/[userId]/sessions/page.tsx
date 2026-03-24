@@ -5,6 +5,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminUsersResponse {
   data: {
@@ -48,7 +49,8 @@ async function loadAdminUserSessionsPageData(
 ): Promise<AdminUserSessionsPageResult> {
   try {
     const response = await dashboardApiGet<AdminUsersResponse>("/api/admin/users");
-    const user = response.data.users.find((item) => item.id === userId) ?? null;
+    const users = Array.isArray(response.data.users) ? response.data.users : [];
+    const user = users.find((item) => item.id === userId) ?? null;
 
     return {
       user,
@@ -142,7 +144,11 @@ export default async function AdminUserSessionsPage({
   const currentSearchParams = await searchParams;
 
   const query = currentSearchParams.q?.trim() ?? "";
-  const selectedSort = (currentSearchParams.sort?.trim() as SortKey) ?? "newest";
+  const selectedSort =
+    currentSearchParams.sort?.trim() === "oldest" ||
+    currentSearchParams.sort?.trim() === "last-used"
+      ? (currentSearchParams.sort.trim() as SortKey)
+      : "newest";
   const currentPage = Math.max(1, Number(currentSearchParams.page ?? "1") || 1);
   const normalizedQuery = query.toLowerCase();
 
@@ -154,7 +160,8 @@ export default async function AdminUserSessionsPage({
     notFound();
   }
 
-  const filteredSessions = user.sessions.filter((session) =>
+  const sessions = Array.isArray(user.sessions) ? user.sessions : [];
+  const filteredSessions = sessions.filter((session) =>
     session.id.toLowerCase().includes(normalizedQuery)
   );
 
@@ -185,7 +192,7 @@ export default async function AdminUserSessionsPage({
       >
         <div className="state-card">
           <strong>إجمالي الجلسات</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{user.sessions.length}</p>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{sessions.length}</p>
         </div>
         <div className="state-card">
           <strong>الجلسات الظاهرة</strong>
@@ -262,7 +269,7 @@ export default async function AdminUserSessionsPage({
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> search={query || "none"}, sort={getSortLabel(selectedSort)}
+          <strong>Current view:</strong> search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
         </p>
       </div>
 
@@ -294,9 +301,9 @@ export default async function AdminUserSessionsPage({
                 {paginatedSessions.map((session) => (
                   <tr key={session.id}>
                     <td>{session.id}</td>
-                    <td>{new Date(session.createdAt).toLocaleString("ar-BH")}</td>
-                    <td>{new Date(session.lastUsedAt).toLocaleString("ar-BH")}</td>
-                    <td>{new Date(session.expiresAt).toLocaleString("ar-BH")}</td>
+                    <td>{formatDateTimeInMakkah(session.createdAt, "ar-BH")}</td>
+                    <td>{formatDateTimeInMakkah(session.lastUsedAt, "ar-BH")}</td>
+                    <td>{formatDateTimeInMakkah(session.expiresAt, "ar-BH")}</td>
                     <td>
                       <AdminUserSessionRevokeButton
                         userId={user.id}

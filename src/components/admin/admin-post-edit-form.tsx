@@ -16,7 +16,17 @@ interface AdminPostEditFormProps {
   };
 }
 
-function getValidationMessage(payload: any) {
+interface ValidationErrorPayload {
+  success?: boolean;
+  error?: {
+    message?: string;
+    details?: {
+      fieldErrors?: Record<string, string[] | undefined>;
+    };
+  };
+}
+
+function getValidationMessage(payload: ValidationErrorPayload | null) {
   const fieldErrors = payload?.error?.details?.fieldErrors;
 
   if (!fieldErrors || typeof fieldErrors !== "object") {
@@ -84,7 +94,7 @@ export function AdminPostEditForm({ post }: AdminPostEditFormProps) {
       body: JSON.stringify(body),
     });
 
-    const payload = await response.json().catch(() => null);
+    const payload = (await response.json().catch(() => null)) as ValidationErrorPayload | null;
 
     if (!response.ok || !payload?.success) {
       setError(getValidationMessage(payload));
