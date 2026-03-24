@@ -21,6 +21,12 @@
 - `./status`
 - `./env`
 - `./artifacts`
+- `./dbs`
+- `./dbt`
+- `./dbbackup`
+- `./dbrestore backups/<file>.sql`
+- `./report-now`
+- `./doctor-full`
 
 ## Main entry
 - `./ops help`
