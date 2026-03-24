@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminCategoryRecord {
   id: string;
@@ -30,6 +31,8 @@ interface AdminPostRecord {
   id: string;
   title: string;
   slug: string | null;
+  status: string;
+  visibility: string;
   category: {
     id: string;
     name: string;
@@ -41,6 +44,9 @@ interface AdminCategoryDetailsPageResult {
   category: AdminCategoryRecord | null;
   sourcesCount: number;
   postsCount: number;
+  publishedPostsCount: number;
+  draftPostsCount: number;
+  archivedPostsCount: number;
   error: string | null;
 }
 
@@ -62,22 +68,28 @@ async function loadAdminCategoryDetailsPageData(
         category: null,
         sourcesCount: 0,
         postsCount: 0,
+        publishedPostsCount: 0,
+        draftPostsCount: 0,
+        archivedPostsCount: 0,
         error: null,
       };
     }
 
-    const sourcesCount = sourcesData.sources.filter(
+    const categorySources = sourcesData.sources.filter(
       (source) => source.category.id === category.id
-    ).length;
+    );
 
-    const postsCount = postsData.posts.filter(
+    const categoryPosts = postsData.posts.filter(
       (post) => post.category?.id === category.id
-    ).length;
+    );
 
     return {
       category,
-      sourcesCount,
-      postsCount,
+      sourcesCount: categorySources.length,
+      postsCount: categoryPosts.length,
+      publishedPostsCount: categoryPosts.filter((post) => post.status === "PUBLISHED").length,
+      draftPostsCount: categoryPosts.filter((post) => post.status === "DRAFT").length,
+      archivedPostsCount: categoryPosts.filter((post) => post.status === "ARCHIVED").length,
       error: null,
     };
   } catch (error) {
@@ -85,6 +97,9 @@ async function loadAdminCategoryDetailsPageData(
       category: null,
       sourcesCount: 0,
       postsCount: 0,
+      publishedPostsCount: 0,
+      draftPostsCount: 0,
+      archivedPostsCount: 0,
       error:
         error instanceof Error ? error.message : "تعذر تحميل بيانات التصنيف.",
     };
@@ -97,8 +112,15 @@ export default async function AdminCategoryDetailsPage({
   params: Promise<{ categoryId: string }>;
 }) {
   const { categoryId } = await params;
-  const { category, sourcesCount, postsCount, error } =
-    await loadAdminCategoryDetailsPageData(categoryId);
+  const {
+    category,
+    sourcesCount,
+    postsCount,
+    publishedPostsCount,
+    draftPostsCount,
+    archivedPostsCount,
+    error,
+  } = await loadAdminCategoryDetailsPageData(categoryId);
 
   if (error) {
     return <ErrorState title="تعذر تحميل التصنيف" description={error} />;
@@ -131,6 +153,56 @@ export default async function AdminCategoryDetailsPage({
         </Link>
       </div>
 
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginBottom: "18px",
+        }}
+      >
+        <div className="state-card">
+          <strong>عدد المصادر</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{sourcesCount}</p>
+        </div>
+        <div className="state-card">
+          <strong>إجمالي المنشورات</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{postsCount}</p>
+        </div>
+        <div className="state-card">
+          <strong>Published</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{publishedPostsCount}</p>
+        </div>
+        <div className="state-card">
+          <strong>Draft</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{draftPostsCount}</p>
+        </div>
+      </div>
+
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> category={category.name}, status={category.status}, sources={sourcesCount}, posts={postsCount}, published={publishedPostsCount}, draft={draftPostsCount}, archived={archivedPostsCount}
+        </p>
+      </div>
+
+      <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <Link href={`/admin/categories/${category.id}/sources`} className="btn small">
+          All Sources
+        </Link>
+        <Link href={`/admin/categories/${category.id}/posts`} className="btn small">
+          All Posts
+        </Link>
+        <Link href={`/admin/categories/${category.id}/posts?status=PUBLISHED`} className="btn small">
+          Published Only
+        </Link>
+        <Link href={`/admin/categories/${category.id}/posts?status=DRAFT`} className="btn small">
+          Draft Only
+        </Link>
+        <Link href={`/admin/categories/${category.id}/posts?status=ARCHIVED`} className="btn small">
+          Archived Only
+        </Link>
+      </div>
+
       <div className="state-card">
         <div style={{ display: "grid", gap: "12px" }}>
           <p><strong>الاسم:</strong> {category.name}</p>
@@ -140,8 +212,8 @@ export default async function AdminCategoryDetailsPage({
           <p><strong>الوصف:</strong> {category.description ?? "-"}</p>
           <p><strong>عدد المصادر:</strong> {sourcesCount}</p>
           <p><strong>عدد المنشورات:</strong> {postsCount}</p>
-          <p><strong>تاريخ الإنشاء:</strong> {new Date(category.createdAt).toLocaleString("ar-BH")}</p>
-          <p><strong>آخر تحديث:</strong> {new Date(category.updatedAt).toLocaleString("ar-BH")}</p>
+          <p><strong>تاريخ الإنشاء:</strong> {formatDateTimeInMakkah(category.createdAt, "ar-BH")}</p>
+          <p><strong>آخر تحديث:</strong> {formatDateTimeInMakkah(category.updatedAt, "ar-BH")}</p>
         </div>
       </div>
     </section>
