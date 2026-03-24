@@ -4,6 +4,10 @@
 - `./scripts/ops.sh help`
 - `./scripts/ops.sh status`
 - `./scripts/ops.sh st`
+- `./scripts/ops.sh quick`
+- `./scripts/ops.sh q`
+- `./scripts/ops.sh latest`
+- `./scripts/ops.sh la`
 - `./scripts/ops.sh verify`
 - `./scripts/ops.sh v`
 - `./scripts/ops.sh build`
@@ -67,6 +71,10 @@
 ## Preview
 - `./scripts/api-preview.sh`
 - `./scripts/public-preview.sh`
+
+## Quick ops
+- `./scripts/quick-status.sh`
+- `./scripts/latest-artifacts.sh`
 
 ## Daily checks
 - `./scripts/status-check.sh`

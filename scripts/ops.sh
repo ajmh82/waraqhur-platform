@@ -9,6 +9,12 @@ case "$command_name" in
   status|st)
     ./scripts/status-check.sh
     ;;
+  quick|q)
+    ./scripts/quick-status.sh
+    ;;
+  latest|la)
+    ./scripts/latest-artifacts.sh
+    ;;
   lint)
     ./scripts/lint-check.sh
     ;;
@@ -129,6 +135,8 @@ case "$command_name" in
   help|*)
     echo "Available commands:"
     echo "  status | st"
+    echo "  quick | q"
+    echo "  latest | la"
     echo "  lint"
     echo "  build"
     echo "  verify | v"
