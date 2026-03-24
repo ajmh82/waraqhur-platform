@@ -9,6 +9,7 @@ services:
     env_file:
       - .env.production
     environment:
+      NODE_ENV: "development"
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     command: >
