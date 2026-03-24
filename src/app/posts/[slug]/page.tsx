@@ -8,6 +8,7 @@ import { LikePostButton } from "@/components/social/like-post-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiGet } from "@/lib/web-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface PostRecord {
   id: string;
@@ -155,7 +156,7 @@ function CommentThread({
         >
           <div className="comment-card__head">
             <strong>{comment.author?.username ?? "مستخدم غير معروف"}</strong>
-            <span>{new Date(comment.createdAt).toLocaleString("ar-BH")}</span>
+            <span>{formatDateTimeInMakkah(comment.createdAt, "ar-BH")}</span>
           </div>
           <p>{comment.content}</p>
 
@@ -194,6 +195,8 @@ export default async function PostPage({
   }
 
   const originalUrl = post.metadata?.ingestion?.originalUrl ?? null;
+  const fetchedAt = post.metadata?.ingestion?.fetchedAt ?? null;
+  const provider = post.metadata?.ingestion?.provider ?? null;
 
   return (
     <main className="page-stack">
@@ -216,11 +219,52 @@ export default async function PostPage({
             {post.excerpt ?? "لا يوجد ملخص لهذا المنشور."}
           </p>
 
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+              gap: "12px",
+              marginTop: "18px",
+              marginBottom: "18px",
+            }}
+          >
+            <div className="state-card">
+              <strong>التاريخ</strong>
+              <p style={{ margin: "10px 0 0" }}>
+                {formatDateTimeInMakkah(post.createdAt, "ar-BH")}
+              </p>
+            </div>
+            <div className="state-card">
+              <strong>الكاتب</strong>
+              <p style={{ margin: "10px 0 0" }}>
+                {post.author?.username ?? "كاتب غير معروف"}
+              </p>
+            </div>
+            <div className="state-card">
+              <strong>التعليقات</strong>
+              <p style={{ margin: "10px 0 0" }}>{comments.length}</p>
+            </div>
+            <div className="state-card">
+              <strong>الإعجابات</strong>
+              <p style={{ margin: "10px 0 0" }}>{post.likesCount ?? 0}</p>
+            </div>
+          </div>
+
+          <div className="state-card" style={{ marginBottom: "18px" }}>
+            <p style={{ margin: 0 }}>
+              <strong>Current view:</strong> slug={post.slug ?? "none"}, source={post.source?.name ?? "none"}, category={post.category?.name ?? "none"}, provider={provider ?? "none"}
+            </p>
+          </div>
+
           <div className="post-detail__info">
-            <span>{new Date(post.createdAt).toLocaleString("ar-BH")}</span>
+            <span>{formatDateTimeInMakkah(post.createdAt, "ar-BH")}</span>
             <span>{post.author?.username ?? "كاتب غير معروف"}</span>
             <span>{comments.length} تعليق رئيسي</span>
             <span>{post.likesCount ?? 0} إعجاب</span>
+            {provider ? <span>{provider}</span> : null}
+            {fetchedAt ? (
+              <span>{formatDateTimeInMakkah(fetchedAt, "ar-BH")}</span>
+            ) : null}
           </div>
 
           <div
@@ -241,6 +285,9 @@ export default async function PostPage({
                 Open Original
               </a>
             ) : null}
+            <Link href="/timeline" className="btn small">
+              العودة إلى الموجز
+            </Link>
           </div>
 
           <div className="post-detail__content">
@@ -265,12 +312,6 @@ export default async function PostPage({
           ) : (
             <CommentThread comments={comments} />
           )}
-        </section>
-
-        <section className="page-section">
-          <Link href="/timeline" className="back-link">
-            العودة إلى الموجز
-          </Link>
         </section>
       </div>
     </main>

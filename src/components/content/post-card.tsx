@@ -4,6 +4,7 @@ import { SourceBadge } from "@/components/content/source-badge";
 import { BookmarkPostButton } from "@/components/social/bookmark-post-button";
 import { LikePostButton } from "@/components/social/like-post-button";
 import { RepostPostButton } from "@/components/social/repost-post-button";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface PostCardProps {
   post: {
@@ -60,6 +61,7 @@ interface PostCardProps {
 export function PostCard({ post }: PostCardProps) {
   const href = post.slug ? `/posts/${post.slug}` : "/timeline";
   const originalUrl = post.metadata?.ingestion?.originalUrl ?? null;
+  const provider = post.metadata?.ingestion?.provider ?? null;
 
   return (
     <article className="post-card">
@@ -98,8 +100,9 @@ export function PostCard({ post }: PostCardProps) {
       ) : null}
 
       <div className="post-card__footer">
-        <span>{new Date(post.createdAt).toLocaleString("ar-BH")}</span>
+        <span>{formatDateTimeInMakkah(post.createdAt, "ar-BH")}</span>
         <span>{post.commentsCount} تعليق</span>
+        {provider ? <span>{provider}</span> : null}
         {post.source ? (
           <Link href={`/sources/${post.source.slug}`}>{post.source.name}</Link>
         ) : null}

@@ -66,6 +66,8 @@ export default async function TimelinePage() {
     );
   }
 
+  const posts = Array.isArray(data.posts) ? data.posts : [];
+
   return (
     <main className="page-stack">
       <div className="page-container">
@@ -78,13 +80,19 @@ export default async function TimelinePage() {
             description="هذه الصفحة تعرض الآن التايم لاين المبني على المتابعة: منشوراتك ومنشورات الحسابات التي تتابعها، مع بقاء هوية ورق حر كموجز عربي منظم للمحتوى والمصادر والتصنيفات."
           />
 
-          {data.posts.length === 0 ? (
+          <div className="state-card" style={{ marginBottom: "18px" }}>
+            <p style={{ margin: 0 }}>
+              <strong>Current view:</strong> totalPosts={posts.length}
+            </p>
+          </div>
+
+          {posts.length === 0 ? (
             <EmptyState
               title="الموجز فارغ حاليًا"
               description="لا توجد منشورات كافية بعد. تابع مستخدمين أكثر أو أضف محتوى جديدًا ليظهر التدفق الكامل."
             />
           ) : (
-            <TimelineList posts={data.posts} />
+            <TimelineList posts={posts} />
           )}
         </section>
       </div>
