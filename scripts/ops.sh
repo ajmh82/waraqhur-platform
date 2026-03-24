@@ -27,6 +27,15 @@ case "$command_name" in
   smoke|sm)
     ./scripts/smoke-public.sh
     ;;
+  smoke-admin|sma)
+    ./scripts/smoke-admin-guest.sh
+    ;;
+  pre-deploy|pd)
+    ./scripts/pre-deploy-check.sh
+    ;;
+  bootstrap|boot)
+    ./scripts/bootstrap-dev.sh
+    ;;
   logs|log)
     ./scripts/logs-app.sh
     ;;
@@ -69,6 +78,9 @@ case "$command_name" in
     echo "  full-check | fc"
     echo "  health | h"
     echo "  smoke | sm"
+    echo "  smoke-admin | sma"
+    echo "  pre-deploy | pd"
+    echo "  bootstrap | boot"
     echo "  logs | log"
     echo "  restart | rs"
     echo "  up"

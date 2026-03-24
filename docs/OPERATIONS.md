@@ -11,6 +11,12 @@
 - `./scripts/ops.sh h`
 - `./scripts/ops.sh smoke`
 - `./scripts/ops.sh sm`
+- `./scripts/ops.sh smoke-admin`
+- `./scripts/ops.sh sma`
+- `./scripts/ops.sh pre-deploy`
+- `./scripts/ops.sh pd`
+- `./scripts/ops.sh bootstrap`
+- `./scripts/ops.sh boot`
 - `./scripts/ops.sh logs`
 - `./scripts/ops.sh restart`
 - `./scripts/ops.sh recreate`
@@ -23,6 +29,9 @@
 - `./scripts/full-check.sh`
 - `./scripts/health-check.sh`
 - `./scripts/smoke-public.sh`
+- `./scripts/smoke-admin-guest.sh`
+- `./scripts/pre-deploy-check.sh`
+- `./scripts/bootstrap-dev.sh`
 
 ## Logs and shell
 - `./scripts/logs-app.sh`
