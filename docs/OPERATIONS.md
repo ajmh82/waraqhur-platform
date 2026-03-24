@@ -1,67 +1,69 @@
 # Operations
 
 ## Main entry
-- `./scripts/ops.sh help`
-- `./scripts/ops.sh status`
-- `./scripts/ops.sh st`
-- `./scripts/ops.sh quick`
-- `./scripts/ops.sh q`
-- `./scripts/ops.sh latest`
-- `./scripts/ops.sh la`
-- `./scripts/ops.sh verify`
-- `./scripts/ops.sh v`
-- `./scripts/ops.sh build`
-- `./scripts/ops.sh maintenance`
-- `./scripts/ops.sh mt`
-- `./scripts/ops.sh env`
-- `./scripts/ops.sh env-check`
-- `./scripts/ops.sh ec`
-- `./scripts/ops.sh self-test`
-- `./scripts/ops.sh test`
-- `./scripts/ops.sh t`
-- `./scripts/ops.sh report`
-- `./scripts/ops.sh rp`
-- `./scripts/ops.sh write-report`
-- `./scripts/ops.sh wr`
-- `./scripts/ops.sh release-check`
-- `./scripts/ops.sh rel`
-- `./scripts/ops.sh api-preview`
-- `./scripts/ops.sh ap`
-- `./scripts/ops.sh public-preview`
-- `./scripts/ops.sh pp`
-- `./scripts/ops.sh health`
-- `./scripts/ops.sh h`
-- `./scripts/ops.sh smoke`
-- `./scripts/ops.sh sm`
-- `./scripts/ops.sh smoke-admin`
-- `./scripts/ops.sh sma`
-- `./scripts/ops.sh pre-deploy`
-- `./scripts/ops.sh pd`
-- `./scripts/ops.sh bootstrap`
-- `./scripts/ops.sh boot`
-- `./scripts/ops.sh db-backup`
-- `./scripts/ops.sh dbb`
-- `./scripts/ops.sh db-backup-list`
-- `./scripts/ops.sh dbbl`
-- `./scripts/ops.sh db-backup-latest`
-- `./scripts/ops.sh dbbt`
-- `./scripts/ops.sh db-backup-prune 5`
-- `./scripts/ops.sh dbbp 5`
-- `./scripts/ops.sh backup-cycle 5`
-- `./scripts/ops.sh bc 5`
-- `./scripts/ops.sh db-restore backups/<file>.sql`
-- `./scripts/ops.sh dbr backups/<file>.sql`
-- `./scripts/ops.sh db-status`
-- `./scripts/ops.sh dbs`
-- `./scripts/ops.sh db-tables`
-- `./scripts/ops.sh dbt`
-- `./scripts/ops.sh db-tools`
-- `./scripts/ops.sh dbx`
-- `./scripts/ops.sh docker-status`
-- `./scripts/ops.sh dps`
-- `./scripts/ops.sh logs`
-- `./scripts/ops.sh restart`
-- `./scripts/ops.sh recreate`
+- `./ops help`
+- `./ops status`
+- `./ops st`
+- `./ops quick`
+- `./ops q`
+- `./ops latest`
+- `./ops la`
+- `./ops doctor`
+- `./ops dr`
+- `./ops verify`
+- `./ops v`
+- `./ops build`
+- `./ops maintenance`
+- `./ops mt`
+- `./ops env`
+- `./ops env-check`
+- `./ops ec`
+- `./ops self-test`
+- `./ops test`
+- `./ops t`
+- `./ops report`
+- `./ops rp`
+- `./ops write-report`
+- `./ops wr`
+- `./ops release-check`
+- `./ops rel`
+- `./ops api-preview`
+- `./ops ap`
+- `./ops public-preview`
+- `./ops pp`
+- `./ops health`
+- `./ops h`
+- `./ops smoke`
+- `./ops sm`
+- `./ops smoke-admin`
+- `./ops sma`
+- `./ops pre-deploy`
+- `./ops pd`
+- `./ops bootstrap`
+- `./ops boot`
+- `./ops db-backup`
+- `./ops dbb`
+- `./ops db-backup-list`
+- `./ops dbbl`
+- `./ops db-backup-latest`
+- `./ops dbbt`
+- `./ops db-backup-prune 5`
+- `./ops dbbp 5`
+- `./ops backup-cycle 5`
+- `./ops bc 5`
+- `./ops db-restore backups/<file>.sql`
+- `./ops dbr backups/<file>.sql`
+- `./ops db-status`
+- `./ops dbs`
+- `./ops db-tables`
+- `./ops dbt`
+- `./ops db-tools`
+- `./ops dbx`
+- `./ops docker-status`
+- `./ops dps`
+- `./ops logs`
+- `./ops restart`
+- `./ops recreate`
 
 ## Reports
 - `./scripts/system-report.sh`
@@ -75,6 +77,7 @@
 ## Quick ops
 - `./scripts/quick-status.sh`
 - `./scripts/latest-artifacts.sh`
+- `./scripts/doctor.sh`
 
 ## Daily checks
 - `./scripts/status-check.sh`

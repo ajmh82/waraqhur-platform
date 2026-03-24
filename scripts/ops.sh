@@ -15,6 +15,9 @@ case "$command_name" in
   latest|la)
     ./scripts/latest-artifacts.sh
     ;;
+  doctor|dr)
+    ./scripts/doctor.sh
+    ;;
   lint)
     ./scripts/lint-check.sh
     ;;
@@ -137,6 +140,7 @@ case "$command_name" in
     echo "  status | st"
     echo "  quick | q"
     echo "  latest | la"
+    echo "  doctor | dr"
     echo "  lint"
     echo "  build"
     echo "  verify | v"
