@@ -21,6 +21,12 @@ case "$command_name" in
   full-check|fc)
     ./scripts/full-check.sh
     ;;
+  health|h)
+    ./scripts/health-check.sh
+    ;;
+  smoke|sm)
+    ./scripts/smoke-public.sh
+    ;;
   logs|log)
     ./scripts/logs-app.sh
     ;;
@@ -61,6 +67,8 @@ case "$command_name" in
     echo "  build"
     echo "  verify | v"
     echo "  full-check | fc"
+    echo "  health | h"
+    echo "  smoke | sm"
     echo "  logs | log"
     echo "  restart | rs"
     echo "  up"
