@@ -7,6 +7,11 @@
 - `./scripts/ops.sh verify`
 - `./scripts/ops.sh v`
 - `./scripts/ops.sh build`
+- `./scripts/ops.sh maintenance`
+- `./scripts/ops.sh mt`
+- `./scripts/ops.sh env`
+- `./scripts/ops.sh env-check`
+- `./scripts/ops.sh ec`
 - `./scripts/ops.sh health`
 - `./scripts/ops.sh h`
 - `./scripts/ops.sh smoke`
@@ -25,6 +30,8 @@
 - `./scripts/ops.sh dbbt`
 - `./scripts/ops.sh db-backup-prune 5`
 - `./scripts/ops.sh dbbp 5`
+- `./scripts/ops.sh backup-cycle 5`
+- `./scripts/ops.sh bc 5`
 - `./scripts/ops.sh db-restore backups/<file>.sql`
 - `./scripts/ops.sh dbr backups/<file>.sql`
 - `./scripts/ops.sh db-status`
@@ -45,6 +52,8 @@
 - `./scripts/build-prod.sh`
 - `./scripts/verify-prod.sh`
 - `./scripts/full-check.sh`
+- `./scripts/maintenance-check.sh`
+- `./scripts/env-check.sh`
 - `./scripts/health-check.sh`
 - `./scripts/smoke-public.sh`
 - `./scripts/smoke-admin-guest.sh`
@@ -56,6 +65,7 @@
 - `./scripts/db-backup-list.sh`
 - `./scripts/db-backup-latest.sh`
 - `./scripts/db-backup-prune.sh 5`
+- `./scripts/backup-cycle.sh 5`
 - `./scripts/db-restore.sh backups/<file>.sql`
 
 ## Database

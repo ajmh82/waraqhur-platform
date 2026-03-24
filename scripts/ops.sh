@@ -21,6 +21,12 @@ case "$command_name" in
   full-check|fc)
     ./scripts/full-check.sh
     ;;
+  maintenance|mt)
+    ./scripts/maintenance-check.sh
+    ;;
+  env|env-check|ec)
+    ./scripts/env-check.sh
+    ;;
   health|h)
     ./scripts/health-check.sh
     ;;
@@ -48,6 +54,10 @@ case "$command_name" in
   db-backup-prune|dbbp)
     shift
     ./scripts/db-backup-prune.sh "$@"
+    ;;
+  backup-cycle|bc)
+    shift
+    ./scripts/backup-cycle.sh "$@"
     ;;
   db-restore|dbr)
     shift
@@ -105,6 +115,8 @@ case "$command_name" in
     echo "  build"
     echo "  verify | v"
     echo "  full-check | fc"
+    echo "  maintenance | mt"
+    echo "  env | env-check | ec"
     echo "  health | h"
     echo "  smoke | sm"
     echo "  smoke-admin | sma"
@@ -114,6 +126,7 @@ case "$command_name" in
     echo "  db-backup-list | dbbl"
     echo "  db-backup-latest | dbbt"
     echo "  db-backup-prune | dbbp <keep-count>"
+    echo "  backup-cycle | bc <keep-count>"
     echo "  db-restore | dbr <backup-file>"
     echo "  db-status | dbs"
     echo "  db-tables | dbt"
