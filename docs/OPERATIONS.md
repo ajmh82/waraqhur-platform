@@ -1,5 +1,11 @@
 # Operations
 
+## Root shortcuts
+- `./doctor`
+- `./check`
+- `./backup`
+- `./report`
+
 ## Main entry
 - `./ops help`
 - `./ops status`
