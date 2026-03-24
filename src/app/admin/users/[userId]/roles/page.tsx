@@ -5,6 +5,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminUsersResponse {
   data: {
@@ -38,7 +39,8 @@ async function loadAdminUserRolesPageData(
 ): Promise<AdminUserRolesPageResult> {
   try {
     const response = await dashboardApiGet<AdminUsersResponse>("/api/admin/users");
-    const user = response.data.users.find((item) => item.id === userId) ?? null;
+    const users = Array.isArray(response.data.users) ? response.data.users : [];
+    const user = users.find((item) => item.id === userId) ?? null;
 
     return {
       user,
@@ -69,8 +71,9 @@ export default async function AdminUserRolesPage({
     notFound();
   }
 
-  const totalRoles = user.roles.length;
-  const uniqueRoles = new Set(user.roles.map((role) => role.key)).size;
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  const totalRoles = roles.length;
+  const uniqueRoles = new Set(roles.map((role) => role.key)).size;
 
   return (
     <section className="dashboard-panel">
@@ -98,6 +101,12 @@ export default async function AdminUserRolesPage({
         </div>
       </div>
 
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> user={user.profile?.displayName ?? user.username}, totalRoles={totalRoles}, uniqueRoles={uniqueRoles}
+        </p>
+      </div>
+
       <div
         style={{
           marginBottom: "18px",
@@ -114,7 +123,7 @@ export default async function AdminUserRolesPage({
         </Link>
       </div>
 
-      {user.roles.length === 0 ? (
+      {roles.length === 0 ? (
         <EmptyState
           title="لا توجد أدوار"
           description="لا توجد أدوار مرتبطة بهذا المستخدم."
@@ -131,11 +140,11 @@ export default async function AdminUserRolesPage({
               </tr>
             </thead>
             <tbody>
-              {user.roles.map((role) => (
+              {roles.map((role) => (
                 <tr key={`${role.key}-${role.assignedAt}`}>
                   <td>{role.name}</td>
                   <td>{role.key}</td>
-                  <td>{new Date(role.assignedAt).toLocaleString("ar-BH")}</td>
+                  <td>{formatDateTimeInMakkah(role.assignedAt, "ar-BH")}</td>
                   <td>
                     <AdminUserRoleRemoveButton
                       userId={user.id}
