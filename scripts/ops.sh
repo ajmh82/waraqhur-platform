@@ -23,6 +23,10 @@ case "$command_name" in
     ./scripts/clean-reports.sh "${1:-5}"
     ./scripts/clean-backups.sh "${1:-5}"
     ;;
+  archive|ar)
+    ./scripts/archive-reports.sh
+    ./scripts/archive-backups.sh
+    ;;
   lint)
     ./scripts/lint-check.sh
     ;;
@@ -147,6 +151,7 @@ case "$command_name" in
     echo "  latest | la"
     echo "  doctor | dr"
     echo "  clean | cl <keep-count>"
+    echo "  archive | ar"
     echo "  lint"
     echo "  build"
     echo "  verify | v"

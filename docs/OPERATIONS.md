@@ -1,6 +1,7 @@
 # Operations
 
 ## Root shortcuts
+- `./archive-files`
 - `./clean 5`
 - `./helpme`
 - `./shortcuts`
@@ -32,6 +33,7 @@
 - `./doctor-full`
 
 ## Main entry
+- `./ops archive`
 - `./ops clean 5`
 - `./ops help`
 - `./ops status`
