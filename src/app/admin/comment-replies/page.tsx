@@ -4,9 +4,10 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminCommentsData {
-  comments: Array<{
+  comments?: Array<{
     id: string;
     postId: string;
     parentId: string | null;
@@ -20,7 +21,7 @@ interface AdminCommentsData {
       username: string;
     } | null;
     repliesCount: number;
-    replies: Array<{
+    replies?: Array<{
       id: string;
       postId: string;
       parentId: string | null;
@@ -66,9 +67,12 @@ const PAGE_SIZE = 10;
 async function loadAdminCommentRepliesPageData(): Promise<AdminCommentRepliesPageResult> {
   try {
     const data = await dashboardApiGet<AdminCommentsData>("/api/comments");
+    const comments = Array.isArray(data.comments) ? data.comments : [];
 
-    const replies = data.comments.flatMap((comment) =>
-      comment.replies.map((reply) => ({
+    const replies = comments.flatMap((comment) => {
+      const nestedReplies = Array.isArray(comment.replies) ? comment.replies : [];
+
+      return nestedReplies.map((reply) => ({
         id: reply.id,
         postId: reply.postId,
         parentId: comment.id,
@@ -78,8 +82,8 @@ async function loadAdminCommentRepliesPageData(): Promise<AdminCommentRepliesPag
         createdAt: reply.createdAt,
         updatedAt: reply.updatedAt,
         author: reply.author,
-      }))
-    );
+      }));
+    });
 
     return { replies, error: null };
   } catch (error) {
@@ -138,14 +142,20 @@ function getSortLabel(sort: SortKey) {
 export default async function AdminCommentRepliesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; sort?: string; page?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    sort?: string;
+    page?: string;
+  }>;
 }) {
   const { replies, error } = await loadAdminCommentRepliesPageData();
   const currentSearchParams = await searchParams;
 
   const query = currentSearchParams.q?.trim() ?? "";
   const selectedStatus = currentSearchParams.status?.trim() ?? "ALL";
-  const selectedSort = (currentSearchParams.sort?.trim() as SortKey) ?? "newest";
+  const selectedSort =
+    currentSearchParams.sort?.trim() === "oldest" ? "oldest" : "newest";
   const currentPage = Math.max(1, Number(currentSearchParams.page ?? "1") || 1);
   const normalizedQuery = query.toLowerCase();
 
@@ -219,7 +229,12 @@ export default async function AdminCommentRepliesPage({
       <form
         action="/admin/comment-replies"
         method="GET"
-        style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}
+        style={{
+          marginBottom: "18px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
       >
         {selectedStatus !== "ALL" ? (
           <input type="hidden" name="status" value={selectedStatus} />
@@ -250,7 +265,14 @@ export default async function AdminCommentRepliesPage({
         </Link>
       </form>
 
-      <div style={{ marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+      <div
+        style={{
+          marginBottom: "12px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
         <Link
           href={buildFilterHref("ALL", query, selectedSort, 1)}
           className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
@@ -269,7 +291,14 @@ export default async function AdminCommentRepliesPage({
         ))}
       </div>
 
-      <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+      <div
+        style={{
+          marginBottom: "18px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
         <Link
           href={buildFilterHref(selectedStatus, query, "newest", 1)}
           className={`btn ${selectedSort === "newest" ? "primary" : "small"}`}
@@ -324,7 +353,7 @@ export default async function AdminCommentRepliesPage({
                     <td>{reply.author?.username ?? "-"}</td>
                     <td>{reply.postId}</td>
                     <td>{reply.status}</td>
-                    <td>{new Date(reply.createdAt).toLocaleString("ar-BH")}</td>
+                    <td>{formatDateTimeInMakkah(reply.createdAt, "ar-BH")}</td>
                     <td>
                       <AdminCommentActions
                         comment={{

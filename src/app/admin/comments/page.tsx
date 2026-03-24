@@ -4,6 +4,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminCommentsData {
   comments: Array<{
@@ -110,14 +111,20 @@ function getSortLabel(sort: SortKey) {
 export default async function AdminCommentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; sort?: string; page?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    sort?: string;
+    page?: string;
+  }>;
 }) {
   const { data, error } = await loadAdminCommentsPageData();
   const currentSearchParams = await searchParams;
 
   const query = currentSearchParams.q?.trim() ?? "";
   const selectedStatus = currentSearchParams.status?.trim() ?? "ALL";
-  const selectedSort = (currentSearchParams.sort?.trim() as SortKey) ?? "newest";
+  const selectedSort =
+    currentSearchParams.sort?.trim() === "oldest" ? "oldest" : "newest";
   const currentPage = Math.max(1, Number(currentSearchParams.page ?? "1") || 1);
   const normalizedQuery = query.toLowerCase();
 
@@ -196,7 +203,12 @@ export default async function AdminCommentsPage({
       <form
         action="/admin/comments"
         method="GET"
-        style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}
+        style={{
+          marginBottom: "18px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
       >
         {selectedStatus !== "ALL" ? (
           <input type="hidden" name="status" value={selectedStatus} />
@@ -227,7 +239,14 @@ export default async function AdminCommentsPage({
         </Link>
       </form>
 
-      <div style={{ marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+      <div
+        style={{
+          marginBottom: "12px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
         <Link
           href={buildFilterHref("ALL", query, selectedSort, 1)}
           className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
@@ -246,7 +265,14 @@ export default async function AdminCommentsPage({
         ))}
       </div>
 
-      <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+      <div
+        style={{
+          marginBottom: "18px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
         <Link
           href={buildFilterHref(selectedStatus, query, "newest", 1)}
           className={`btn ${selectedSort === "newest" ? "primary" : "small"}`}
@@ -263,7 +289,7 @@ export default async function AdminCommentsPage({
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> status={selectedStatus}, search={query || "none"}, sort={getSortLabel(selectedSort)}
+          <strong>Current view:</strong> status={selectedStatus}, search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
         </p>
       </div>
 
@@ -302,7 +328,7 @@ export default async function AdminCommentsPage({
                     <td>{comment.postId}</td>
                     <td>{comment.repliesCount}</td>
                     <td>{comment.status}</td>
-                    <td>{new Date(comment.createdAt).toLocaleString("ar-BH")}</td>
+                    <td>{formatDateTimeInMakkah(comment.createdAt, "ar-BH")}</td>
                     <td>
                       <Link href={`/admin/comments/${comment.id}`} className="btn small">
                         Comment Details
