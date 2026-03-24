@@ -3,6 +3,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminAuditLogsResponse {
   data: {
@@ -111,7 +112,8 @@ export default async function AdminAuditLogsPage({
   const query = currentSearchParams.q?.trim() ?? "";
   const selectedActorType = currentSearchParams.actorType?.trim() ?? "ALL";
   const selectedTargetType = currentSearchParams.targetType?.trim() ?? "ALL";
-  const selectedSort = (currentSearchParams.sort?.trim() as SortKey) ?? "newest";
+  const selectedSort =
+    currentSearchParams.sort?.trim() === "oldest" ? "oldest" : "newest";
   const currentPage = Math.max(1, Number(currentSearchParams.page ?? "1") || 1);
   const normalizedQuery = query.toLowerCase();
 
@@ -124,15 +126,16 @@ export default async function AdminAuditLogsPage({
     );
   }
 
-  const totalLogs = data.auditLogs.length;
-  const userActorLogs = data.auditLogs.filter((log) => log.actorType === "USER").length;
-  const postTargetLogs = data.auditLogs.filter((log) => log.targetType === "POST").length;
-  const commentTargetLogs = data.auditLogs.filter((log) => log.targetType === "COMMENT").length;
+  const auditLogs = Array.isArray(data.auditLogs) ? data.auditLogs : [];
+  const totalLogs = auditLogs.length;
+  const userActorLogs = auditLogs.filter((log) => log.actorType === "USER").length;
+  const postTargetLogs = auditLogs.filter((log) => log.targetType === "POST").length;
+  const commentTargetLogs = auditLogs.filter((log) => log.targetType === "COMMENT").length;
 
-  const actorTypes = Array.from(new Set(data.auditLogs.map((log) => log.actorType))).sort();
-  const targetTypes = Array.from(new Set(data.auditLogs.map((log) => log.targetType))).sort();
+  const actorTypes = Array.from(new Set(auditLogs.map((log) => log.actorType))).sort();
+  const targetTypes = Array.from(new Set(auditLogs.map((log) => log.targetType))).sort();
 
-  const filteredAuditLogs = data.auditLogs.filter((log) => {
+  const filteredAuditLogs = auditLogs.filter((log) => {
     const actorTypeMatches =
       selectedActorType === "ALL" || log.actorType === selectedActorType;
 
@@ -321,7 +324,7 @@ export default async function AdminAuditLogsPage({
                     <td>{log.actorUserId ?? "-"}</td>
                     <td>{log.targetType}</td>
                     <td>{log.targetId ?? "-"}</td>
-                    <td>{new Date(log.createdAt).toLocaleString("ar-BH")}</td>
+                    <td>{formatDateTimeInMakkah(log.createdAt, "ar-BH")}</td>
                   </tr>
                 ))}
               </tbody>
