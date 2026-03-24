@@ -1,6 +1,7 @@
 # Operations
 
 ## Root shortcuts
+- `./snapshot`
 - `./menu`
 - `./update`
 - `./nightly`
@@ -108,6 +109,7 @@
 - `./ops recreate`
 
 ## Reports
+- `./scripts/snapshot-run.sh`
 - `./scripts/system-report.sh`
 - `./scripts/write-report.sh`
 - `./scripts/release-check.sh`
