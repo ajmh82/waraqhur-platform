@@ -4,6 +4,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah, formatDateInMakkah } from "@/lib/date-time";
 
 interface AdminUsersResponse {
   data: {
@@ -143,7 +144,11 @@ export default async function AdminUsersPage({
   const query = currentSearchParams.q?.trim() ?? "";
   const selectedStatus = currentSearchParams.status?.trim() ?? "ALL";
   const selectedRole = currentSearchParams.role?.trim() ?? "ALL";
-  const selectedSort = (currentSearchParams.sort?.trim() as SortKey) ?? "newest";
+  const selectedSort =
+    currentSearchParams.sort?.trim() === "oldest" ||
+    currentSearchParams.sort?.trim() === "last-activity"
+      ? (currentSearchParams.sort.trim() as SortKey)
+      : "newest";
   const currentPage = Math.max(1, Number(currentSearchParams.page ?? "1") || 1);
   const normalizedQuery = query.toLowerCase();
 
@@ -159,7 +164,7 @@ export default async function AdminUsersPage({
   const totalUsers = data.users.length;
   const activeUsers = data.users.filter((user) => user.status === "ACTIVE").length;
   const suspendedUsers = data.users.filter((user) => user.status === "SUSPENDED").length;
-  const statuses = Array.from(new Set(data.users.map((user) => user.status)));
+  const statuses = Array.from(new Set(data.users.map((user) => user.status))).sort();
   const roleKeys = Array.from(
     new Set(data.users.flatMap((user) => user.roles.map((role) => role.key)))
   ).sort();
@@ -325,8 +330,7 @@ export default async function AdminUsersPage({
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> status={selectedStatus}, role={selectedRole},
-          search={query || "none"}, sort={getSortLabel(selectedSort)}
+          <strong>Current view:</strong> status={selectedStatus}, role={selectedRole}, search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
         </p>
       </div>
 
@@ -370,10 +374,10 @@ export default async function AdminUsersPage({
                     <td>{user.email}</td>
                     <td>{user.roles[0]?.name ?? "No role"}</td>
                     <td>{user.status}</td>
-                    <td>{new Date(user.createdAt).toLocaleDateString("en-GB")}</td>
+                    <td>{formatDateInMakkah(user.createdAt, "en-GB")}</td>
                     <td>
                       {user.lastActivityAt
-                        ? new Date(user.lastActivityAt).toLocaleString("en-GB")
+                        ? formatDateTimeInMakkah(user.lastActivityAt, "en-GB")
                         : "No activity"}
                     </td>
                     <td>
@@ -412,7 +416,7 @@ export default async function AdminUsersPage({
                 selectedSort,
                 Math.max(1, safePage - 1)
               )}
-              className={`btn ${safePage > 1 ? "small" : "small"}`}
+              className="btn small"
               aria-disabled={safePage <= 1}
             >
               Previous
@@ -430,7 +434,7 @@ export default async function AdminUsersPage({
                 selectedSort,
                 Math.min(totalPages, safePage + 1)
               )}
-              className={`btn ${safePage < totalPages ? "small" : "small"}`}
+              className="btn small"
               aria-disabled={safePage >= totalPages}
             >
               Next
