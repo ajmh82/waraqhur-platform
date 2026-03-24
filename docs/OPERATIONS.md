@@ -19,6 +19,10 @@
 - `./scripts/ops.sh boot`
 - `./scripts/ops.sh db-backup`
 - `./scripts/ops.sh dbb`
+- `./scripts/ops.sh db-backup-list`
+- `./scripts/ops.sh dbbl`
+- `./scripts/ops.sh db-backup-latest`
+- `./scripts/ops.sh dbbt`
 - `./scripts/ops.sh db-restore backups/<file>.sql`
 - `./scripts/ops.sh dbr backups/<file>.sql`
 - `./scripts/ops.sh logs`
@@ -39,6 +43,8 @@
 
 ## Backups
 - `./scripts/db-backup.sh`
+- `./scripts/db-backup-list.sh`
+- `./scripts/db-backup-latest.sh`
 - `./scripts/db-restore.sh backups/<file>.sql`
 
 ## Logs and shell

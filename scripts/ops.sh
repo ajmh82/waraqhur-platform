@@ -39,6 +39,12 @@ case "$command_name" in
   db-backup|dbb)
     ./scripts/db-backup.sh
     ;;
+  db-backup-list|dbbl)
+    ./scripts/db-backup-list.sh
+    ;;
+  db-backup-latest|dbbt)
+    ./scripts/db-backup-latest.sh
+    ;;
   db-restore|dbr)
     shift
     ./scripts/db-restore.sh "$@"
@@ -89,6 +95,8 @@ case "$command_name" in
     echo "  pre-deploy | pd"
     echo "  bootstrap | boot"
     echo "  db-backup | dbb"
+    echo "  db-backup-list | dbbl"
+    echo "  db-backup-latest | dbbt"
     echo "  db-restore | dbr <backup-file>"
     echo "  logs | log"
     echo "  restart | rs"
