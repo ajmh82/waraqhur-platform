@@ -2,6 +2,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface CurrentUserResponse {
   user: {
@@ -89,11 +90,18 @@ export default async function DashboardActivityPage() {
     );
   }
 
-  const unreadNotifications = notificationsData.notifications.filter(
+  const notifications = Array.isArray(notificationsData.notifications)
+    ? notificationsData.notifications
+    : [];
+  const invitations = Array.isArray(invitationsData.invitations)
+    ? invitationsData.invitations
+    : [];
+
+  const unreadNotifications = notifications.filter(
     (notification) => !notification.readAt
   ).length;
 
-  const acceptedInvitations = invitationsData.invitations.filter(
+  const acceptedInvitations = invitations.filter(
     (invitation) => invitation.acceptedAt
   ).length;
 
@@ -104,6 +112,27 @@ export default async function DashboardActivityPage() {
         title="Activity overview"
         description="A compact summary of recent account activity, session state, invitations, and notifications in a layout suitable for both mobile web and future app screens."
       />
+
+      <div className="dashboard-grid" style={{ marginBottom: "18px" }}>
+        <article className="dashboard-card">
+          <h3>Unread notifications</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{unreadNotifications}</p>
+        </article>
+        <article className="dashboard-card">
+          <h3>Accepted invitations</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{acceptedInvitations}</p>
+        </article>
+        <article className="dashboard-card">
+          <h3>Session status</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{currentUser.user.status}</p>
+        </article>
+      </div>
+
+      <article className="dashboard-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> user={currentUser.user.username}, notifications={notifications.length}, unread={unreadNotifications}, invitations={invitations.length}
+        </p>
+      </article>
 
       <div className="dashboard-grid">
         <article className="dashboard-card">
@@ -117,14 +146,14 @@ export default async function DashboardActivityPage() {
               <dt>Last used</dt>
               <dd>
                 {currentUser.session.lastUsedAt
-                  ? new Date(currentUser.session.lastUsedAt).toLocaleString("en-GB")
+                  ? formatDateTimeInMakkah(currentUser.session.lastUsedAt, "en-GB")
                   : "Not available"}
               </dd>
             </div>
             <div>
               <dt>Expires at</dt>
               <dd>
-                {new Date(currentUser.session.expiresAt).toLocaleString("en-GB")}
+                {formatDateTimeInMakkah(currentUser.session.expiresAt, "en-GB")}
               </dd>
             </div>
           </dl>
@@ -132,7 +161,7 @@ export default async function DashboardActivityPage() {
 
         <article className="dashboard-card">
           <h3>Notification activity</h3>
-          {notificationsData.notifications.length === 0 ? (
+          {notifications.length === 0 ? (
             <EmptyState
               title="No notifications"
               description="No notification activity is available yet."
@@ -141,7 +170,7 @@ export default async function DashboardActivityPage() {
             <dl className="dashboard-detail-list">
               <div>
                 <dt>Total notifications</dt>
-                <dd>{notificationsData.notifications.length}</dd>
+                <dd>{notifications.length}</dd>
               </div>
               <div>
                 <dt>Unread notifications</dt>
@@ -149,11 +178,7 @@ export default async function DashboardActivityPage() {
               </div>
               <div>
                 <dt>Latest notification</dt>
-                <dd>
-                  {new Date(
-                    notificationsData.notifications[0].createdAt
-                  ).toLocaleString("en-GB")}
-                </dd>
+                <dd>{formatDateTimeInMakkah(notifications[0].createdAt, "en-GB")}</dd>
               </div>
             </dl>
           )}
@@ -161,7 +186,7 @@ export default async function DashboardActivityPage() {
 
         <article className="dashboard-card">
           <h3>Invitation activity</h3>
-          {invitationsData.invitations.length === 0 ? (
+          {invitations.length === 0 ? (
             <EmptyState
               title="No invitations"
               description="No invitation activity is available yet."
@@ -170,7 +195,7 @@ export default async function DashboardActivityPage() {
             <dl className="dashboard-detail-list">
               <div>
                 <dt>Total invitations</dt>
-                <dd>{invitationsData.invitations.length}</dd>
+                <dd>{invitations.length}</dd>
               </div>
               <div>
                 <dt>Accepted invitations</dt>
@@ -178,11 +203,7 @@ export default async function DashboardActivityPage() {
               </div>
               <div>
                 <dt>Latest invitation</dt>
-                <dd>
-                  {new Date(
-                    invitationsData.invitations[0].createdAt
-                  ).toLocaleString("en-GB")}
-                </dd>
+                <dd>{formatDateTimeInMakkah(invitations[0].createdAt, "en-GB")}</dd>
               </div>
             </dl>
           )}

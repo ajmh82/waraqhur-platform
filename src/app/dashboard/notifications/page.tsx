@@ -2,6 +2,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface NotificationsResponse {
   notifications: Array<{
@@ -56,6 +57,10 @@ export default async function DashboardNotificationsPage() {
     );
   }
 
+  const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+  const unreadNotifications = notifications.filter((notification) => !notification.readAt).length;
+  const readNotifications = notifications.filter((notification) => notification.readAt).length;
+
   return (
     <section className="dashboard-panel">
       <SectionHeading
@@ -64,14 +69,35 @@ export default async function DashboardNotificationsPage() {
         description="A consolidated timeline of in-app notification events prepared for both web and future app notification screens."
       />
 
-      {data.notifications.length === 0 ? (
+      <div className="dashboard-grid" style={{ marginBottom: "18px" }}>
+        <article className="dashboard-card">
+          <h3>Total notifications</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{notifications.length}</p>
+        </article>
+        <article className="dashboard-card">
+          <h3>Unread</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{unreadNotifications}</p>
+        </article>
+        <article className="dashboard-card">
+          <h3>Read</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{readNotifications}</p>
+        </article>
+      </div>
+
+      <article className="dashboard-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> notifications={notifications.length}, unread={unreadNotifications}, read={readNotifications}
+        </p>
+      </article>
+
+      {notifications.length === 0 ? (
         <EmptyState
           title="No notifications"
           description="Notifications will appear here when important events happen."
         />
       ) : (
         <div className="dashboard-list">
-          {data.notifications.map((notification) => (
+          {notifications.map((notification) => (
             <article key={notification.id} className="dashboard-card">
               <h3>{notification.title}</h3>
               <p className="dashboard-card__body">{notification.body}</p>
@@ -89,7 +115,7 @@ export default async function DashboardNotificationsPage() {
                   <dt>Sent at</dt>
                   <dd>
                     {notification.sentAt
-                      ? new Date(notification.sentAt).toLocaleString("en-GB")
+                      ? formatDateTimeInMakkah(notification.sentAt, "en-GB")
                       : "Not sent"}
                   </dd>
                 </div>
@@ -97,7 +123,7 @@ export default async function DashboardNotificationsPage() {
                   <dt>Read at</dt>
                   <dd>
                     {notification.readAt
-                      ? new Date(notification.readAt).toLocaleString("en-GB")
+                      ? formatDateTimeInMakkah(notification.readAt, "en-GB")
                       : "Unread"}
                   </dd>
                 </div>

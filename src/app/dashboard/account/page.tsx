@@ -1,6 +1,7 @@
 import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface CurrentUserResponse {
   user: {
@@ -63,6 +64,31 @@ export default async function DashboardAccountPage() {
         description="Core account information and session metadata prepared in a structure that can later map directly to mobile account screens."
       />
 
+      <div className="dashboard-grid" style={{ marginBottom: "18px" }}>
+        <article className="dashboard-card">
+          <h3>Account status</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{data.user.status}</p>
+        </article>
+        <article className="dashboard-card">
+          <h3>Locale</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
+            {data.user.profile?.locale ?? "Not set"}
+          </p>
+        </article>
+        <article className="dashboard-card">
+          <h3>Timezone</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
+            {data.user.profile?.timezone ?? "Not set"}
+          </p>
+        </article>
+      </div>
+
+      <article className="dashboard-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> user={data.user.username}, status={data.user.status}, locale={data.user.profile?.locale ?? "none"}, timezone={data.user.profile?.timezone ?? "none"}
+        </p>
+      </article>
+
       <div className="dashboard-grid">
         <article className="dashboard-card">
           <h3>Account identity</h3>
@@ -117,13 +143,13 @@ export default async function DashboardAccountPage() {
             </div>
             <div>
               <dt>Expires at</dt>
-              <dd>{new Date(data.session.expiresAt).toLocaleString("en-GB")}</dd>
+              <dd>{formatDateTimeInMakkah(data.session.expiresAt, "en-GB")}</dd>
             </div>
             <div>
               <dt>Last activity</dt>
               <dd>
                 {data.session.lastUsedAt
-                  ? new Date(data.session.lastUsedAt).toLocaleString("en-GB")
+                  ? formatDateTimeInMakkah(data.session.lastUsedAt, "en-GB")
                   : "Not available"}
               </dd>
             </div>

@@ -2,6 +2,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface InvitationsResponse {
   invitations: Array<{
@@ -65,6 +66,10 @@ export default async function DashboardInvitesPage() {
     );
   }
 
+  const invitations = Array.isArray(data.invitations) ? data.invitations : [];
+  const acceptedInvites = invitations.filter((invitation) => invitation.acceptedAt).length;
+  const pendingInvites = invitations.filter((invitation) => invitation.status === "PENDING").length;
+
   return (
     <section className="dashboard-panel">
       <SectionHeading
@@ -73,14 +78,35 @@ export default async function DashboardInvitesPage() {
         description="Track invitations you created, their current status, and whether they were accepted."
       />
 
-      {data.invitations.length === 0 ? (
+      <div className="dashboard-grid" style={{ marginBottom: "18px" }}>
+        <article className="dashboard-card">
+          <h3>Total invites</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{invitations.length}</p>
+        </article>
+        <article className="dashboard-card">
+          <h3>Pending</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{pendingInvites}</p>
+        </article>
+        <article className="dashboard-card">
+          <h3>Accepted</h3>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{acceptedInvites}</p>
+        </article>
+      </div>
+
+      <article className="dashboard-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> invites={invitations.length}, pending={pendingInvites}, accepted={acceptedInvites}
+        </p>
+      </article>
+
+      {invitations.length === 0 ? (
         <EmptyState
           title="No invitations yet"
           description="Once invitations are created, they will appear here."
         />
       ) : (
         <div className="dashboard-list">
-          {data.invitations.map((invitation) => (
+          {invitations.map((invitation) => (
             <article key={invitation.id} className="dashboard-card">
               <h3>{invitation.email}</h3>
               <dl className="dashboard-detail-list">
@@ -96,13 +122,13 @@ export default async function DashboardInvitesPage() {
                   <dt>Sent at</dt>
                   <dd>
                     {invitation.sentAt
-                      ? new Date(invitation.sentAt).toLocaleString("en-GB")
+                      ? formatDateTimeInMakkah(invitation.sentAt, "en-GB")
                       : "Not sent"}
                   </dd>
                 </div>
                 <div>
                   <dt>Expires at</dt>
-                  <dd>{new Date(invitation.expiresAt).toLocaleString("en-GB")}</dd>
+                  <dd>{formatDateTimeInMakkah(invitation.expiresAt, "en-GB")}</dd>
                 </div>
               </dl>
             </article>
