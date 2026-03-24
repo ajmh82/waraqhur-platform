@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -e
+
+cd /home/docker/apps/waraqhur-platform
+
+cat <<'TXT'
+Essential commands:
+  ./doctor
+  ./quick
+  ./status
+  ./health
+  ./verify
+  ./build
+  ./smoke
+  ./release
+  ./backup
+  ./latest
+  ./snapshot
+  ./maintain
+  ./shortcuts
+  ./helpme
+TXT

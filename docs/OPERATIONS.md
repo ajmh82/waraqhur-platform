@@ -1,6 +1,9 @@
 # Operations
 
 ## Root shortcuts
+- `./start-here`
+- `./sanity`
+- `./root-check`
 - `./inventory`
 - `./all-in-one`
 - `./housekeeping`
@@ -46,7 +49,22 @@
 - `./snapshot-now`
 - `./maintain`
 
+## Make targets
+- `make help`
+- `make doctor`
+- `make verify`
+- `make build`
+- `make smoke`
+- `make release`
+- `make backup`
+- `make snapshot`
+- `make maintain`
+- `make daily`
+- `make nightly`
+
 ## Main entry
+- `./ops root-check`
+- `./ops rchk`
 - `./ops update`
 - `./ops upd`
 - `./scripts/nightly-run.sh`
@@ -134,6 +152,7 @@
 - `./scripts/doctor.sh`
 
 ## Daily checks
+- `./scripts/root-shortcuts-check.sh`
 - `./scripts/status-check.sh`
 - `./scripts/lint-check.sh`
 - `./scripts/build-prod.sh`
