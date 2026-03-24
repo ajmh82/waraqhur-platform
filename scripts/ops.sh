@@ -49,6 +49,15 @@ case "$command_name" in
     shift
     ./scripts/db-restore.sh "$@"
     ;;
+  db-status|dbs)
+    ./scripts/db-status.sh
+    ;;
+  db-tables|dbt)
+    ./scripts/db-tables.sh
+    ;;
+  docker-status|dps)
+    ./scripts/docker-status.sh
+    ;;
   logs|log)
     ./scripts/logs-app.sh
     ;;
@@ -98,6 +107,9 @@ case "$command_name" in
     echo "  db-backup-list | dbbl"
     echo "  db-backup-latest | dbbt"
     echo "  db-restore | dbr <backup-file>"
+    echo "  db-status | dbs"
+    echo "  db-tables | dbt"
+    echo "  docker-status | dps"
     echo "  logs | log"
     echo "  restart | rs"
     echo "  up"

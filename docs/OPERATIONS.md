@@ -25,6 +25,12 @@
 - `./scripts/ops.sh dbbt`
 - `./scripts/ops.sh db-restore backups/<file>.sql`
 - `./scripts/ops.sh dbr backups/<file>.sql`
+- `./scripts/ops.sh db-status`
+- `./scripts/ops.sh dbs`
+- `./scripts/ops.sh db-tables`
+- `./scripts/ops.sh dbt`
+- `./scripts/ops.sh docker-status`
+- `./scripts/ops.sh dps`
 - `./scripts/ops.sh logs`
 - `./scripts/ops.sh restart`
 - `./scripts/ops.sh recreate`
@@ -47,12 +53,20 @@
 - `./scripts/db-backup-latest.sh`
 - `./scripts/db-restore.sh backups/<file>.sql`
 
+## Database
+- `./scripts/db-status.sh`
+- `./scripts/db-tables.sh`
+- `./scripts/prisma-generate.sh`
+- `./scripts/prisma-migrate.sh`
+- `./scripts/prisma-seed.sh`
+
 ## Logs and shell
 - `./scripts/logs-app.sh`
 - `./scripts/app-shell.sh`
 - `./scripts/db-shell.sh`
 
 ## Containers
+- `./scripts/docker-status.sh`
 - `./scripts/up-dev.sh`
 - `./scripts/down-dev.sh`
 - `./scripts/restart-app.sh`
@@ -60,8 +74,3 @@
 
 ## Git
 - `./scripts/git-sync.sh`
-
-## Database
-- `./scripts/prisma-generate.sh`
-- `./scripts/prisma-migrate.sh`
-- `./scripts/prisma-seed.sh`
