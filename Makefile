@@ -1,4 +1,10 @@
-.PHONY: help doctor quick status health verify build smoke release backup latest report snapshot maintain daily nightly menu shortcuts inventory env root-check sanity check logs app-shell db-shell db-status db-tables up down restart clean archive all
+.PHONY: help doctor quick status health verify build smoke release backup latest \
+	report snapshot maintain daily nightly menu shortcuts inventory env \
+	root-check sanity check logs app-shell db-shell db-status db-tables \
+	up down restart clean archive all update latest-artifacts \
+	morning evening start doctor-full report-now dbbackup dbrestore \
+	dbs dbt release-check helpme snapshot-now cleanall maintain-all \
+	root-sanity
 
 help:
 	./start-here
@@ -27,19 +33,40 @@ smoke:
 release:
 	./release
 
+release-check:
+	./release
+
 backup:
 	./backup
+
+dbbackup:
+	./dbbackup
+
+dbrestore:
+	./dbrestore
 
 latest:
 	./latest
 
+latest-artifacts:
+	./artifacts
+
 report:
+	./report
+
+report-now:
 	./report-now
 
 snapshot:
 	./snapshot
 
+snapshot-now:
+	./snapshot-now
+
 maintain:
+	./maintain
+
+maintain-all:
 	./maintain
 
 daily:
@@ -47,6 +74,12 @@ daily:
 
 nightly:
 	./nightly
+
+morning:
+	./morning
+
+evening:
+	./evening
 
 menu:
 	./menu --list
@@ -62,6 +95,9 @@ env:
 
 root-check:
 	./root-check
+
+root-sanity:
+	./sanity
 
 sanity:
 	./sanity
@@ -84,6 +120,12 @@ db-status:
 db-tables:
 	./dbt
 
+dbs:
+	./dbs
+
+dbt:
+	./dbt
+
 up:
 	./up
 
@@ -96,8 +138,23 @@ restart:
 clean:
 	./cleanall 5
 
+cleanall:
+	./cleanall 5
+
 archive:
 	./archive
+
+update:
+	./update
+
+start:
+	./start-here
+
+doctor-full:
+	./doctor-full
+
+helpme:
+	./helpme
 
 all:
 	./all-in-one

@@ -52,15 +52,26 @@
 ## Make targets
 - `make help`
 - `make doctor`
+- `make quick`
+- `make status`
+- `make health`
 - `make verify`
 - `make build`
 - `make smoke`
 - `make release`
 - `make backup`
+- `make latest`
+- `make report`
 - `make snapshot`
 - `make maintain`
 - `make daily`
 - `make nightly`
+- `make morning`
+- `make evening`
+- `make update`
+- `make clean`
+- `make archive`
+- `make all`
 
 ## Main entry
 - `./ops root-check`
