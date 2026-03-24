@@ -1,5 +1,16 @@
 # Operations
 
+## Main entry
+- `./scripts/ops.sh help`
+- `./scripts/ops.sh status`
+- `./scripts/ops.sh st`
+- `./scripts/ops.sh verify`
+- `./scripts/ops.sh v`
+- `./scripts/ops.sh build`
+- `./scripts/ops.sh logs`
+- `./scripts/ops.sh restart`
+- `./scripts/ops.sh recreate`
+
 ## Daily checks
 - `./scripts/status-check.sh`
 - `./scripts/lint-check.sh`

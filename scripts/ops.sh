@@ -6,7 +6,7 @@ cd /home/docker/apps/waraqhur-platform
 command_name="${1:-help}"
 
 case "$command_name" in
-  status)
+  status|st)
     ./scripts/status-check.sh
     ;;
   lint)
@@ -15,16 +15,16 @@ case "$command_name" in
   build)
     ./scripts/build-prod.sh
     ;;
-  verify)
+  verify|v)
     ./scripts/verify-prod.sh
     ;;
-  full-check)
+  full-check|fc)
     ./scripts/full-check.sh
     ;;
-  logs)
+  logs|log)
     ./scripts/logs-app.sh
     ;;
-  restart)
+  restart|rs)
     ./scripts/restart-app.sh
     ;;
   up)
@@ -33,44 +33,44 @@ case "$command_name" in
   down)
     ./scripts/down-dev.sh
     ;;
-  recreate)
+  recreate|rc)
     ./scripts/recreate-app.sh
     ;;
-  git-sync)
+  git-sync|gs)
     ./scripts/git-sync.sh
     ;;
-  prisma-generate)
+  prisma-generate|pg)
     ./scripts/prisma-generate.sh
     ;;
-  prisma-migrate)
+  prisma-migrate|pm)
     ./scripts/prisma-migrate.sh
     ;;
-  prisma-seed)
+  prisma-seed|ps)
     ./scripts/prisma-seed.sh
     ;;
-  app-shell)
+  app-shell|ash)
     ./scripts/app-shell.sh
     ;;
-  db-shell)
+  db-shell|dsh)
     ./scripts/db-shell.sh
     ;;
   help|*)
     echo "Available commands:"
-    echo "  status"
+    echo "  status | st"
     echo "  lint"
     echo "  build"
-    echo "  verify"
-    echo "  full-check"
-    echo "  logs"
-    echo "  restart"
+    echo "  verify | v"
+    echo "  full-check | fc"
+    echo "  logs | log"
+    echo "  restart | rs"
     echo "  up"
     echo "  down"
-    echo "  recreate"
-    echo "  git-sync"
-    echo "  prisma-generate"
-    echo "  prisma-migrate"
-    echo "  prisma-seed"
-    echo "  app-shell"
-    echo "  db-shell"
+    echo "  recreate | rc"
+    echo "  git-sync | gs"
+    echo "  prisma-generate | pg"
+    echo "  prisma-migrate | pm"
+    echo "  prisma-seed | ps"
+    echo "  app-shell | ash"
+    echo "  db-shell | dsh"
     ;;
 esac
