@@ -12,6 +12,9 @@
 - `./scripts/ops.sh env`
 - `./scripts/ops.sh env-check`
 - `./scripts/ops.sh ec`
+- `./scripts/ops.sh self-test`
+- `./scripts/ops.sh test`
+- `./scripts/ops.sh t`
 - `./scripts/ops.sh health`
 - `./scripts/ops.sh h`
 - `./scripts/ops.sh smoke`
@@ -54,6 +57,7 @@
 - `./scripts/full-check.sh`
 - `./scripts/maintenance-check.sh`
 - `./scripts/env-check.sh`
+- `./scripts/self-test-ops.sh`
 - `./scripts/health-check.sh`
 - `./scripts/smoke-public.sh`
 - `./scripts/smoke-admin-guest.sh`

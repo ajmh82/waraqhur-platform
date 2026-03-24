@@ -27,6 +27,9 @@ case "$command_name" in
   env|env-check|ec)
     ./scripts/env-check.sh
     ;;
+  self-test|test|t)
+    ./scripts/self-test-ops.sh
+    ;;
   health|h)
     ./scripts/health-check.sh
     ;;
@@ -117,6 +120,7 @@ case "$command_name" in
     echo "  full-check | fc"
     echo "  maintenance | mt"
     echo "  env | env-check | ec"
+    echo "  self-test | test | t"
     echo "  health | h"
     echo "  smoke | sm"
     echo "  smoke-admin | sma"
