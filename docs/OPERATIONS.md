@@ -19,6 +19,8 @@
 - `./scripts/ops.sh boot`
 - `./scripts/ops.sh db-backup`
 - `./scripts/ops.sh dbb`
+- `./scripts/ops.sh db-restore backups/<file>.sql`
+- `./scripts/ops.sh dbr backups/<file>.sql`
 - `./scripts/ops.sh logs`
 - `./scripts/ops.sh restart`
 - `./scripts/ops.sh recreate`
@@ -37,6 +39,7 @@
 
 ## Backups
 - `./scripts/db-backup.sh`
+- `./scripts/db-restore.sh backups/<file>.sql`
 
 ## Logs and shell
 - `./scripts/logs-app.sh`
