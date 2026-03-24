@@ -1,6 +1,9 @@
 # Operations
 
 ## Root shortcuts
+- `./housekeeping`
+- `./evening`
+- `./morning`
 - `./snapshot`
 - `./menu`
 - `./update`
@@ -109,6 +112,7 @@
 - `./ops recreate`
 
 ## Reports
+- `./scripts/housekeeping-run.sh`
 - `./scripts/snapshot-run.sh`
 - `./scripts/system-report.sh`
 - `./scripts/write-report.sh`
