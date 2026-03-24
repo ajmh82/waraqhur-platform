@@ -4,6 +4,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminPostsData {
   posts: Array<{
@@ -123,7 +124,8 @@ export default async function AdminPostsPage({
   const query = currentSearchParams.q?.trim() ?? "";
   const selectedStatus = currentSearchParams.status?.trim() ?? "ALL";
   const selectedVisibility = currentSearchParams.visibility?.trim() ?? "ALL";
-  const selectedSort = (currentSearchParams.sort?.trim() as SortKey) ?? "newest";
+  const selectedSort =
+    currentSearchParams.sort?.trim() === "oldest" ? "oldest" : "newest";
   const currentPage = Math.max(1, Number(currentSearchParams.page ?? "1") || 1);
   const normalizedQuery = query.toLowerCase();
 
@@ -389,8 +391,12 @@ export default async function AdminPostsPage({
                     <td>{post.visibility}</td>
                     <td>{post.commentsCount}</td>
                     <td>{post.likesCount}</td>
-                    <td>{post.publishedAt ? new Date(post.publishedAt).toLocaleString("ar-BH") : "-"}</td>
-                    <td>{new Date(post.createdAt).toLocaleString("ar-BH")}</td>
+                    <td>
+                      {post.publishedAt
+                        ? formatDateTimeInMakkah(post.publishedAt, "ar-BH")
+                        : "-"}
+                    </td>
+                    <td>{formatDateTimeInMakkah(post.createdAt, "ar-BH")}</td>
                     <td>
                       <Link href={`/admin/posts/${post.id}`} className="btn small">
                         Post Details
