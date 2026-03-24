@@ -1,6 +1,10 @@
 # Operations
 
 ## Root shortcuts
+- `./menu`
+- `./update`
+- `./nightly`
+- `./daily`
 - `./archive-files`
 - `./clean 5`
 - `./helpme`
@@ -33,6 +37,10 @@
 - `./doctor-full`
 
 ## Main entry
+- `./ops update`
+- `./ops upd`
+- `./scripts/nightly-run.sh`
+- `./scripts/daily-run.sh`
 - `./ops archive`
 - `./ops clean 5`
 - `./ops help`

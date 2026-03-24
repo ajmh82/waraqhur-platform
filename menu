@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -e
+
+cd /home/docker/apps/waraqhur-platform
+
+if [ "${1:-}" = "--list" ]; then
+  cat <<'TXT'
+1) doctor
+2) check
+3) quick
+4) status
+5) health
+6) verify
+7) build
+8) smoke
+9) logs
+10) backup
+11) dbs
+12) dbt
+13) release
+14) latest
+15) shortcuts
+TXT
+  exit 0
+fi
+
+cat <<'TXT'
+Choose a command:
+1) doctor
+2) check
+3) quick
+4) status
+5) health
+6) verify
+7) build
+8) smoke
+9) logs
+10) backup
+11) dbs
+12) dbt
+13) release
+14) latest
+15) shortcuts
+TXT
+
+read -r choice
+
+case "$choice" in
+  1) exec ./doctor ;;
+  2) exec ./check ;;
+  3) exec ./quick ;;
+  4) exec ./status ;;
+  5) exec ./health ;;
+  6) exec ./verify ;;
+  7) exec ./build ;;
+  8) exec ./smoke ;;
+  9) exec ./logs ;;
+  10) exec ./backup ;;
+  11) exec ./dbs ;;
+  12) exec ./dbt ;;
+  13) exec ./release ;;
+  14) exec ./latest ;;
+  15) exec ./shortcuts ;;
+  *) echo "Invalid choice"; exit 1 ;;
+esac
