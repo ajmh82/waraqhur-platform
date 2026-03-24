@@ -5,6 +5,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminCommentsData {
   comments: Array<{
@@ -49,7 +50,8 @@ async function loadAdminCommentDetailsPageData(
 ): Promise<AdminCommentDetailsPageResult> {
   try {
     const data = await dashboardApiGet<AdminCommentsData>("/api/comments");
-    const comment = data.comments.find((item) => item.id === commentId) ?? null;
+    const comments = Array.isArray(data.comments) ? data.comments : [];
+    const comment = comments.find((item) => item.id === commentId) ?? null;
 
     return {
       comment,
@@ -80,6 +82,10 @@ export default async function AdminCommentDetailsPage({
     notFound();
   }
 
+  const replies = Array.isArray(comment.replies) ? comment.replies : [];
+  const activeReplies = replies.filter((reply) => reply.status === "ACTIVE").length;
+  const hiddenReplies = replies.filter((reply) => reply.status === "HIDDEN").length;
+
   return (
     <section className="dashboard-panel">
       <SectionHeading
@@ -99,6 +105,41 @@ export default async function AdminCommentDetailsPage({
         <Link href="/admin/comments" className="btn small">
           العودة إلى التعليقات
         </Link>
+        <Link href="/admin/comment-replies" className="btn small">
+          Comment Replies
+        </Link>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginBottom: "18px",
+        }}
+      >
+        <div className="state-card">
+          <strong>حالة التعليق</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{comment.status}</p>
+        </div>
+        <div className="state-card">
+          <strong>إجمالي الردود</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{replies.length}</p>
+        </div>
+        <div className="state-card">
+          <strong>الردود النشطة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{activeReplies}</p>
+        </div>
+        <div className="state-card">
+          <strong>الردود المخفية</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{hiddenReplies}</p>
+        </div>
+      </div>
+
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> commentId={comment.id}, postId={comment.postId}, status={comment.status}, replies={replies.length}
+        </p>
       </div>
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
@@ -109,8 +150,8 @@ export default async function AdminCommentDetailsPage({
           <p><strong>Author:</strong> {comment.author?.username ?? "-"}</p>
           <p><strong>Status:</strong> {comment.status}</p>
           <p><strong>Replies:</strong> {comment.repliesCount}</p>
-          <p><strong>Created At:</strong> {new Date(comment.createdAt).toLocaleString("ar-BH")}</p>
-          <p><strong>Updated At:</strong> {new Date(comment.updatedAt).toLocaleString("ar-BH")}</p>
+          <p><strong>Created At:</strong> {formatDateTimeInMakkah(comment.createdAt, "ar-BH")}</p>
+          <p><strong>Updated At:</strong> {formatDateTimeInMakkah(comment.updatedAt, "ar-BH")}</p>
         </div>
       </div>
 
@@ -132,7 +173,7 @@ export default async function AdminCommentDetailsPage({
       <div className="state-card">
         <h2 style={{ marginTop: 0 }}>Replies</h2>
 
-        {comment.replies.length === 0 ? (
+        {replies.length === 0 ? (
           <EmptyState
             title="لا توجد ردود"
             description="لا توجد ردود تابعة لهذا التعليق."
@@ -142,19 +183,30 @@ export default async function AdminCommentDetailsPage({
             <table className="admin-table">
               <thead>
                 <tr>
+                  <th>Reply ID</th>
                   <th>Reply</th>
                   <th>Author</th>
                   <th>Status</th>
                   <th>Created</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {comment.replies.map((reply) => (
+                {replies.map((reply) => (
                   <tr key={reply.id}>
+                    <td>{reply.id}</td>
                     <td>{reply.content}</td>
                     <td>{reply.author?.username ?? "-"}</td>
                     <td>{reply.status}</td>
-                    <td>{new Date(reply.createdAt).toLocaleString("ar-BH")}</td>
+                    <td>{formatDateTimeInMakkah(reply.createdAt, "ar-BH")}</td>
+                    <td>
+                      <AdminCommentActions
+                        comment={{
+                          id: reply.id,
+                          status: reply.status,
+                        }}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
