@@ -5,6 +5,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminUsersResponse {
   data: {
@@ -44,7 +45,8 @@ async function loadAdminUserDetailsPageData(
 ): Promise<AdminUserDetailsPageResult> {
   try {
     const response = await dashboardApiGet<AdminUsersResponse>("/api/admin/users");
-    const user = response.data.users.find((item) => item.id === userId) ?? null;
+    const users = Array.isArray(response.data.users) ? response.data.users : [];
+    const user = users.find((item) => item.id === userId) ?? null;
 
     return {
       user,
@@ -74,6 +76,9 @@ export default async function AdminUserDetailsPage({
   if (!user) {
     notFound();
   }
+
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  const sessions = Array.isArray(user.sessions) ? user.sessions : [];
 
   return (
     <section className="dashboard-panel">
@@ -111,35 +116,71 @@ export default async function AdminUserDetailsPage({
         </Link>
       </div>
 
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginBottom: "18px",
+        }}
+      >
+        <div className="state-card">
+          <strong>الحالة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{user.status}</p>
+        </div>
+        <div className="state-card">
+          <strong>عدد الأدوار</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{roles.length}</p>
+        </div>
+        <div className="state-card">
+          <strong>عدد الجلسات</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{sessions.length}</p>
+        </div>
+        <div className="state-card">
+          <strong>آخر نشاط</strong>
+          <p style={{ fontSize: "16px", margin: "10px 0 0" }}>
+            {user.lastActivityAt
+              ? formatDateTimeInMakkah(user.lastActivityAt, "ar-BH")
+              : "No activity"}
+          </p>
+        </div>
+      </div>
+
+      <div className="state-card" style={{ marginBottom: "18px" }}>
+        <p style={{ margin: 0 }}>
+          <strong>Current view:</strong> user={user.username}, status={user.status}, roles={roles.length}, sessions={sessions.length}
+        </p>
+      </div>
+
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <div style={{ display: "grid", gap: "12px" }}>
           <p><strong>اسم المستخدم:</strong> {user.username}</p>
           <p><strong>الاسم الظاهر:</strong> {user.profile?.displayName ?? "-"}</p>
           <p><strong>البريد الإلكتروني:</strong> {user.email}</p>
           <p><strong>الحالة:</strong> {user.status}</p>
-          <p><strong>عدد الجلسات:</strong> {user.sessions.length}</p>
+          <p><strong>عدد الجلسات:</strong> {sessions.length}</p>
           <p>
             <strong>آخر نشاط:</strong>{" "}
             {user.lastActivityAt
-              ? new Date(user.lastActivityAt).toLocaleString("ar-BH")
+              ? formatDateTimeInMakkah(user.lastActivityAt, "ar-BH")
               : "No activity"}
           </p>
-          <p><strong>تاريخ التسجيل:</strong> {new Date(user.createdAt).toLocaleString("ar-BH")}</p>
-          <p><strong>آخر تحديث:</strong> {new Date(user.updatedAt).toLocaleString("ar-BH")}</p>
+          <p><strong>تاريخ التسجيل:</strong> {formatDateTimeInMakkah(user.createdAt, "ar-BH")}</p>
+          <p><strong>آخر تحديث:</strong> {formatDateTimeInMakkah(user.updatedAt, "ar-BH")}</p>
         </div>
       </div>
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <h2 style={{ marginTop: 0 }}>الأدوار</h2>
 
-        {user.roles.length === 0 ? (
+        {roles.length === 0 ? (
           <EmptyState
             title="لا توجد أدوار"
             description="لا توجد أدوار مرتبطة بهذا المستخدم."
           />
         ) : (
           <div className="admin-chip-list">
-            {user.roles.map((role) => (
+            {roles.map((role) => (
               <span key={`${role.key}-${role.assignedAt}`} className="badge-chip">
                 {role.name} ({role.key})
               </span>

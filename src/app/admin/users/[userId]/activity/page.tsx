@@ -4,6 +4,7 @@ import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
+import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface AdminUsersResponse {
   data: {
@@ -61,8 +62,14 @@ async function loadAdminUserActivityPageData(
       dashboardApiGet<AdminAuditLogsResponse>("/api/admin/audit-logs"),
     ]);
 
-    const user =
-      usersResponse.data.users.find((item) => item.id === userId) ?? null;
+    const users = Array.isArray(usersResponse.data.users)
+      ? usersResponse.data.users
+      : [];
+    const allLogs = Array.isArray(auditLogsResponse.data.auditLogs)
+      ? auditLogsResponse.data.auditLogs
+      : [];
+
+    const user = users.find((item) => item.id === userId) ?? null;
 
     if (!user) {
       return {
@@ -72,9 +79,7 @@ async function loadAdminUserActivityPageData(
       };
     }
 
-    const auditLogs = auditLogsResponse.data.auditLogs.filter(
-      (log) => log.targetId === user.id
-    );
+    const auditLogs = allLogs.filter((log) => log.targetId === user.id);
 
     return {
       user,
@@ -137,6 +142,10 @@ function getSortedAuditLogs(
   return nextLogs;
 }
 
+function getSortLabel(sort: SortKey) {
+  return sort === "oldest" ? "Oldest First" : "Newest First";
+}
+
 export default async function AdminUserActivityPage({
   params,
   searchParams,
@@ -155,7 +164,8 @@ export default async function AdminUserActivityPage({
 
   const query = currentSearchParams.q?.trim() ?? "";
   const selectedTargetType = currentSearchParams.targetType?.trim() ?? "ALL";
-  const selectedSort = (currentSearchParams.sort?.trim() as SortKey) ?? "newest";
+  const selectedSort =
+    currentSearchParams.sort?.trim() === "oldest" ? "oldest" : "newest";
   const currentPage = Math.max(1, Number(currentSearchParams.page ?? "1") || 1);
   const normalizedQuery = query.toLowerCase();
 
@@ -232,6 +242,9 @@ export default async function AdminUserActivityPage({
         <Link href={`/admin/users/${user.id}/permissions`} className="btn small">
           User Permissions
         </Link>
+        <Link href={`/admin/users/${user.id}/sessions`} className="btn small">
+          User Sessions
+        </Link>
       </div>
 
       <form
@@ -304,7 +317,7 @@ export default async function AdminUserActivityPage({
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> targetType={selectedTargetType}, search={query || "none"}, sort={selectedSort}
+          <strong>Current view:</strong> targetType={selectedTargetType}, search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
         </p>
       </div>
 
@@ -337,7 +350,7 @@ export default async function AdminUserActivityPage({
                     <td>{log.action}</td>
                     <td>{log.actorType}</td>
                     <td>{log.targetType}</td>
-                    <td>{new Date(log.createdAt).toLocaleString("ar-BH")}</td>
+                    <td>{formatDateTimeInMakkah(log.createdAt, "ar-BH")}</td>
                   </tr>
                 ))}
               </tbody>
