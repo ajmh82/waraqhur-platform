@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -e
+
+cd /home/docker/apps/waraqhur-platform
+
+printf '%s\n' \
+  ./ops \
+  ./doctor \
+  ./doctor-full \
+  ./check \
+  ./quick \
+  ./status \
+  ./health \
+  ./latest \
+  ./artifacts \
+  ./report \
+  ./report-now \
+  ./backup \
+  ./dbbackup \
+  ./dbrestore \
+  ./dbs \
+  ./dbt \
+  ./logs \
+  ./shell \
+  ./db \
+  ./release \
+  ./up \
+  ./down \
+  ./restart \
+  ./verify \
+  ./build \
+  ./smoke \
+| while read -r file; do
+    if [ -f "$file" ]; then
+      echo "$file"
+    fi
+  done

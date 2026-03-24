@@ -1,6 +1,7 @@
 # Operations
 
 ## Root shortcuts
+- `./shortcuts`
 - `./doctor`
 - `./check`
 - `./backup`
