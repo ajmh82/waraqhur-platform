@@ -4,32 +4,32 @@ const dashboardLinks = [
   {
     href: "/dashboard/profile",
     label: "الملف الشخصي",
-    description: "تعديل الاسم والمعلومات العامة.",
+    description: "مراجعة هويتك ومعلوماتك العامة.",
   },
   {
     href: "/dashboard/account",
     label: "إعدادات الحساب",
-    description: "تفاصيل الحساب الأساسية والبيانات العامة.",
+    description: "بيانات الحساب الأساسية والجلسة الحالية.",
   },
   {
     href: "/dashboard/security",
     label: "الأمان",
-    description: "كلمة المرور والجلسات والإعدادات الأمنية.",
+    description: "متابعة وضع الأمان والجلسة النشطة.",
   },
   {
     href: "/dashboard/invites",
     label: "الدعوات",
-    description: "متابعة الدعوات الصادرة والواردة.",
+    description: "مراجعة الدعوات وحالتها الحالية.",
   },
   {
     href: "/dashboard/notifications",
     label: "الإشعارات",
-    description: "كل التحديثات والتنبيهات المتعلقة بحسابك.",
+    description: "جميع التنبيهات والتحديثات المرتبطة بحسابك.",
   },
   {
     href: "/dashboard/activity",
     label: "النشاط",
-    description: "ملخص تفاعلاتك الأخيرة داخل المنصة.",
+    description: "ملخص نشاطك داخل المنصة.",
   },
 ] as const;
 
