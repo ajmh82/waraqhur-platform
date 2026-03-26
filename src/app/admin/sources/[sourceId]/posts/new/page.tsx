@@ -86,7 +86,7 @@ export default async function AdminSourceNewPostPage({
           العودة إلى تفاصيل المصدر
         </Link>
         <Link href={`/admin/sources/${source.id}/posts`} className="btn small">
-          All Source Posts
+          جميع منشورات المصدر
         </Link>
       </div>
 

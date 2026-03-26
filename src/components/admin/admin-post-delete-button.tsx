@@ -24,11 +24,11 @@ export function AdminPostDeleteButton({ postId }: AdminPostDeleteButtonProps) {
 
     startTransition(() => {
       if (!response.ok || !payload?.success) {
-        setResult(payload?.error?.message ?? "تعذر حذف المنشور.");
+        setResult(payload?.error?.message ?? "تعذر Delete المنشور.");
         return;
       }
 
-      setResult("تم حذف المنشور");
+      setResult("تم Delete المنشور");
       router.refresh();
     });
   }
@@ -41,7 +41,7 @@ export function AdminPostDeleteButton({ postId }: AdminPostDeleteButtonProps) {
         onClick={handleDelete}
         disabled={isPending}
       >
-        {isPending ? "..." : "Delete Post"}
+        {isPending ? "..." : "Delete المنشور"}
       </button>
 
       {result ? (

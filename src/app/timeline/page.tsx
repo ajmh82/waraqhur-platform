@@ -1,7 +1,8 @@
-import { TimelineList } from "@/components/content/timeline-list";
+import { cookies } from "next/headers";
 import { SectionHeading } from "@/components/content/section-heading";
+import { TimelineFeedClient } from "@/components/content/timeline-feed-client";
+import { TimelineSortTabs } from "@/components/content/timeline-sort-tabs";
 import { AppHeader } from "@/components/layout/app-header";
-import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiGet } from "@/lib/web-api";
 
@@ -13,44 +14,88 @@ interface TimelinePageData {
     excerpt: string | null;
     createdAt: string;
     commentsCount: number;
-    category: {
+    likesCount?: number;
+    category: { id: string; name: string; slug: string } | null;
+    source: { id: string; name: string; slug: string } | null;
+    author: { id: string; email: string; username: string } | null;
+    repostOfPost?: {
       id: string;
-      name: string;
-      slug: string;
+      title: string;
+      slug: string | null;
+      author: { id: string; username: string } | null;
     } | null;
-    source: {
+    quotedPost?: {
       id: string;
-      name: string;
-      slug: string;
+      title: string;
+      slug: string | null;
+      author: { id: string; username: string } | null;
     } | null;
-    author: {
-      id: string;
-      email: string;
-      username: string;
+    metadata?: {
+      ingestion?: {
+        originalUrl?: string | null;
+      };
     } | null;
   }>;
+  sortMode?: "latest" | "smart";
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  };
 }
 
-interface TimelinePageResult {
-  data: TimelinePageData | null;
-  error: string | null;
-}
+type SortMode = "latest" | "smart";
 
-async function loadTimelinePageData(): Promise<TimelinePageResult> {
+async function loadData(sortMode: SortMode) {
   try {
-    const data = await apiGet<TimelinePageData>("/api/posts");
-    return { data, error: null };
+    return {
+      data: await apiGet<TimelinePageData>(`/api/posts?sort=${sortMode}&page=1&limit=10`),
+      error: null,
+    };
   } catch (error) {
     return {
       data: null,
-      error:
-        error instanceof Error ? error.message : "تعذر تحميل بيانات الموجز.",
+      error: error instanceof Error ? error.message : "تعذر تحميل بيانات الموجز.",
     };
   }
 }
 
-export default async function TimelinePage() {
-  const { data, error } = await loadTimelinePageData();
+function getModeMeta(sortMode: SortMode) {
+  if (sortMode === "smart") {
+    return {
+      badge: "الترتيب الذكي",
+      title: "الموجز الذكي",
+      description:
+        "يعرض المنشورات حسب التفاعل والأولوية، وليس فقط حسب الوقت.",
+    };
+  }
+
+  return {
+    badge: "الأحدث أولًا",
+    title: "الموجز الزمني",
+    description: "يعرض أحدث المنشورات مباشرة بترتيب زمني واضح.",
+  };
+}
+
+export default async function TimelinePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ sort?: string }>;
+}) {
+  const params = (await searchParams) ?? {};
+  const cookieStore = await cookies();
+  const savedSort = cookieStore.get("timeline_sort")?.value;
+
+  const sortMode: SortMode =
+    params.sort === "smart" || params.sort === "latest"
+      ? params.sort
+      : savedSort === "smart" || savedSort === "latest"
+        ? savedSort
+        : "latest";
+
+  const { data, error } = await loadData(sortMode);
+  const modeMeta = getModeMeta(sortMode);
 
   if (error || !data) {
     return (
@@ -66,7 +111,8 @@ export default async function TimelinePage() {
     );
   }
 
-  const posts = Array.isArray(data.posts) ? data.posts : [];
+  const posts = data.posts ?? [];
+  const hasMore = Boolean(data.pagination?.hasMore);
 
   return (
     <main className="page-stack">
@@ -74,26 +120,56 @@ export default async function TimelinePage() {
         <AppHeader />
 
         <section className="page-section">
-          <SectionHeading
-            eyebrow="التايم لاين"
-            title="موجزك الاجتماعي"
-            description="هذه الصفحة تعرض الآن التايم لاين المبني على المتابعة: منشوراتك ومنشورات الحسابات التي تتابعها، مع بقاء هوية ورق حر كموجز عربي منظم للمحتوى والمصادر والتصنيفات."
-          />
+          <div
+            style={{
+              marginBottom: "20px",
+              padding: "18px",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "18px",
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))",
+              backdropFilter: "blur(8px)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-start",
+                marginBottom: "10px",
+              }}
+            >
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "6px 12px",
+                  borderRadius: "999px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  color: "#dbeafe",
+                  background: "rgba(59,130,246,0.14)",
+                  border: "1px solid rgba(59,130,246,0.28)",
+                }}
+              >
+                {modeMeta.badge}
+              </span>
+            </div>
 
-          <div className="state-card" style={{ marginBottom: "18px" }}>
-            <p style={{ margin: 0 }}>
-              <strong>Current view:</strong> totalPosts={posts.length}
-            </p>
+            <SectionHeading
+              eyebrow="التايم لاين"
+              title={modeMeta.title}
+              description={modeMeta.description}
+            />
+
+            <TimelineSortTabs sortMode={sortMode} />
           </div>
 
-          {posts.length === 0 ? (
-            <EmptyState
-              title="الموجز فارغ حاليًا"
-              description="لا توجد منشورات كافية بعد. تابع مستخدمين أكثر أو أضف محتوى جديدًا ليظهر التدفق الكامل."
-            />
-          ) : (
-            <TimelineList posts={posts} />
-          )}
+          <TimelineFeedClient
+            initialPosts={posts}
+            initialHasMore={hasMore}
+            sortMode={sortMode}
+          />
         </section>
       </div>
     </main>

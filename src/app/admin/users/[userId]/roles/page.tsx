@@ -64,7 +64,7 @@ export default async function AdminUserRolesPage({
   const { user, error } = await loadAdminUserRolesPageData(userId);
 
   if (error) {
-    return <ErrorState title="Failed to load user roles" description={error} />;
+    return <ErrorState title="تعذر تحميل أدوار المستخدم" description={error} />;
   }
 
   if (!user) {
@@ -101,11 +101,7 @@ export default async function AdminUserRolesPage({
         </div>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> user={user.profile?.displayName ?? user.username}, totalRoles={totalRoles}, uniqueRoles={uniqueRoles}
-        </p>
-      </div>
+      
 
       <div
         style={{
@@ -119,7 +115,7 @@ export default async function AdminUserRolesPage({
           العودة إلى تفاصيل المستخدم
         </Link>
         <Link href={`/admin/users/${user.id}/assign-role`} className="btn small">
-          Assign Role
+          إسناد دور
         </Link>
       </div>
 
@@ -133,10 +129,10 @@ export default async function AdminUserRolesPage({
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Role Name</th>
-                <th>Role Key</th>
-                <th>Assigned At</th>
-                <th>Remove</th>
+                <th>اسم الدور</th>
+                <th>معرّف الدور</th>
+                <th>تاريخ الإسناد</th>
+                <th>إزالة</th>
               </tr>
             </thead>
             <tbody>

@@ -3,12 +3,28 @@ import { NextResponse } from "next/server";
 
 const SESSION_COOKIE_NAME = "waraqhur_session";
 
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/register",
+  "/accept-invitation",
+  "/timeline",
+  "/api/",
+  "/posts/",
+  "/categories/",
+  "/sources/",
+  "/u/",
+];
+
 function isProtectedPath(pathname: string) {
   return (
     pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/settings") ||
     pathname.startsWith("/admin")
   );
+}
+
+function isPublicPath(pathname: string) {
+  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p));
 }
 
 export function middleware(request: NextRequest) {
@@ -21,21 +37,32 @@ export function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
 
   if (!sessionCookie) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
+    // API requests get JSON response
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "UNAUTHENTICATED",
+            message: "Authentication required",
+          },
         },
-      },
-      { status: 401 }
-    );
+        { status: 401 }
+      );
+    }
+
+    // Page requests get redirected to login
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/settings/:path*", "/admin/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/admin/:path*",
+  ],
 };

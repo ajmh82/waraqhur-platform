@@ -135,7 +135,7 @@ function getSortedSources(
 }
 
 function getSortLabel(sort: SortKey) {
-  return sort === "oldest" ? "Oldest First" : "Newest First";
+  return sort === "oldest" ? "الأقدم أولاً" : "الأحدث أولاً";
 }
 
 export default async function AdminCategorySourcesPage({
@@ -253,7 +253,7 @@ export default async function AdminCategorySourcesPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="ابحث بالاسم أو slug أو handle"
+          placeholder="اSearch بالاسم أو slug أو handle"
           className="search-input"
           style={{ minWidth: "280px" }}
         />
@@ -275,7 +275,7 @@ export default async function AdminCategorySourcesPage({
           href={buildFilterHref(category.id, "ALL", selectedType, query, selectedSort, 1)}
           className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
         >
-          All Statuses
+          جميع الحالات
         </Link>
 
         {statuses.map((status) => (
@@ -313,32 +313,28 @@ export default async function AdminCategorySourcesPage({
           href={buildFilterHref(category.id, selectedStatus, selectedType, query, "newest", 1)}
           className={`btn ${selectedSort === "newest" ? "primary" : "small"}`}
         >
-          Newest First
+          الأحدث أولاً
         </Link>
         <Link
           href={buildFilterHref(category.id, selectedStatus, selectedType, query, "oldest", 1)}
           className={`btn ${selectedSort === "oldest" ? "primary" : "small"}`}
         >
-          Oldest First
+          الأقدم أولاً
         </Link>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> category={category.name}, status={selectedStatus}, type={selectedType}, search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
-        </p>
-      </div>
+      
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <p style={{ margin: 0 }}>
-          <strong>Showing:</strong> {visibleFrom}-{visibleTo} of {sortedSources.length}
+          <strong>عرض:</strong> {visibleFrom}-{visibleTo} of {sortedSources.length}
         </p>
       </div>
 
       {paginatedSources.length === 0 ? (
         <EmptyState
           title="لا توجد مصادر مطابقة"
-          description="لا توجد مصادر تطابق البحث الحالي أو الفلاتر الحالية."
+          description="لا توجد مصادر تطابق الSearch الحالي أو الفلاتر الحالية."
         />
       ) : (
         <>
@@ -368,7 +364,7 @@ export default async function AdminCategorySourcesPage({
                     <td>{formatDateTimeInMakkah(source.createdAt, "ar-BH")}</td>
                     <td>
                       <Link href={`/admin/sources/${source.id}`} className="btn small">
-                        Source Details
+                        تفاصيل المصدر
                       </Link>
                     </td>
                   </tr>
@@ -397,7 +393,7 @@ export default async function AdminCategorySourcesPage({
               className="btn small"
               aria-disabled={safePage <= 1}
             >
-              Previous
+              السابق
             </Link>
 
             <span className="btn small">
@@ -416,7 +412,7 @@ export default async function AdminCategorySourcesPage({
               className="btn small"
               aria-disabled={safePage >= totalPages}
             >
-              Next
+              التالي
             </Link>
           </div>
         </>

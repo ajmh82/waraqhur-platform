@@ -26,13 +26,13 @@ export function AdminCommentActions({ comment }: AdminCommentActionsProps) {
 
     startTransition(() => {
       if (!response.ok || !payload?.success) {
-        setMessage(payload?.error?.message ?? "Comment action failed");
+        setMessage(payload?.error?.message ?? "تعذر تنفيذ الإجراء");
         return;
       }
 
       setMessage(
         action === "delete"
-          ? "تم حذف التعليق"
+          ? "تم Delete التعليق"
           : action === "activate"
             ? "تم تفعيل التعليق"
             : "تم إخفاء التعليق"
@@ -64,7 +64,7 @@ export function AdminCommentActions({ comment }: AdminCommentActionsProps) {
           }
           disabled={isPending}
         >
-          {isPending ? "..." : "Activate"}
+          {isPending ? "..." : "تفعيل"}
         </button>
       ) : null}
 
@@ -89,7 +89,7 @@ export function AdminCommentActions({ comment }: AdminCommentActionsProps) {
           }
           disabled={isPending}
         >
-          {isPending ? "..." : "Hide"}
+          {isPending ? "..." : "إخفاء"}
         </button>
       ) : null}
 

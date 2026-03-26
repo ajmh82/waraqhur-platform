@@ -52,7 +52,7 @@ export function AdminUserRoleRemoveButton({
         onClick={handleRemove}
         disabled={isPending}
       >
-        {isPending ? "..." : "Remove Role"}
+        {isPending ? "..." : "إزالة الدور"}
       </button>
 
       {message ? <p className="admin-actions__message">{message}</p> : null}

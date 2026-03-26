@@ -1,6 +1,8 @@
 # Operations
 
 ## Root shortcuts
+- `./release-cycle`
+- `./dev-cycle`
 - `./start-here`
 - `./sanity`
 - `./root-check`
@@ -50,6 +52,8 @@
 - `./maintain`
 
 ## Make targets
+- `make release-cycle`
+- `make dev-cycle`
 - `make help`
 - `make doctor`
 - `make quick`
@@ -147,6 +151,8 @@
 - `./ops recreate`
 
 ## Reports
+- `./scripts/release-cycle.sh`
+- `./scripts/dev-cycle.sh`
 - `./scripts/housekeeping-run.sh`
 - `./scripts/snapshot-run.sh`
 - `./scripts/system-report.sh`

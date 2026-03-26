@@ -103,7 +103,7 @@ export default async function AdminSourcePostEditPage({
           العودة إلى تفاصيل المصدر
         </Link>
         <Link href={`/admin/sources/${source.id}/posts`} className="btn small">
-          All Source Posts
+          جميع منشورات المصدر
         </Link>
         <Link href={`/posts/${post.slug}`} className="btn small">
           فتح المنشور

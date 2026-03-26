@@ -79,7 +79,7 @@ export default async function AdminPostDetailsPage({
   const { post, error } = await loadAdminPostDetailsPageData(postId);
 
   if (error) {
-    return <ErrorState title="Failed to load post" description={error} />;
+    return <ErrorState title="تعذر تحميل المنشور" description={error} />;
   }
 
   if (!post) {
@@ -107,24 +107,24 @@ export default async function AdminPostDetailsPage({
         </Link>
 
         <Link href={`/admin/posts/${post.id}/edit`} className="btn small">
-          Edit Post
+          تعديل المنشور
         </Link>
 
         {post.category ? (
           <Link href={`/admin/categories/${post.category.id}`} className="btn small">
-            Open Category
+            فتح التصنيف
           </Link>
         ) : null}
 
         {post.source ? (
           <Link href={`/admin/sources/${post.source.id}`} className="btn small">
-            Open Source
+            فتح المصدر
           </Link>
         ) : null}
 
         {post.slug ? (
           <Link href={`/posts/${post.slug}`} className="btn small">
-            Open Public Post
+            فتح المنشور
           </Link>
         ) : null}
       </div>
@@ -155,22 +155,18 @@ export default async function AdminPostDetailsPage({
         </div>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> postId={post.id}, status={post.status}, visibility={post.visibility}, category={post.category?.name ?? "none"}, source={post.source?.name ?? "none"}
-        </p>
-      </div>
+      
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <div style={{ display: "grid", gap: "12px" }}>
-          <p><strong>Post ID:</strong> {post.id}</p>
-          <p><strong>Slug:</strong> {post.slug ?? "-"}</p>
-          <p><strong>Status:</strong> {post.status}</p>
-          <p><strong>Visibility:</strong> {post.visibility}</p>
-          <p><strong>Author:</strong> {post.author?.username ?? "-"}</p>
-          <p><strong>Updated By:</strong> {post.updatedBy?.username ?? "-"}</p>
+          <p><strong>معرّف المنشور:</strong> {post.id}</p>
+          <p><strong>المعرّف النصي:</strong> {post.slug ?? "-"}</p>
+          <p><strong>الحالة:</strong> {post.status}</p>
+          <p><strong>الظهور:</strong> {post.visibility}</p>
+          <p><strong>الكاتب:</strong> {post.author?.username ?? "-"}</p>
+          <p><strong>آخر تحديث بواسطة:</strong> {post.updatedBy?.username ?? "-"}</p>
           <p>
-            <strong>Source:</strong>{" "}
+            <strong>المصدر:</strong>{" "}
             {post.source ? (
               <Link href={`/admin/sources/${post.source.id}`} className="btn small">
                 {post.source.name}
@@ -180,7 +176,7 @@ export default async function AdminPostDetailsPage({
             )}
           </p>
           <p>
-            <strong>Category:</strong>{" "}
+            <strong>التصنيف:</strong>{" "}
             {post.category ? (
               <Link href={`/admin/categories/${post.category.id}`} className="btn small">
                 {post.category.name}
@@ -189,33 +185,33 @@ export default async function AdminPostDetailsPage({
               "-"
             )}
           </p>
-          <p><strong>Comments Count:</strong> {post.commentsCount}</p>
-          <p><strong>Likes Count:</strong> {post.likesCount}</p>
-          <p><strong>Published At:</strong> {post.publishedAt ? formatDateTimeInMakkah(post.publishedAt, "ar-BH") : "-"}</p>
-          <p><strong>Created At:</strong> {formatDateTimeInMakkah(post.createdAt, "ar-BH")}</p>
-          <p><strong>Updated At:</strong> {formatDateTimeInMakkah(post.updatedAt, "ar-BH")}</p>
+          <p><strong>عدد التعليقات:</strong> {post.commentsCount}</p>
+          <p><strong>عدد الإعجابات:</strong> {post.likesCount}</p>
+          <p><strong>تاريخ النشر:</strong> {post.publishedAt ? formatDateTimeInMakkah(post.publishedAt, "ar-BH") : "-"}</p>
+          <p><strong>تاريخ الإنشاء:</strong> {formatDateTimeInMakkah(post.createdAt, "ar-BH")}</p>
+          <p><strong>آخر تحديث:</strong> {formatDateTimeInMakkah(post.updatedAt, "ar-BH")}</p>
         </div>
       </div>
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
-        <h2 style={{ marginTop: 0 }}>Excerpt</h2>
+        <h2 style={{ marginTop: 0 }}>الملخص</h2>
         <p style={{ marginBottom: 0 }}>{post.excerpt ?? "-"}</p>
       </div>
 
       {post.coverImageUrl ? (
         <div className="state-card" style={{ marginBottom: "18px" }}>
-          <h2 style={{ marginTop: 0 }}>Cover Image</h2>
+          <h2 style={{ marginTop: 0 }}>صورة الغلاف</h2>
           <p style={{ marginBottom: "10px" }}>{post.coverImageUrl}</p>
         </div>
       ) : null}
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
-        <h2 style={{ marginTop: 0 }}>Content</h2>
+        <h2 style={{ marginTop: 0 }}>المحتوى</h2>
         <div style={{ whiteSpace: "pre-wrap" }}>{post.content}</div>
       </div>
 
       <div className="state-card">
-        <h2 style={{ marginTop: 0 }}>Danger Zone</h2>
+        <h2 style={{ marginTop: 0 }}>منطقة الخطر</h2>
         <AdminPostDeleteButton postId={post.id} />
       </div>
     </section>

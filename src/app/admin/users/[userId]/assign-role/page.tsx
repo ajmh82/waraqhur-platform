@@ -154,11 +154,7 @@ export default async function AdminAssignRolePage({
         </div>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> user={user.username}, assignedRoles={user.roles.length}, availableRoles={roles.length}
-        </p>
-      </div>
+      
 
       <div
         style={{
@@ -172,10 +168,10 @@ export default async function AdminAssignRolePage({
           العودة إلى تفاصيل المستخدم
         </Link>
         <Link href={`/admin/users/${user.id}/roles`} className="btn small">
-          User Roles
+          أدوار المستخدم
         </Link>
         <Link href={`/admin/users/${user.id}/permissions`} className="btn small">
-          User Permissions
+          صلاحيات المستخدم
         </Link>
       </div>
 

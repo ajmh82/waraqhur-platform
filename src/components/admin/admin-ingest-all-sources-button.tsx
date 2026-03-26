@@ -46,7 +46,7 @@ export function AdminIngestAllSourcesButton() {
         onClick={handleIngestAll}
         disabled={isPending}
       >
-        {isPending ? "..." : "Ingest All NITTER"}
+        {isPending ? "..." : "جلب جميع مصادر NITTER"}
       </button>
 
       {result ? (

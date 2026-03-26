@@ -54,7 +54,7 @@ export function AdminSourcePreviewButton({
         onClick={handlePreview}
         disabled={isPending}
       >
-        {isPending ? "..." : "Preview"}
+        {isPending ? "..." : "معاينة"}
       </button>
 
       {result ? (

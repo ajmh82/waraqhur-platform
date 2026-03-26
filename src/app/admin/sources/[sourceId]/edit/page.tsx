@@ -58,7 +58,7 @@ export default async function AdminSourceEditPage({
   const { source, error } = await loadAdminSourceEditPageData(sourceId);
 
   if (error) {
-    return <ErrorState title="Failed to load source" description={error} />;
+    return <ErrorState title="تعذر تحميل المصدر" description={error} />;
   }
 
   if (!source) {
@@ -85,7 +85,7 @@ export default async function AdminSourceEditPage({
           العودة إلى المصادر
         </Link>
         <Link href={`/admin/sources/${source.id}`} className="btn small">
-          Source Details
+          تفاصيل المصدر
         </Link>
       </div>
 

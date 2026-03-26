@@ -33,13 +33,13 @@ export function AdminUserActions({ user }: AdminUserActionsProps) {
       const payload = await parseResponse(response);
 
       if (!response.ok || !payload?.success) {
-        throw new Error(payload?.error?.message ?? "Admin action failed");
+        throw new Error(payload?.error?.message ?? "تعذر تنفيذ الإجراء");
       }
 
-      setMessage("Success");
+      setMessage("تم بنجاح");
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Admin action failed");
+      setMessage(error instanceof Error ? error.message : "تعذر تنفيذ الإجراء");
     } finally {
       setLoading(null);
     }
@@ -68,7 +68,7 @@ export function AdminUserActions({ user }: AdminUserActionsProps) {
           }
           disabled={loading !== null}
         >
-          {loading === "suspend" ? "Working..." : "Suspend"}
+          {loading === "suspend" ? "جارٍ التنفيذ..." : "إيقاف"}
         </button>
       ) : (
         <button
@@ -91,7 +91,7 @@ export function AdminUserActions({ user }: AdminUserActionsProps) {
           }
           disabled={loading !== null}
         >
-          {loading === "activate" ? "Working..." : "Activate"}
+          {loading === "activate" ? "جارٍ التنفيذ..." : "تفعيل"}
         </button>
       )}
 
@@ -114,7 +114,7 @@ export function AdminUserActions({ user }: AdminUserActionsProps) {
         }
         disabled={loading !== null}
       >
-        {loading === "reset" ? "Working..." : "Send reset"}
+        {loading === "reset" ? "جارٍ التنفيذ..." : "إعادة تعيين كلمة المرور"}
       </button>
 
       {message ? <p className="admin-actions__message">{message}</p> : null}

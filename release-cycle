@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+
+cd /home/docker/apps/waraqhur-platform
+exec ./scripts/release-cycle.sh "$@"

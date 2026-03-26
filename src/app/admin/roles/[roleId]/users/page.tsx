@@ -106,7 +106,7 @@ function getSortedUsers(
 }
 
 function getSortLabel(sort: SortKey) {
-  return sort === "oldest" ? "Oldest First" : "Newest First";
+  return sort === "oldest" ? "الأقدم أولاً" : "الأحدث أولاً";
 }
 
 export default async function AdminRoleUsersPage({
@@ -133,7 +133,7 @@ export default async function AdminRoleUsersPage({
   const normalizedQuery = query.toLowerCase();
 
   if (error) {
-    return <ErrorState title="Failed to load role users" description={error} />;
+    return <ErrorState title="تعذر تحميل مستخدمي الدور" description={error} />;
   }
 
   if (!role) {
@@ -195,7 +195,7 @@ export default async function AdminRoleUsersPage({
           العودة إلى تفاصيل الدور
         </Link>
         <Link href="/admin/users" className="btn small">
-          Users Management
+          إدارة المستخدمين
         </Link>
       </div>
 
@@ -216,7 +216,7 @@ export default async function AdminRoleUsersPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="ابحث باسم المستخدم أو البريد"
+          placeholder="اSearch باسم المستخدم أو البريد"
           className="search-input"
           style={{ minWidth: "280px" }}
         />
@@ -238,7 +238,7 @@ export default async function AdminRoleUsersPage({
           href={buildFilterHref(role.id, "ALL", query, selectedSort, 1)}
           className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
         >
-          All Statuses
+          جميع الحالات
         </Link>
 
         {statuses.map((status) => (
@@ -257,25 +257,21 @@ export default async function AdminRoleUsersPage({
           href={buildFilterHref(role.id, selectedStatus, query, "newest", 1)}
           className={`btn ${selectedSort === "newest" ? "primary" : "small"}`}
         >
-          Newest First
+          الأحدث أولاً
         </Link>
         <Link
           href={buildFilterHref(role.id, selectedStatus, query, "oldest", 1)}
           className={`btn ${selectedSort === "oldest" ? "primary" : "small"}`}
         >
-          Oldest First
+          الأقدم أولاً
         </Link>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> role={role.name}, status={selectedStatus}, search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
-        </p>
-      </div>
+      
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <p style={{ margin: 0 }}>
-          <strong>Showing:</strong> {visibleFrom}-{visibleTo} of {sortedUsers.length}
+          <strong>عرض:</strong> {visibleFrom}-{visibleTo} of {sortedUsers.length}
         </p>
       </div>
 
@@ -294,7 +290,7 @@ export default async function AdminRoleUsersPage({
                   <th>البريد الإلكتروني</th>
                   <th>الحالة</th>
                   <th>تاريخ الإسناد</th>
-                  <th>Details</th>
+                  <th>تفاصيل</th>
                 </tr>
               </thead>
               <tbody>
@@ -306,7 +302,7 @@ export default async function AdminRoleUsersPage({
                     <td>{formatDateTimeInMakkah(user.assignedAt, "ar-BH")}</td>
                     <td>
                       <Link href={`/admin/users/${user.id}`} className="btn small">
-                        User Details
+                        تفاصيل المستخدم
                       </Link>
                     </td>
                   </tr>
@@ -334,7 +330,7 @@ export default async function AdminRoleUsersPage({
               className="btn small"
               aria-disabled={safePage <= 1}
             >
-              Previous
+              السابق
             </Link>
 
             <span className="btn small">
@@ -352,7 +348,7 @@ export default async function AdminRoleUsersPage({
               className="btn small"
               aria-disabled={safePage >= totalPages}
             >
-              Next
+              التالي
             </Link>
           </div>
         </>

@@ -1,525 +1,155 @@
-import Link from "next/link";
-import { AdminIngestAllSourcesButton } from "@/components/admin/admin-ingest-all-sources-button";
-import { AdminSourceArchiveButton } from "@/components/admin/admin-source-archive-button";
-import { AdminSourceIngestButton } from "@/components/admin/admin-source-ingest-button";
-import { AdminSourcePreviewButton } from "@/components/admin/admin-source-preview-button";
-import { AdminSourceRestoreButton } from "@/components/admin/admin-source-restore-button";
-import { SectionHeading } from "@/components/content/section-heading";
-import { EmptyState } from "@/components/ui/empty-state";
-import { ErrorState } from "@/components/ui/error-state";
-import { dashboardApiGet } from "@/lib/dashboard-api";
-import { formatDateTimeInMakkah } from "@/lib/date-time";
+import type { CSSProperties } from "react";
+import { prisma } from "@/lib/prisma";
+import { SourceIngestButton } from "@/components/admin/source-ingest-button";
 
-interface AdminSourcesData {
-  sources: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    type: string;
-    status: string;
-    url: string | null;
-    handle: string | null;
-    lastFetchedAt: string | null;
-    createdAt: string;
-    updatedAt: string;
-    category: {
-      id: string;
-      name: string;
-      slug: string;
-    };
-  }>;
+type SourceHealth = "HEALTHY" | "DEGRADED" | "BROKEN" | "STATIC";
+
+interface SourceRuntimeConfig {
+  statusHealth?: SourceHealth;
+  lastSuccessAt?: string | null;
+  lastErrorMessage?: string | null;
+  consecutiveFailures?: number;
 }
 
-interface AdminSourcesPageResult {
-  data: AdminSourcesData | null;
-  error: string | null;
+function readSourceConfig(value: unknown): SourceRuntimeConfig {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const raw = value as Record<string, unknown>;
+
+  return {
+    statusHealth:
+      raw.statusHealth === "HEALTHY" ||
+      raw.statusHealth === "DEGRADED" ||
+      raw.statusHealth === "BROKEN" ||
+      raw.statusHealth === "STATIC"
+        ? raw.statusHealth
+        : undefined,
+    lastSuccessAt:
+      typeof raw.lastSuccessAt === "string" ? raw.lastSuccessAt : null,
+    lastErrorMessage:
+      typeof raw.lastErrorMessage === "string" ? raw.lastErrorMessage : null,
+    consecutiveFailures:
+      typeof raw.consecutiveFailures === "number"
+        ? raw.consecutiveFailures
+        : 0,
+  };
 }
 
-type SortKey = "newest" | "oldest";
-
-const PAGE_SIZE = 10;
-
-async function loadAdminSourcesPageData(): Promise<AdminSourcesPageResult> {
-  try {
-    const data = await dashboardApiGet<AdminSourcesData>("/api/sources");
-
-    return {
-      data,
-      error: null,
-    };
-  } catch (error) {
-    return {
-      data: null,
-      error:
-        error instanceof Error ? error.message : "Unable to load sources.",
-    };
-  }
+function healthStyle(health?: SourceHealth | null): CSSProperties {
+  if (health === "HEALTHY") return { color: "#22c55e", fontWeight: 700 };
+  if (health === "DEGRADED") return { color: "#f59e0b", fontWeight: 700 };
+  if (health === "BROKEN") return { color: "#ef4444", fontWeight: 700 };
+  if (health === "STATIC") return { color: "#a1a1aa", fontWeight: 700 };
+  return { color: "#94a3b8", fontWeight: 700 };
 }
 
-function buildFilterHref(
-  type: string,
-  status: string,
-  query: string,
-  sort: SortKey,
-  page: number
-) {
-  const params = new URLSearchParams();
-
-  if (type !== "ALL") {
-    params.set("type", type);
-  }
-
-  if (status !== "ALL") {
-    params.set("status", status);
-  }
-
-  if (query.trim()) {
-    params.set("q", query.trim());
-  }
-
-  if (sort !== "newest") {
-    params.set("sort", sort);
-  }
-
-  if (page > 1) {
-    params.set("page", String(page));
-  }
-
-  const queryString = params.toString();
-  return queryString ? `/admin/sources?${queryString}` : "/admin/sources";
+function formatDate(date?: string | null) {
+  if (!date) return "-";
+  return new Date(date).toLocaleString();
 }
 
-function getSortedSources(
-  sources: AdminSourcesData["sources"],
-  sort: SortKey
-) {
-  const nextSources = [...sources];
-
-  nextSources.sort((a, b) => {
-    const aTime = new Date(a.createdAt).getTime();
-    const bTime = new Date(b.createdAt).getTime();
-    return sort === "oldest" ? aTime - bTime : bTime - aTime;
+export default async function SourcesPage() {
+  const sources = await prisma.source.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: { createdAt: "asc" },
   });
 
-  return nextSources;
-}
+  const sourceConfigs = sources.map((source) => ({
+    source,
+    config: readSourceConfig(source.config),
+  }));
 
-function getSortLabel(sort: SortKey) {
-  return sort === "oldest" ? "Oldest First" : "Newest First";
-}
-
-export default async function AdminSourcesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    q?: string;
-    type?: string;
-    status?: string;
-    sort?: string;
-    page?: string;
-  }>;
-}) {
-  const { data, error } = await loadAdminSourcesPageData();
-  const currentSearchParams = await searchParams;
-
-  const query = currentSearchParams.q?.trim() ?? "";
-  const selectedType = currentSearchParams.type?.trim() ?? "ALL";
-  const selectedStatus = currentSearchParams.status?.trim() ?? "ALL";
-  const selectedSort = (currentSearchParams.sort?.trim() as SortKey) ?? "newest";
-  const currentPage = Math.max(1, Number(currentSearchParams.page ?? "1") || 1);
-  const normalizedQuery = query.toLowerCase();
-
-  if (error || !data) {
-    return (
-      <ErrorState
-        title="Failed to load sources"
-        description={error ?? "Unable to load sources."}
-      />
-    );
-  }
-
-  const totalSources = data.sources.length;
-  const activeSources = data.sources.filter(
-    (source) => source.status === "ACTIVE"
-  ).length;
-  const archivedSources = data.sources.filter(
-    (source) => source.status === "ARCHIVED"
-  ).length;
-  const fetchedSources = data.sources.filter(
-    (source) => source.lastFetchedAt !== null
-  ).length;
-  const nitterSources = data.sources.filter((source) => source.type === "NITTER").length;
-  const rssSources = data.sources.filter((source) => source.type === "RSS").length;
-  const manualSources = data.sources.filter((source) => source.type === "MANUAL").length;
-
-  const types = Array.from(new Set(data.sources.map((source) => source.type))).sort();
-  const statuses = Array.from(
-    new Set(data.sources.map((source) => source.status))
-  ).sort();
-
-  const filteredSources = data.sources.filter((source) => {
-    const typeMatches = selectedType === "ALL" || source.type === selectedType;
-    const statusMatches =
-      selectedStatus === "ALL" || source.status === selectedStatus;
-
-    const queryMatches =
-      normalizedQuery.length === 0 ||
-      source.name.toLowerCase().includes(normalizedQuery) ||
-      source.slug.toLowerCase().includes(normalizedQuery) ||
-      source.category.name.toLowerCase().includes(normalizedQuery) ||
-      (source.handle ?? "").toLowerCase().includes(normalizedQuery) ||
-      (source.url ?? "").toLowerCase().includes(normalizedQuery);
-
-    return typeMatches && statusMatches && queryMatches;
-  });
-
-  const sortedSources = getSortedSources(filteredSources, selectedSort);
-  const totalPages = Math.max(1, Math.ceil(sortedSources.length / PAGE_SIZE));
-  const safePage = Math.min(currentPage, totalPages);
-  const startIndex = (safePage - 1) * PAGE_SIZE;
-  const endIndex = startIndex + PAGE_SIZE;
-  const paginatedSources = sortedSources.slice(startIndex, endIndex);
-  const visibleFrom = sortedSources.length === 0 ? 0 : startIndex + 1;
-  const visibleTo = Math.min(endIndex, sortedSources.length);
+  const summaryStats = {
+    healthy: sourceConfigs.filter((entry) => entry.config.statusHealth === "HEALTHY").length,
+    broken: sourceConfigs.filter((entry) => entry.config.statusHealth === "BROKEN").length,
+    degraded: sourceConfigs.filter((entry) => entry.config.statusHealth === "DEGRADED").length,
+    static: sourceConfigs.filter((entry) => entry.config.statusHealth === "STATIC").length,
+  };
 
   return (
-    <section className="dashboard-panel">
-      <SectionHeading
-        eyebrow="Admin"
-        title="Sources management"
-        description="إدارة جميع المصادر من داخل لوحة الإدارة."
-      />
+    <div style={{ padding: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          flexWrap: "wrap",
+          marginBottom: 20,
+          fontWeight: 800,
+          fontSize: 15,
+        }}
+      >
+        <div style={{ color: "#22c55e" }}>🟢 {summaryStats.healthy} Healthy</div>
+        <div style={{ color: "#ef4444" }}>🔴 {summaryStats.broken} Broken</div>
+        <div style={{ color: "#f59e0b" }}>🟡 {summaryStats.degraded} Degraded</div>
+        <div style={{ color: "#a1a1aa" }}>⚪ {summaryStats.static} Static</div>
+      </div>
+
+      <h1 style={{ fontSize: 26, fontWeight: "bold", marginBottom: 20 }}>
+        📡 Sources Dashboard
+      </h1>
 
       <div
         style={{
-          marginBottom: "18px",
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          alignItems: "flex-start",
+          overflowX: "auto",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 16,
+          background: "rgba(255,255,255,0.02)",
         }}
       >
-        <Link href="/admin/sources/new" className="btn primary">
-          New Source
-        </Link>
-        <AdminIngestAllSourcesButton />
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1100 }}>
+          <thead>
+            <tr style={{ textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+              <th style={{ padding: 14 }}>الاسم</th>
+              <th style={{ padding: 14 }}>النوع</th>
+              <th style={{ padding: 14 }}>الحالة</th>
+              <th style={{ padding: 14 }}>الصحة</th>
+              <th style={{ padding: 14 }}>آخر نجاح</th>
+              <th style={{ padding: 14 }}>آخر خطأ</th>
+              <th style={{ padding: 14 }}>فشل متتالي</th>
+              <th style={{ padding: 14 }}>الإجراء</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {sourceConfigs.map(({ source, config }) => (
+              <tr
+                key={source.id}
+                style={{
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                  verticalAlign: "top",
+                }}
+              >
+                <td style={{ padding: 14, fontWeight: 700 }}>{source.name}</td>
+                <td style={{ padding: 14 }}>{source.type}</td>
+                <td style={{ padding: 14 }}>{source.status}</td>
+                <td style={{ padding: 14 }}>
+                  <span style={healthStyle(config.statusHealth)}>
+                    {config.statusHealth || "-"}
+                  </span>
+                </td>
+                <td style={{ padding: 14, whiteSpace: "nowrap" }}>
+                  {formatDate(config.lastSuccessAt)}
+                </td>
+                <td style={{ padding: 14, color: "#fca5a5", maxWidth: 320 }}>
+                  {config.lastErrorMessage || "-"}
+                </td>
+                <td style={{ padding: 14 }}>{config.consecutiveFailures || 0}</td>
+                <td style={{ padding: 14 }}>
+                  {source.type === "MANUAL" ? (
+                    <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 13 }}>
+                      غير مطلوب
+                    </span>
+                  ) : (
+                    <SourceIngestButton sourceId={source.id} />
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "12px",
-          marginBottom: "18px",
-        }}
-      >
-        <div className="state-card">
-          <strong>إجمالي المصادر</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{totalSources}</p>
-        </div>
-        <div className="state-card">
-          <strong>المصادر النشطة</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{activeSources}</p>
-        </div>
-        <div className="state-card">
-          <strong>المصادر المؤرشفة</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{archivedSources}</p>
-        </div>
-        <div className="state-card">
-          <strong>تم fetched لها</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{fetchedSources}</p>
-        </div>
-        <div className="state-card">
-          <strong>NITTER</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{nitterSources}</p>
-        </div>
-        <div className="state-card">
-          <strong>RSS</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{rssSources}</p>
-        </div>
-        <div className="state-card">
-          <strong>MANUAL</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{manualSources}</p>
-        </div>
-      </div>
-
-      <form
-        action="/admin/sources"
-        method="GET"
-        style={{
-          marginBottom: "18px",
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-        }}
-      >
-        {selectedType !== "ALL" ? (
-          <input type="hidden" name="type" value={selectedType} />
-        ) : null}
-
-        {selectedStatus !== "ALL" ? (
-          <input type="hidden" name="status" value={selectedStatus} />
-        ) : null}
-
-        {selectedSort !== "newest" ? (
-          <input type="hidden" name="sort" value={selectedSort} />
-        ) : null}
-
-        <input
-          type="text"
-          name="q"
-          defaultValue={query}
-          placeholder="ابحث بالاسم أو slug أو التصنيف أو الرابط"
-          className="search-input"
-          style={{ minWidth: "320px" }}
-        />
-
-        <button type="submit" className="btn small">
-          Search
-        </button>
-
-        <Link
-          href={buildFilterHref(selectedType, selectedStatus, "", selectedSort, 1)}
-          className="btn small"
-        >
-          Reset Search
-        </Link>
-      </form>
-
-      <div
-        style={{
-          marginBottom: "12px",
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-        }}
-      >
-        <Link href={buildFilterHref("NITTER", selectedStatus, query, selectedSort, 1)} className="btn small">
-          NITTER Only
-        </Link>
-        <Link href={buildFilterHref("RSS", selectedStatus, query, selectedSort, 1)} className="btn small">
-          RSS Only
-        </Link>
-        <Link href={buildFilterHref("MANUAL", selectedStatus, query, selectedSort, 1)} className="btn small">
-          MANUAL Only
-        </Link>
-        <Link href={buildFilterHref(selectedType, "ACTIVE", query, selectedSort, 1)} className="btn small">
-          Active Only
-        </Link>
-        <Link href={buildFilterHref(selectedType, "ARCHIVED", query, selectedSort, 1)} className="btn small">
-          Archived Only
-        </Link>
-        <Link href={buildFilterHref("ALL", "ALL", "", "newest", 1)} className="btn small">
-          Reset Filters
-        </Link>
-      </div>
-
-      <div
-        style={{
-          marginBottom: "12px",
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-        }}
-      >
-        <Link
-          href={buildFilterHref("ALL", selectedStatus, query, selectedSort, 1)}
-          className={`btn ${selectedType === "ALL" ? "primary" : "small"}`}
-        >
-          All Types
-        </Link>
-
-        {types.map((type) => (
-          <Link
-            key={type}
-            href={buildFilterHref(type, selectedStatus, query, selectedSort, 1)}
-            className={`btn ${selectedType === type ? "primary" : "small"}`}
-          >
-            {type}
-          </Link>
-        ))}
-      </div>
-
-      <div
-        style={{
-          marginBottom: "12px",
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-        }}
-      >
-        <Link
-          href={buildFilterHref(selectedType, "ALL", query, selectedSort, 1)}
-          className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
-        >
-          All Statuses
-        </Link>
-
-        {statuses.map((status) => (
-          <Link
-            key={status}
-            href={buildFilterHref(selectedType, status, query, selectedSort, 1)}
-            className={`btn ${selectedStatus === status ? "primary" : "small"}`}
-          >
-            {status}
-          </Link>
-        ))}
-      </div>
-
-      <div
-        style={{
-          marginBottom: "18px",
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-        }}
-      >
-        <Link
-          href={buildFilterHref(selectedType, selectedStatus, query, "newest", 1)}
-          className={`btn ${selectedSort === "newest" ? "primary" : "small"}`}
-        >
-          Newest First
-        </Link>
-        <Link
-          href={buildFilterHref(selectedType, selectedStatus, query, "oldest", 1)}
-          className={`btn ${selectedSort === "oldest" ? "primary" : "small"}`}
-        >
-          Oldest First
-        </Link>
-      </div>
-
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> type={selectedType}, status={selectedStatus}, search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
-        </p>
-      </div>
-
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Showing:</strong> {visibleFrom}-{visibleTo} of {sortedSources.length}
-        </p>
-      </div>
-
-      {paginatedSources.length === 0 ? (
-        <EmptyState
-          title="لا توجد مصادر"
-          description="لا توجد مصادر تطابق البحث أو الفلاتر الحالية."
-        />
-      ) : (
-        <>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Slug</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Category</th>
-                  <th>Handle</th>
-                  <th>URL</th>
-                  <th>Last Fetched</th>
-                  <th>Created</th>
-                  <th>Details</th>
-                  <th>Edit</th>
-                  <th>Preview</th>
-                  <th>Ingest</th>
-                  <th>Archive</th>
-                  <th>Restore</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedSources.map((source) => (
-                  <tr key={source.id}>
-                    <td>{source.name}</td>
-                    <td>{source.slug}</td>
-                    <td>{source.type}</td>
-                    <td>{source.status}</td>
-                    <td>{source.category.name}</td>
-                    <td>{source.handle ?? "-"}</td>
-                    <td>{source.url ?? "-"}</td>
-                    <td>
-                      {source.lastFetchedAt
-                        ? formatDateTimeInMakkah(source.lastFetchedAt, "ar-BH")
-                        : "-"}
-                    </td>
-                    <td>{formatDateTimeInMakkah(source.createdAt, "ar-BH")}</td>
-                    <td>
-                      <Link href={`/admin/sources/${source.id}`} className="btn small">
-                        Source Details
-                      </Link>
-                    </td>
-                    <td>
-                      <Link href={`/admin/sources/${source.id}/edit`} className="btn small">
-                        Edit Source
-                      </Link>
-                    </td>
-                    <td>
-                      <AdminSourcePreviewButton sourceId={source.id} sourceType={source.type} />
-                    </td>
-                    <td>
-                      <AdminSourceIngestButton sourceId={source.id} sourceType={source.type} />
-                    </td>
-                    <td>
-                      <AdminSourceArchiveButton
-                        sourceId={source.id}
-                        status={source.status}
-                      />
-                    </td>
-                    <td>
-                      <AdminSourceRestoreButton
-                        sourceId={source.id}
-                        status={source.status}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div
-            style={{
-              marginTop: "18px",
-              display: "flex",
-              gap: "10px",
-              flexWrap: "wrap",
-            }}
-          >
-            <Link
-              href={buildFilterHref(
-                selectedType,
-                selectedStatus,
-                query,
-                selectedSort,
-                Math.max(1, safePage - 1)
-              )}
-              className="btn small"
-              aria-disabled={safePage <= 1}
-            >
-              Previous
-            </Link>
-
-            <span className="btn small">
-              Page {safePage} / {totalPages}
-            </span>
-
-            <Link
-              href={buildFilterHref(
-                selectedType,
-                selectedStatus,
-                query,
-                selectedSort,
-                Math.min(totalPages, safePage + 1)
-              )}
-              className="btn small"
-              aria-disabled={safePage >= totalPages}
-            >
-              Next
-            </Link>
-          </div>
-        </>
-      )}
-    </section>
+    </div>
   );
 }

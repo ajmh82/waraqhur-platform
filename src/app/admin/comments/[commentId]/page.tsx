@@ -75,7 +75,7 @@ export default async function AdminCommentDetailsPage({
   const { comment, error } = await loadAdminCommentDetailsPageData(commentId);
 
   if (error) {
-    return <ErrorState title="Failed to load comment" description={error} />;
+    return <ErrorState title="تعذر تحميل التعليق" description={error} />;
   }
 
   if (!comment) {
@@ -106,7 +106,7 @@ export default async function AdminCommentDetailsPage({
           العودة إلى التعليقات
         </Link>
         <Link href="/admin/comment-replies" className="btn small">
-          Comment Replies
+          ردود التعليقات
         </Link>
       </div>
 
@@ -136,32 +136,28 @@ export default async function AdminCommentDetailsPage({
         </div>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> commentId={comment.id}, postId={comment.postId}, status={comment.status}, replies={replies.length}
-        </p>
-      </div>
+      
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <div style={{ display: "grid", gap: "12px" }}>
-          <p><strong>Comment ID:</strong> {comment.id}</p>
-          <p><strong>Post ID:</strong> {comment.postId}</p>
-          <p><strong>Parent ID:</strong> {comment.parentId ?? "-"}</p>
-          <p><strong>Author:</strong> {comment.author?.username ?? "-"}</p>
-          <p><strong>Status:</strong> {comment.status}</p>
-          <p><strong>Replies:</strong> {comment.repliesCount}</p>
-          <p><strong>Created At:</strong> {formatDateTimeInMakkah(comment.createdAt, "ar-BH")}</p>
-          <p><strong>Updated At:</strong> {formatDateTimeInMakkah(comment.updatedAt, "ar-BH")}</p>
+          <p><strong>معرّف التعليق:</strong> {comment.id}</p>
+          <p><strong>معرّف المنشور:</strong> {comment.postId}</p>
+          <p><strong>معرّف الأصل:</strong> {comment.parentId ?? "-"}</p>
+          <p><strong>الكاتب:</strong> {comment.author?.username ?? "-"}</p>
+          <p><strong>الحالة:</strong> {comment.status}</p>
+          <p><strong>الردود:</strong> {comment.repliesCount}</p>
+          <p><strong>تاريخ الإنشاء:</strong> {formatDateTimeInMakkah(comment.createdAt, "ar-BH")}</p>
+          <p><strong>آخر تحديث:</strong> {formatDateTimeInMakkah(comment.updatedAt, "ar-BH")}</p>
         </div>
       </div>
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
-        <h2 style={{ marginTop: 0 }}>Content</h2>
+        <h2 style={{ marginTop: 0 }}>المحتوى</h2>
         <p style={{ marginBottom: 0 }}>{comment.content}</p>
       </div>
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
-        <h2 style={{ marginTop: 0 }}>Actions</h2>
+        <h2 style={{ marginTop: 0 }}>الإجراءات</h2>
         <AdminCommentActions
           comment={{
             id: comment.id,
@@ -171,7 +167,7 @@ export default async function AdminCommentDetailsPage({
       </div>
 
       <div className="state-card">
-        <h2 style={{ marginTop: 0 }}>Replies</h2>
+        <h2 style={{ marginTop: 0 }}>الردود</h2>
 
         {replies.length === 0 ? (
           <EmptyState
@@ -183,12 +179,12 @@ export default async function AdminCommentDetailsPage({
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Reply ID</th>
-                  <th>Reply</th>
-                  <th>Author</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th>Actions</th>
+                  <th>معرّف الرد</th>
+                  <th>الرد</th>
+                  <th>الكاتب</th>
+                  <th>الحالة</th>
+                  <th>التاريخ</th>
+                  <th>الإجراءات</th>
                 </tr>
               </thead>
               <tbody>

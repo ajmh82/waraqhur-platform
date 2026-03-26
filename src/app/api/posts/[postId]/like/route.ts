@@ -12,13 +12,7 @@ async function requireSessionUser() {
     return {
       ok: false as const,
       response: NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "UNAUTHENTICATED",
-            message: "Authentication required",
-          },
-        },
+        { success: false, error: { code: "UNAUTHENTICATED", message: "Authentication required" } },
         { status: 401 }
       ),
     };
@@ -26,24 +20,51 @@ async function requireSessionUser() {
 
   try {
     const current = await getCurrentUserFromSession(sessionValue);
-    return {
-      ok: true as const,
-      current,
-    };
+    return { ok: true as const, current };
   } catch {
     return {
       ok: false as const,
       response: NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "INVALID_SESSION",
-            message: "Invalid or expired session",
-          },
-        },
+        { success: false, error: { code: "INVALID_SESSION", message: "Invalid or expired session" } },
         { status: 401 }
       ),
     };
+  }
+}
+
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ postId: string }> }
+) {
+  try {
+    const { postId } = await context.params;
+
+    const likes = await prisma.like.findMany({
+      where: { postId },
+      include: {
+        user: {
+          select: { id: true, username: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        postId,
+        likesCount: likes.length,
+        users: likes.map((l) => ({
+          id: l.user.id,
+          username: l.user.username,
+        })),
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: { code: "LIKES_FETCH_FAILED", message: error instanceof Error ? error.message : "Failed" } },
+      { status: 400 }
+    );
   }
 }
 
@@ -52,70 +73,35 @@ export async function POST(
   context: { params: Promise<{ postId: string }> }
 ) {
   const auth = await requireSessionUser();
-
-  if (!auth.ok) {
-    return auth.response;
-  }
+  if (!auth.ok) return auth.response;
 
   try {
     const { postId } = await context.params;
     const userId = auth.current.user.id;
 
-    const post = await prisma.post.findUnique({
-      where: {
-        id: postId,
-      },
-    });
-
+    const post = await prisma.post.findUnique({ where: { id: postId } });
     if (!post) {
       return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "POST_NOT_FOUND",
-            message: "Post not found",
-          },
-        },
+        { success: false, error: { code: "POST_NOT_FOUND", message: "Post not found" } },
         { status: 404 }
       );
     }
 
     await prisma.like.upsert({
-      where: {
-        userId_postId: {
-          userId,
-          postId,
-        },
-      },
+      where: { userId_postId: { userId, postId } },
       update: {},
-      create: {
-        userId,
-        postId,
-      },
+      create: { userId, postId },
     });
 
-    const likesCount = await prisma.like.count({
-      where: {
-        postId,
-      },
-    });
+    const likesCount = await prisma.like.count({ where: { postId } });
 
     return NextResponse.json({
       success: true,
-      data: {
-        liked: true,
-        likesCount,
-      },
+      data: { liked: true, likesCount },
     });
   } catch (error) {
     return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "LIKE_FAILED",
-          message: error instanceof Error ? error.message : "Like failed",
-        },
-      },
+      { success: false, error: { code: "LIKE_FAILED", message: error instanceof Error ? error.message : "Like failed" } },
       { status: 400 }
     );
   }
@@ -126,44 +112,22 @@ export async function DELETE(
   context: { params: Promise<{ postId: string }> }
 ) {
   const auth = await requireSessionUser();
-
-  if (!auth.ok) {
-    return auth.response;
-  }
+  if (!auth.ok) return auth.response;
 
   try {
     const { postId } = await context.params;
     const userId = auth.current.user.id;
 
-    await prisma.like.deleteMany({
-      where: {
-        userId,
-        postId,
-      },
-    });
-
-    const likesCount = await prisma.like.count({
-      where: {
-        postId,
-      },
-    });
+    await prisma.like.deleteMany({ where: { userId, postId } });
+    const likesCount = await prisma.like.count({ where: { postId } });
 
     return NextResponse.json({
       success: true,
-      data: {
-        liked: false,
-        likesCount,
-      },
+      data: { liked: false, likesCount },
     });
   } catch (error) {
     return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "UNLIKE_FAILED",
-          message: error instanceof Error ? error.message : "Unlike failed",
-        },
-      },
+      { success: false, error: { code: "UNLIKE_FAILED", message: error instanceof Error ? error.message : "Unlike failed" } },
       { status: 400 }
     );
   }

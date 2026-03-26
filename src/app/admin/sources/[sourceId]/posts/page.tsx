@@ -120,7 +120,7 @@ function buildFilterHref(
 }
 
 function getSortLabel(sort: SortKey) {
-  return sort === "OLDEST" ? "Oldest First" : "Latest First";
+  return sort === "OLDEST" ? "الأقدم أولاً" : "الأحدث أولاً";
 }
 
 export default async function AdminSourcePostsPage({
@@ -238,52 +238,52 @@ export default async function AdminSourcePostsPage({
           العودة إلى تفاصيل المصدر
         </Link>
         <Link href={`/admin/sources/${source.id}/posts/new`} className="btn small">
-          Create Post Manually
+          إنشاء منشور يدوي
         </Link>
         <Link
           href={buildFilterHref(source.id, "ALL", "ALL", "", "LATEST", 1)}
           className={`btn ${selectedStatus === "ALL" && selectedVisibility === "ALL" && !query && selectedSort === "LATEST" ? "primary" : "small"}`}
         >
-          All Posts
+          جميع المنشورات
         </Link>
         <Link href={`/admin/sources/${source.id}/posts`} className="btn small">
-          Reset Filters
+          إعادة ضبط الفلاتر
         </Link>
         <Link
           href={buildFilterHref(source.id, "DRAFT", selectedVisibility, query, selectedSort, 1)}
           className={`btn ${selectedStatus === "DRAFT" ? "primary" : "small"}`}
         >
-          Draft Only
+          المسودات فقط
         </Link>
         <Link
           href={buildFilterHref(source.id, "PUBLISHED", selectedVisibility, query, selectedSort, 1)}
           className={`btn ${selectedStatus === "PUBLISHED" ? "primary" : "small"}`}
         >
-          Published Only
+          المنشورة فقط
         </Link>
         <Link
           href={buildFilterHref(source.id, "ARCHIVED", selectedVisibility, query, selectedSort, 1)}
           className={`btn ${selectedStatus === "ARCHIVED" ? "primary" : "small"}`}
         >
-          Archived Only
+          المؤرشفة فقط
         </Link>
         <Link
           href={buildFilterHref(source.id, selectedStatus, "PUBLIC", query, selectedSort, 1)}
           className={`btn ${selectedVisibility === "PUBLIC" ? "primary" : "small"}`}
         >
-          Public Only
+          العامة فقط
         </Link>
         <Link
           href={buildFilterHref(source.id, selectedStatus, "PRIVATE", query, selectedSort, 1)}
           className={`btn ${selectedVisibility === "PRIVATE" ? "primary" : "small"}`}
         >
-          Private Only
+          الخاصة فقط
         </Link>
         <Link
           href={buildFilterHref(source.id, selectedStatus, "UNLISTED", query, selectedSort, 1)}
           className={`btn ${selectedVisibility === "UNLISTED" ? "primary" : "small"}`}
         >
-          Unlisted Only
+          غير مدرجة فقط
         </Link>
       </div>
 
@@ -306,7 +306,7 @@ export default async function AdminSourcePostsPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="ابحث بالعنوان أو slug"
+          placeholder="اSearch بالعنوان أو slug"
           className="search-input"
           style={{ minWidth: "280px" }}
         />
@@ -325,7 +325,7 @@ export default async function AdminSourcePostsPage({
 
       {activeFilters.length > 0 ? (
         <p style={{ marginBottom: "12px" }}>
-          <strong>Active filters:</strong> {activeFilters.join(" | ")}
+          <strong>الفلاتر النشطة:</strong> {activeFilters.join(" | ")}
         </p>
       ) : null}
 
@@ -338,7 +338,7 @@ export default async function AdminSourcePostsPage({
           href={buildFilterHref(source.id, "ALL", selectedVisibility, query, selectedSort, 1)}
           className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
         >
-          All Statuses
+          جميع الحالات
         </Link>
 
         {statuses.map((status) => (
@@ -357,7 +357,7 @@ export default async function AdminSourcePostsPage({
           href={buildFilterHref(source.id, selectedStatus, "ALL", query, selectedSort, 1)}
           className={`btn ${selectedVisibility === "ALL" ? "primary" : "small"}`}
         >
-          All Visibility
+          جميع مستويات الظهور
         </Link>
 
         {visibilities.map((visibility) => (
@@ -376,32 +376,28 @@ export default async function AdminSourcePostsPage({
           href={buildFilterHref(source.id, selectedStatus, selectedVisibility, query, "LATEST", 1)}
           className={`btn ${selectedSort === "LATEST" ? "primary" : "small"}`}
         >
-          Latest First
+          الأحدث أولاً
         </Link>
         <Link
           href={buildFilterHref(source.id, selectedStatus, selectedVisibility, query, "OLDEST", 1)}
           className={`btn ${selectedSort === "OLDEST" ? "primary" : "small"}`}
         >
-          Oldest First
+          الأقدم أولاً
         </Link>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> status={selectedStatus}, visibility={selectedVisibility}, search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
-        </p>
-      </div>
+      
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <p style={{ margin: 0 }}>
-          <strong>Showing:</strong> {visibleStart}-{visibleEnd} of {totalFilteredPosts}
+          <strong>عرض:</strong> {visibleStart}-{visibleEnd} of {totalFilteredPosts}
         </p>
       </div>
 
       {paginatedPosts.length === 0 ? (
         <EmptyState
           title="لا توجد منشورات مطابقة"
-          description="لا توجد منشورات تطابق البحث الحالي أو الفلاتر الحالية."
+          description="لا توجد منشورات تطابق الSearch الحالي أو الفلاتر الحالية."
         />
       ) : (
         <>
@@ -414,7 +410,7 @@ export default async function AdminSourcePostsPage({
                   <th>الحالة</th>
                   <th>الظهور</th>
                   <th>التاريخ</th>
-                  <th>Open</th>
+                  <th>فتح</th>
                   <th>Delete</th>
                 </tr>
               </thead>
@@ -428,7 +424,7 @@ export default async function AdminSourcePostsPage({
                     <td>{formatDateTimeInMakkah(post.createdAt, "ar-BH")}</td>
                     <td>
                       <Link href={post.slug ? `/posts/${post.slug}` : "#"} className="btn small">
-                        Open Post
+                        فتح المنشور
                       </Link>
                     </td>
                     <td>
@@ -460,7 +456,7 @@ export default async function AdminSourcePostsPage({
               className="btn small"
               aria-disabled={safePage <= 1}
             >
-              Previous
+              السابق
             </Link>
 
             <span className="btn small">
@@ -479,7 +475,7 @@ export default async function AdminSourcePostsPage({
               className="btn small"
               aria-disabled={safePage >= totalPages}
             >
-              Next
+              التالي
             </Link>
           </div>
         </>

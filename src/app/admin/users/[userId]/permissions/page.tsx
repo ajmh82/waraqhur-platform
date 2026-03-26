@@ -118,7 +118,7 @@ export default async function AdminUserPermissionsPage({
   if (error) {
     return (
       <ErrorState
-        title="Failed to load user permissions"
+        title="تعذر تحميل الصلاحيات"
         description={error}
       />
     );
@@ -160,11 +160,7 @@ export default async function AdminUserPermissionsPage({
         </div>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> user={user.username}, roles={roles.length}, permissions={permissions.length}
-        </p>
-      </div>
+      
 
       <div
         style={{
@@ -178,10 +174,10 @@ export default async function AdminUserPermissionsPage({
           العودة إلى تفاصيل المستخدم
         </Link>
         <Link href={`/admin/users/${user.id}/roles`} className="btn small">
-          User Roles
+          أدوار المستخدم
         </Link>
         <Link href={`/admin/users/${user.id}/assign-role`} className="btn small">
-          Assign Role
+          إسناد دور
         </Link>
       </div>
 

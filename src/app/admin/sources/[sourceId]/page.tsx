@@ -84,7 +84,7 @@ export default async function AdminSourceDetailsPage({
   const { source, posts, error } = await loadAdminSourceDetailsPageData(sourceId);
 
   if (error) {
-    return <ErrorState title="Failed to load source" description={error} />;
+    return <ErrorState title="تعذر تحميل المصدر" description={error} />;
   }
 
   if (!source) {
@@ -118,13 +118,13 @@ export default async function AdminSourceDetailsPage({
           العودة إلى المصادر
         </Link>
         <Link href={`/admin/sources/${source.id}/edit`} className="btn small">
-          Edit Source
+          تعديل المصدر
         </Link>
         <Link href={`/admin/sources/${source.id}/posts`} className="btn small">
-          Source Posts
+          منشورات المصدر
         </Link>
         <Link href={`/admin/sources/${source.id}/posts/new`} className="btn small">
-          Create Post Manually
+          إنشاء منشور يدوي
         </Link>
       </div>
 
@@ -141,24 +141,20 @@ export default async function AdminSourceDetailsPage({
           <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{totalPosts}</p>
         </div>
         <div className="state-card">
-          <strong>Draft</strong>
+          <strong>مسودة</strong>
           <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{draftPosts}</p>
         </div>
         <div className="state-card">
-          <strong>Published</strong>
+          <strong>منشورة</strong>
           <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{publishedPosts}</p>
         </div>
         <div className="state-card">
-          <strong>Archived</strong>
+          <strong>مؤرشفة</strong>
           <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{archivedPosts}</p>
         </div>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> source={source.name}, type={source.type}, status={source.status}, totalPosts={totalPosts}, publicPosts={publicPosts}, privatePosts={privatePosts}
-        </p>
-      </div>
+      
 
       <div
         style={{
@@ -169,48 +165,48 @@ export default async function AdminSourceDetailsPage({
         }}
       >
         <Link href={`/admin/sources/${source.id}/posts`} className="btn small">
-          All Posts
+          جميع المنشورات
         </Link>
         <Link href={`/admin/sources/${source.id}/posts?status=DRAFT`} className="btn small">
-          Draft Only
+          المسودات فقط
         </Link>
         <Link href={`/admin/sources/${source.id}/posts?status=PUBLISHED`} className="btn small">
-          Published Only
+          المنشورة فقط
         </Link>
         <Link href={`/admin/sources/${source.id}/posts?status=ARCHIVED`} className="btn small">
-          Archived Only
+          المؤرشفة فقط
         </Link>
         <Link href={`/admin/sources/${source.id}/posts?visibility=PUBLIC`} className="btn small">
-          Public Only
+          العامة فقط
         </Link>
         <Link href={`/admin/sources/${source.id}/posts?visibility=PRIVATE`} className="btn small">
-          Private Only
+          الخاصة فقط
         </Link>
       </div>
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <div style={{ display: "grid", gap: "12px" }}>
-          <p><strong>Source ID:</strong> {source.id}</p>
-          <p><strong>Name:</strong> {source.name}</p>
-          <p><strong>Slug:</strong> {source.slug}</p>
-          <p><strong>Type:</strong> {source.type}</p>
-          <p><strong>Status:</strong> {source.status}</p>
-          <p><strong>Category:</strong> {source.category.name}</p>
-          <p><strong>Handle:</strong> {source.handle ?? "-"}</p>
-          <p><strong>URL:</strong> {source.url ?? "-"}</p>
+          <p><strong>معرّف المصدر:</strong> {source.id}</p>
+          <p><strong>الاسم:</strong> {source.name}</p>
+          <p><strong>المعرّف النصي:</strong> {source.slug}</p>
+          <p><strong>النوع:</strong> {source.type}</p>
+          <p><strong>الحالة:</strong> {source.status}</p>
+          <p><strong>التصنيف:</strong> {source.category.name}</p>
+          <p><strong>المُعرّف:</strong> {source.handle ?? "-"}</p>
+          <p><strong>الرابط:</strong> {source.url ?? "-"}</p>
           <p>
-            <strong>Last Fetched At:</strong>{" "}
+            <strong>آخر جلب:</strong>{" "}
             {source.lastFetchedAt
               ? formatDateTimeInMakkah(source.lastFetchedAt, "ar-BH")
               : "-"}
           </p>
-          <p><strong>Created At:</strong> {formatDateTimeInMakkah(source.createdAt, "ar-BH")}</p>
-          <p><strong>Updated At:</strong> {formatDateTimeInMakkah(source.updatedAt, "ar-BH")}</p>
+          <p><strong>تاريخ الإنشاء:</strong> {formatDateTimeInMakkah(source.createdAt, "ar-BH")}</p>
+          <p><strong>آخر تحديث:</strong> {formatDateTimeInMakkah(source.updatedAt, "ar-BH")}</p>
         </div>
       </div>
 
       <div className="state-card">
-        <h2 style={{ marginTop: 0 }}>Actions</h2>
+        <h2 style={{ marginTop: 0 }}>الإجراءات</h2>
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           <AdminSourcePreviewButton
             sourceId={source.id}

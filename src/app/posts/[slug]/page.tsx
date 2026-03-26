@@ -3,12 +3,14 @@ import { notFound } from "next/navigation";
 import { CategoryBadge } from "@/components/content/category-badge";
 import { SourceBadge } from "@/components/content/source-badge";
 import { AppHeader } from "@/components/layout/app-header";
-import { BookmarkPostButton } from "@/components/social/bookmark-post-button";
 import { LikePostButton } from "@/components/social/like-post-button";
+import { BookmarkPostButton } from "@/components/social/bookmark-post-button";
+import { CommentForm } from "@/components/social/comment-form";
+import { ReplyToggleButton } from "@/components/social/reply-toggle-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiGet } from "@/lib/web-api";
-import { formatDateTimeInMakkah } from "@/lib/date-time";
+import { formatDateTimeInMakkah, formatRelativeTime } from "@/lib/date-time";
 
 interface PostRecord {
   id: string;
@@ -26,143 +28,127 @@ interface PostRecord {
   createdAt: string;
   commentsCount: number;
   likesCount?: number;
-  category: {
-    id: string;
-    name: string;
-    slug: string;
-  } | null;
-  source: {
-    id: string;
-    name: string;
-    slug: string;
-  } | null;
-  author: {
-    id: string;
-    email: string;
-    username: string;
-  } | null;
+  category: { id: string; name: string; slug: string } | null;
+  source: { id: string; name: string; slug: string } | null;
+  author: { id: string; email: string; username: string } | null;
 }
 
-interface PostsData {
-  posts: PostRecord[];
-}
+interface PostsData { posts: PostRecord[] }
 
-interface CommentNode {
+interface FlatComment {
   id: string;
   postId: string;
   parentId: string | null;
   content: string;
   createdAt: string;
-  author: {
-    id: string;
-    email: string;
-    username: string;
-  } | null;
+  status: string;
+  author: { id: string; email: string; username: string } | null;
+  repliesCount: number;
+}
+
+interface CommentNode extends FlatComment {
   replies: CommentNode[];
 }
 
-interface CommentsData {
-  comments: CommentNode[];
-}
-
-interface SourceListData {
-  sources: Array<{
-    id: string;
-    slug: string;
-  }>;
-}
-
-interface SourcePostsData {
-  posts: PostRecord[];
-}
+interface CommentsData { comments: FlatComment[] }
+interface SourceListData { sources: Array<{ id: string; slug: string }> }
+interface SourcePostsData { posts: PostRecord[] }
 
 interface PostPageResult {
   post: PostRecord | null;
-  comments: CommentsData["comments"];
+  comments: CommentNode[];
   error: string | null;
+}
+
+function buildCommentTree(flat: FlatComment[]): CommentNode[] {
+  const map = new Map<string, CommentNode>();
+  const roots: CommentNode[] = [];
+
+  for (const c of flat) {
+    map.set(c.id, { ...c, replies: [] });
+  }
+
+  for (const node of map.values()) {
+    if (node.parentId && map.has(node.parentId)) {
+      map.get(node.parentId)!.replies.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  roots.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  for (const node of map.values()) {
+    node.replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  return roots;
 }
 
 async function loadPostBySlug(slug: string) {
   const timelineData = await apiGet<PostsData>("/api/posts");
   const directMatch = timelineData.posts.find((item) => item.slug === slug);
-
-  if (directMatch) {
-    return directMatch;
-  }
+  if (directMatch) return directMatch;
 
   const sourcesData = await apiGet<SourceListData>("/api/sources");
-
   for (const source of sourcesData.sources) {
     try {
       const sourceData = await apiGet<SourcePostsData>(`/sources/${source.slug}`);
       const sourceMatch = sourceData.posts.find((item) => item.slug === slug);
-
-      if (sourceMatch) {
-        return sourceMatch;
-      }
-    } catch {
-      continue;
-    }
+      if (sourceMatch) return sourceMatch;
+    } catch { continue }
   }
-
   return null;
 }
 
 async function loadPostPageData(slug: string): Promise<PostPageResult> {
   try {
     const post = await loadPostBySlug(slug);
-
-    if (!post) {
-      return {
-        post: null,
-        comments: [],
-        error: null,
-      };
-    }
-
-    const commentsData = await apiGet<CommentsData>(
-      `/api/comments?postId=${post.id}`
-    );
-
-    return {
-      post,
-      comments: commentsData.comments,
-      error: null,
-    };
+    if (!post) return { post: null, comments: [], error: null };
+    const commentsData = await apiGet<CommentsData>(`/api/comments?postId=${post.id}`);
+    const tree = buildCommentTree(commentsData.comments);
+    return { post, comments: tree, error: null };
   } catch (error) {
     return {
-      post: null,
-      comments: [],
-      error:
-        error instanceof Error ? error.message : "تعذر تحميل بيانات المنشور.",
+      post: null, comments: [],
+      error: error instanceof Error ? error.message : "تعذر تحميل بيانات المنشور.",
     };
   }
 }
 
 function CommentThread({
-  comments,
-  depth = 0,
+  comments, postId, depth = 0,
 }: {
-  comments: CommentNode[];
-  depth?: number;
+  comments: CommentNode[]; postId: string; depth?: number;
 }) {
   return (
-    <div className="comment-list">
+    <div className="comment-thread">
       {comments.map((comment) => (
         <article
           key={comment.id}
-          className="comment-card"
-          style={{ marginRight: `${depth * 24}px` }}
+          className={`comment-item ${depth > 0 ? "comment-item--nested" : ""}`}
+          style={depth > 0 ? { marginRight: `${Math.min(depth * 20, 60)}px` } : undefined}
         >
-          <div className="comment-card__head">
-            <strong>{comment.author?.username ?? "مستخدم غير معروف"}</strong>
-            <span>{formatDateTimeInMakkah(comment.createdAt, "ar-BH")}</span>
+          <div className="comment-item__avatar">
+            {(comment.author?.username ?? "؟").charAt(0).toUpperCase()}
           </div>
-          <p>{comment.content}</p>
+          <div className="comment-item__body">
+            <div className="comment-item__header">
+              <strong className="comment-item__author">
+                {comment.author ? (
+                  <Link href={`/u/${comment.author.username}`}>{comment.author.username}</Link>
+                ) : "مستخدم غير معروف"}
+              </strong>
+              <span className="comment-item__time">
+                {formatRelativeTime(comment.createdAt)}
+              </span>
+            </div>
+            <p className="comment-item__text">{comment.content}</p>
+            <ReplyToggleButton postId={postId} commentId={comment.id} />
+          </div>
 
           {comment.replies.length > 0 ? (
-            <div style={{ marginTop: "14px" }}>
-              <CommentThread comments={comment.replies} depth={depth + 1} />
+            <div className="comment-item__replies">
+              <CommentThread comments={comment.replies} postId={postId} depth={depth + 1} />
             </div>
           ) : null}
         </article>
@@ -190,127 +176,86 @@ export default async function PostPage({
     );
   }
 
-  if (!post) {
-    notFound();
-  }
+  if (!post) notFound();
 
   const originalUrl = post.metadata?.ingestion?.originalUrl ?? null;
-  const fetchedAt = post.metadata?.ingestion?.fetchedAt ?? null;
-  const provider = post.metadata?.ingestion?.provider ?? null;
+  const totalComments = (function countAll(nodes: CommentNode[]): number {
+    return nodes.reduce((sum, n) => sum + 1 + countAll(n.replies), 0);
+  })(comments);
 
   return (
     <main className="page-stack">
       <div className="page-container">
         <AppHeader />
 
-        <article className="post-detail">
-          <div className="post-detail__meta">
-            {post.source ? (
-              <SourceBadge name={post.source.name} slug={post.source.slug} />
-            ) : null}
-            {post.category ? (
-              <CategoryBadge name={post.category.name} slug={post.category.slug} />
-            ) : null}
-          </div>
-
-          <h1 className="post-detail__title">{post.title}</h1>
-
-          <p className="post-detail__summary">
-            {post.excerpt ?? "لا يوجد ملخص لهذا المنشور."}
-          </p>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: "12px",
-              marginTop: "18px",
-              marginBottom: "18px",
-            }}
-          >
-            <div className="state-card">
-              <strong>التاريخ</strong>
-              <p style={{ margin: "10px 0 0" }}>
+        <article className="post-detail-v2">
+          <div className="post-detail-v2__top">
+            <div className="tweet-card__avatar tweet-card__avatar--lg">
+              {(post.author?.username ?? "؟").charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <strong className="post-detail-v2__author">
+                {post.author ? (
+                  <Link href={`/u/${post.author.username}`}>{post.author.username}</Link>
+                ) : "كاتب غير معروف"}
+              </strong>
+              <span className="post-detail-v2__time">
                 {formatDateTimeInMakkah(post.createdAt, "ar-BH")}
-              </p>
-            </div>
-            <div className="state-card">
-              <strong>الكاتب</strong>
-              <p style={{ margin: "10px 0 0" }}>
-                {post.author?.username ?? "كاتب غير معروف"}
-              </p>
-            </div>
-            <div className="state-card">
-              <strong>التعليقات</strong>
-              <p style={{ margin: "10px 0 0" }}>{comments.length}</p>
-            </div>
-            <div className="state-card">
-              <strong>الإعجابات</strong>
-              <p style={{ margin: "10px 0 0" }}>{post.likesCount ?? 0}</p>
+              </span>
             </div>
           </div>
 
-          <div className="state-card" style={{ marginBottom: "18px" }}>
-            <p style={{ margin: 0 }}>
-              <strong>Current view:</strong> slug={post.slug ?? "none"}, source={post.source?.name ?? "none"}, category={post.category?.name ?? "none"}, provider={provider ?? "none"}
-            </p>
+          <div className="post-detail-v2__badges">
+            {post.source ? <SourceBadge name={post.source.name} slug={post.source.slug} /> : null}
+            {post.category ? <CategoryBadge name={post.category.name} slug={post.category.slug} /> : null}
           </div>
 
-          <div className="post-detail__info">
-            <span>{formatDateTimeInMakkah(post.createdAt, "ar-BH")}</span>
-            <span>{post.author?.username ?? "كاتب غير معروف"}</span>
-            <span>{comments.length} تعليق رئيسي</span>
-            <span>{post.likesCount ?? 0} إعجاب</span>
-            {provider ? <span>{provider}</span> : null}
-            {fetchedAt ? (
-              <span>{formatDateTimeInMakkah(fetchedAt, "ar-BH")}</span>
-            ) : null}
+          <h1 className="post-detail-v2__title">{post.title}</h1>
+
+          {post.excerpt ? <p className="post-detail-v2__excerpt">{post.excerpt}</p> : null}
+
+          <div className="post-detail-v2__content">
+            {post.content ?? "لا يوجد محتوى كامل لهذا المنشور حتى الآن."}
           </div>
 
-          <div
-            style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}
-          >
-            <LikePostButton
-              postId={post.id}
-              initialLikesCount={post.likesCount ?? 0}
-            />
+          <div className="post-detail-v2__stats">
+            <span>❤️ {post.likesCount ?? 0} إعجاب</span>
+            <span>💬 {totalComments} تعليق</span>
+          </div>
+
+          <div className="post-detail-v2__actions">
+            <LikePostButton postId={post.id} initialLikesCount={post.likesCount ?? 0} />
             <BookmarkPostButton postId={post.id} />
             {originalUrl ? (
-              <a
-                href={originalUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn small"
-              >
-                Open Original
+              <a href={originalUrl} target="_blank" rel="noreferrer" className="btn-action">
+                🔗 المصدر الأصلي
               </a>
             ) : null}
-            <Link href="/timeline" className="btn small">
-              العودة إلى الموجز
-            </Link>
-          </div>
-
-          <div className="post-detail__content">
-            {post.content ?? "لا يوجد محتوى كامل لهذا المنشور حتى الآن."}
+            <Link href="/timeline" className="btn-action">← العودة للموجز</Link>
           </div>
         </article>
 
         <section className="page-section">
           <div className="section-heading">
+            <p className="section-heading__eyebrow">شارك رأيك</p>
+            <h2>أضف تعليقاً</h2>
+          </div>
+          <CommentForm postId={post.id} />
+        </section>
+
+        <section className="page-section">
+          <div className="section-heading">
             <p className="section-heading__eyebrow">النقاش</p>
-            <h2>التعليقات والردود</h2>
-            <p className="section-heading__description">
-              هذا القسم يدعم الآن الردود المتداخلة، وهو أقرب إلى أسلوب النقاش الاجتماعي الذي نحتاجه داخل ورق حر.
-            </p>
+            <h2>التعليقات ({totalComments})</h2>
           </div>
 
           {comments.length === 0 ? (
             <EmptyState
               title="لا توجد تعليقات بعد"
-              description="المنشور موجود، لكن لم تتم إضافة أي تعليق عليه حتى الآن."
+              description="كن أول من يعلّق على هذا المنشور."
             />
           ) : (
-            <CommentThread comments={comments} />
+            <CommentThread comments={comments} postId={post.id} />
           )}
         </section>
       </div>

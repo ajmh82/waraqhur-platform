@@ -5,131 +5,42 @@ import { dashboardApiGet } from "@/lib/dashboard-api";
 import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface InvitationsResponse {
-  invitations: Array<{
-    id: string;
-    email: string;
-    token: string;
-    status: string;
-    sentAt: string | null;
-    acceptedAt: string | null;
-    revokedAt: string | null;
-    expiresAt: string;
-    createdAt: string;
-    role: {
-      key: string;
-      name: string;
-    } | null;
-    issuerUser: {
-      id: string;
-      email: string;
-      username: string;
-    };
-    usages: Array<{
-      id: string;
-      usedAt: string;
-      user: {
-        id: string;
-        email: string;
-        username: string;
-      };
-    }>;
-  }>;
+  invitations: Array<{ id: string; email: string; status: string; sentAt: string | null; acceptedAt: string | null; expiresAt: string; role: { name: string } | null }>;
 }
 
-interface InvitesPageResult {
-  data: InvitationsResponse | null;
-  error: string | null;
-}
-
-async function loadInvitesPageData(): Promise<InvitesPageResult> {
-  try {
-    const data = await dashboardApiGet<InvitationsResponse>("/api/invitations");
-    return { data, error: null };
-  } catch (error) {
-    return {
-      data: null,
-      error:
-        error instanceof Error ? error.message : "Unable to load invitations.",
-    };
-  }
+async function loadData() {
+  try { return { data: await dashboardApiGet<InvitationsResponse>("/api/invitations"), error: null }; }
+  catch (error) { return { data: null, error: error instanceof Error ? error.message : "تعذر التحميل." }; }
 }
 
 export default async function DashboardInvitesPage() {
-  const { data, error } = await loadInvitesPageData();
+  const { data, error } = await loadData();
+  if (error || !data) return <ErrorState title="تعذر تحميل الدعوات" description={error ?? "تعذر التحميل."} />;
 
-  if (error || !data) {
-    return (
-      <ErrorState
-        title="Failed to load invites"
-        description={error ?? "Unable to load invitations."}
-      />
-    );
-  }
-
-  const invitations = Array.isArray(data.invitations) ? data.invitations : [];
-  const acceptedInvites = invitations.filter((invitation) => invitation.acceptedAt).length;
-  const pendingInvites = invitations.filter((invitation) => invitation.status === "PENDING").length;
+  const invitations = data.invitations ?? [];
+  const pending = invitations.filter((i) => i.status === "PENDING").length;
+  const accepted = invitations.filter((i) => i.acceptedAt).length;
 
   return (
     <section className="dashboard-panel">
-      <SectionHeading
-        eyebrow="Invites"
-        title="Invitation history"
-        description="Track invitations you created, their current status, and whether they were accepted."
-      />
-
+      <SectionHeading eyebrow="الدعوات" title="سجل الدعوات" description="تتبع الدعوات التي أنشأتها وحالتها." />
       <div className="dashboard-grid" style={{ marginBottom: "18px" }}>
-        <article className="dashboard-card">
-          <h3>Total invites</h3>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{invitations.length}</p>
-        </article>
-        <article className="dashboard-card">
-          <h3>Pending</h3>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{pendingInvites}</p>
-        </article>
-        <article className="dashboard-card">
-          <h3>Accepted</h3>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{acceptedInvites}</p>
-        </article>
+        <article className="dashboard-card"><h3>إجمالي الدعوات</h3><p style={{ fontSize: "28px", margin: "10px 0 0" }}>{invitations.length}</p></article>
+        <article className="dashboard-card"><h3>معلّقة</h3><p style={{ fontSize: "28px", margin: "10px 0 0" }}>{pending}</p></article>
+        <article className="dashboard-card"><h3>مقبولة</h3><p style={{ fontSize: "28px", margin: "10px 0 0" }}>{accepted}</p></article>
       </div>
-
-      <article className="dashboard-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> invites={invitations.length}, pending={pendingInvites}, accepted={acceptedInvites}
-        </p>
-      </article>
-
       {invitations.length === 0 ? (
-        <EmptyState
-          title="No invitations yet"
-          description="Once invitations are created, they will appear here."
-        />
+        <EmptyState title="لا توجد دعوات" description="ستظهر الدعوات هنا عند إنشائها." />
       ) : (
         <div className="dashboard-list">
-          {invitations.map((invitation) => (
-            <article key={invitation.id} className="dashboard-card">
-              <h3>{invitation.email}</h3>
+          {invitations.map((inv) => (
+            <article key={inv.id} className="dashboard-card">
+              <h3>{inv.email}</h3>
               <dl className="dashboard-detail-list">
-                <div>
-                  <dt>Status</dt>
-                  <dd>{invitation.status}</dd>
-                </div>
-                <div>
-                  <dt>Role</dt>
-                  <dd>{invitation.role?.name ?? "Not assigned"}</dd>
-                </div>
-                <div>
-                  <dt>Sent at</dt>
-                  <dd>
-                    {invitation.sentAt
-                      ? formatDateTimeInMakkah(invitation.sentAt, "en-GB")
-                      : "Not sent"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Expires at</dt>
-                  <dd>{formatDateTimeInMakkah(invitation.expiresAt, "en-GB")}</dd>
-                </div>
+                <div><dt>الحالة</dt><dd>{inv.status}</dd></div>
+                <div><dt>الدور</dt><dd>{inv.role?.name ?? "غير محدد"}</dd></div>
+                <div><dt>أُرسلت في</dt><dd>{inv.sentAt ? formatDateTimeInMakkah(inv.sentAt, "ar-BH") : "لم تُرسل"}</dd></div>
+                <div><dt>تنتهي في</dt><dd>{formatDateTimeInMakkah(inv.expiresAt, "ar-BH")}</dd></div>
               </dl>
             </article>
           ))}

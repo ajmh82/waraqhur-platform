@@ -5,7 +5,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 import { createPostSchema } from "@/services/content-schemas";
 import { createPost } from "@/services/content-service";
-import { listHomeTimeline } from "@/services/timeline-service";
+import { listHomeTimeline, type TimelineSortMode } from "@/services/timeline-service";
 import { userHasPermission } from "@/services/authorization-service";
 
 async function getOptionalCurrentUserId() {
@@ -13,9 +13,7 @@ async function getOptionalCurrentUserId() {
     const cookieStore = await cookies();
     const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-    if (!sessionValue) {
-      return null;
-    }
+    if (!sessionValue) return null;
 
     const current = await getCurrentUserFromSession(sessionValue);
     return current.user.id;
@@ -24,15 +22,42 @@ async function getOptionalCurrentUserId() {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const currentUserId = await getOptionalCurrentUserId();
-    const posts = await listHomeTimeline(currentUserId);
+    const { searchParams } = new URL(request.url);
+
+    const rawSort = searchParams.get("sort");
+    const sortMode: TimelineSortMode = rawSort === "smart" ? "smart" : "latest";
+
+    const rawPage = Number(searchParams.get("page") ?? "1");
+    const rawLimit = Number(searchParams.get("limit") ?? "10");
+
+    const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+    const limit =
+      Number.isFinite(rawLimit) && rawLimit > 0
+        ? Math.min(rawLimit, 20)
+        : 10;
+
+    const allPosts = await listHomeTimeline(currentUserId, sortMode);
+
+    const total = allPosts.length;
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const posts = allPosts.slice(start, end);
+    const hasMore = end < total;
 
     return NextResponse.json({
       success: true,
       data: {
         posts,
+        sortMode,
+        pagination: {
+          page,
+          limit,
+          total,
+          hasMore,
+        },
       },
     });
   } catch (error) {

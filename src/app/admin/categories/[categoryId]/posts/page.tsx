@@ -127,7 +127,7 @@ function getSortedPosts(
 }
 
 function getSortLabel(sort: SortKey) {
-  return sort === "oldest" ? "Oldest First" : "Newest First";
+  return sort === "oldest" ? "الأقدم أولاً" : "الأحدث أولاً";
 }
 
 export default async function AdminCategoryPostsPage({
@@ -240,7 +240,7 @@ export default async function AdminCategoryPostsPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="ابحث بالعنوان أو slug"
+          placeholder="اSearch بالعنوان أو slug"
           className="search-input"
           style={{ minWidth: "280px" }}
         />
@@ -262,7 +262,7 @@ export default async function AdminCategoryPostsPage({
           href={buildFilterHref(category.id, "ALL", query, selectedSort, 1)}
           className={`btn ${selectedStatus === "ALL" ? "primary" : "small"}`}
         >
-          All Statuses
+          جميع الحالات
         </Link>
 
         {statuses.map((status) => (
@@ -281,32 +281,28 @@ export default async function AdminCategoryPostsPage({
           href={buildFilterHref(category.id, selectedStatus, query, "newest", 1)}
           className={`btn ${selectedSort === "newest" ? "primary" : "small"}`}
         >
-          Newest First
+          الأحدث أولاً
         </Link>
         <Link
           href={buildFilterHref(category.id, selectedStatus, query, "oldest", 1)}
           className={`btn ${selectedSort === "oldest" ? "primary" : "small"}`}
         >
-          Oldest First
+          الأقدم أولاً
         </Link>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> category={category.name}, status={selectedStatus}, search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
-        </p>
-      </div>
+      
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <p style={{ margin: 0 }}>
-          <strong>Showing:</strong> {visibleFrom}-{visibleTo} of {sortedPosts.length}
+          <strong>عرض:</strong> {visibleFrom}-{visibleTo} of {sortedPosts.length}
         </p>
       </div>
 
       {paginatedPosts.length === 0 ? (
         <EmptyState
           title="لا توجد منشورات مطابقة"
-          description="لا توجد منشورات تطابق البحث الحالي أو الفلاتر الحالية."
+          description="لا توجد منشورات تطابق الSearch الحالي أو الفلاتر الحالية."
         />
       ) : (
         <>
@@ -332,7 +328,7 @@ export default async function AdminCategoryPostsPage({
                     <td>{formatDateTimeInMakkah(post.createdAt, "ar-BH")}</td>
                     <td>
                       <Link href={post.slug ? `/posts/${post.slug}` : "#"} className="btn small">
-                        Open Post
+                        فتح المنشور
                       </Link>
                     </td>
                   </tr>
@@ -360,7 +356,7 @@ export default async function AdminCategoryPostsPage({
               className="btn small"
               aria-disabled={safePage <= 1}
             >
-              Previous
+              السابق
             </Link>
 
             <span className="btn small">
@@ -378,7 +374,7 @@ export default async function AdminCategoryPostsPage({
               className="btn small"
               aria-disabled={safePage >= totalPages}
             >
-              Next
+              التالي
             </Link>
           </div>
         </>

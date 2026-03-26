@@ -49,7 +49,7 @@ export function AdminSourceArchiveButton({
         onClick={handleArchive}
         disabled={isPending}
       >
-        {isPending ? "..." : "Archive"}
+        {isPending ? "..." : "أرشفة"}
       </button>
 
       {result ? (

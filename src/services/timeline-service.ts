@@ -1,159 +1,95 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-type TimelinePostRecord = Prisma.PostGetPayload<{
-  include: {
-    category: true;
-    source: true;
-    author: true;
-    updatedBy: true;
-    comments: true;
-    likes: true;
-    repostOfPost: {
-      include: {
-        author: true;
-      };
-    };
-    quotedPost: {
-      include: {
-        author: true;
-      };
-    };
-  };
-}>;
+export type TimelineSortMode = "latest" | "smart";
 
-function mapTimelinePost(post: TimelinePostRecord) {
-  return {
-    id: post.id,
-    title: post.title,
-    slug: post.slug,
-    excerpt: post.excerpt,
-    content: post.content,
-    coverImageUrl: post.coverImageUrl,
-    status: post.status,
-    visibility: post.visibility,
-    publishedAt: post.publishedAt?.toISOString() ?? null,
-    createdAt: post.createdAt.toISOString(),
-    updatedAt: post.updatedAt.toISOString(),
-    category: post.category
-      ? {
-          id: post.category.id,
-          name: post.category.name,
-          slug: post.category.slug,
-        }
-      : null,
-    source: post.source
-      ? {
-          id: post.source.id,
-          name: post.source.name,
-          slug: post.source.slug,
-        }
-      : null,
-    author: post.author
-      ? {
-          id: post.author.id,
-          email: post.author.email,
-          username: post.author.username,
-        }
-      : null,
-    updatedBy: post.updatedBy
-      ? {
-          id: post.updatedBy.id,
-          email: post.updatedBy.email,
-          username: post.updatedBy.username,
-        }
-      : null,
-    commentsCount: post.comments.length,
-    likesCount: post.likes.length,
-    repostOfPost: post.repostOfPost
-      ? {
-          id: post.repostOfPost.id,
-          title: post.repostOfPost.title,
-          slug: post.repostOfPost.slug,
-          author: post.repostOfPost.author
-            ? {
-                id: post.repostOfPost.author.id,
-                username: post.repostOfPost.author.username,
-              }
-            : null,
-        }
-      : null,
-    quotedPost: post.quotedPost
-      ? {
-          id: post.quotedPost.id,
-          title: post.quotedPost.title,
-          slug: post.quotedPost.slug,
-          author: post.quotedPost.author
-            ? {
-                id: post.quotedPost.author.id,
-                username: post.quotedPost.author.username,
-              }
-            : null,
-        }
-      : null,
-  };
-}
-
-const timelinePostInclude = {
+const timelineInclude = {
   category: true,
   source: true,
   author: true,
   updatedBy: true,
-  comments: true,
-  likes: true,
-  repostOfPost: {
-    include: {
-      author: true,
-    },
-  },
-  quotedPost: {
-    include: {
-      author: true,
-    },
-  },
+  repostOfPost: { include: { author: true } },
+  quotedPost: { include: { author: true } },
+  _count: { select: { comments: true, likes: true } },
 } as const;
 
-export async function listHomeTimeline(viewerUserId?: string | null) {
-  if (!viewerUserId) {
-    const publicPosts = await prisma.post.findMany({
-      include: timelinePostInclude,
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 50,
-    });
+type TimelinePost = Prisma.PostGetPayload<{
+  include: typeof timelineInclude;
+}>;
 
-    return publicPosts.map(mapTimelinePost);
+interface ScoredPost {
+  post: TimelinePost;
+  score: number;
+}
+
+function scorePost(
+  post: TimelinePost,
+  userId?: string | null,
+  followingIds: string[] = []
+): number {
+  const now = Date.now();
+  const created = new Date(post.publishedAt || post.createdAt).getTime();
+  const hours = (now - created) / (1000 * 60 * 60);
+
+  const likes = post._count?.likes ?? 0;
+  const comments = post._count?.comments ?? 0;
+
+  const engagement = likes * 10 + comments * 20;
+  const recency = Math.max(0, 100 / (1 + hours));
+  const followBoost =
+    userId && post.authorUserId && followingIds.includes(post.authorUserId)
+      ? 25
+      : 0;
+
+  return engagement + recency + followBoost;
+}
+
+function cleanPost(post: TimelinePost) {
+  return {
+    ...post,
+    repostOfPost:
+      post.repostOfPost?.status === "PUBLISHED" ? post.repostOfPost : null,
+    quotedPost:
+      post.quotedPost?.status === "PUBLISHED" ? post.quotedPost : null,
+    commentsCount: post._count?.comments ?? 0,
+    likesCount: post._count?.likes ?? 0,
+  };
+}
+
+export async function listHomeTimeline(
+  userId?: string | null,
+  sort: TimelineSortMode = "latest"
+) {
+  let followingIds: string[] = [];
+
+  if (userId) {
+    const following = await prisma.follow.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    });
+    followingIds = following.map((f) => f.followingId);
   }
 
-  const following = await prisma.follow.findMany({
+  const posts = await prisma.post.findMany({
     where: {
-      followerId: viewerUserId,
+      status: "PUBLISHED",
+      visibility: "PUBLIC",
     },
-    select: {
-      followingId: true,
-    },
+    include: timelineInclude,
+    orderBy: { createdAt: "desc" },
+    take: 100,
   });
 
-  const visibleAuthorIds = Array.from(
-    new Set([viewerUserId, ...following.map((item) => item.followingId)])
-  );
+  if (sort === "latest") {
+    return posts.map(cleanPost);
+  }
 
-  const timelinePosts = await prisma.post.findMany({
-    where: {
-      authorUserId: {
-        in: visibleAuthorIds,
-      },
-      status: {
-        not: "DELETED",
-      },
-    },
-    include: timelinePostInclude,
-    orderBy: {
-      createdAt: "desc",
-    },
-    take: 50,
-  });
+  const scored: ScoredPost[] = posts.map((post) => ({
+    post,
+    score: scorePost(post, userId, followingIds),
+  }));
 
-  return timelinePosts.map(mapTimelinePost);
+  scored.sort((a, b) => b.score - a.score);
+
+  return scored.map((item) => cleanPost(item.post));
 }

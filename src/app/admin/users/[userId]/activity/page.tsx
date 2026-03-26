@@ -143,7 +143,7 @@ function getSortedAuditLogs(
 }
 
 function getSortLabel(sort: SortKey) {
-  return sort === "oldest" ? "Oldest First" : "Newest First";
+  return sort === "oldest" ? "الأقدم أولاً" : "الأحدث أولاً";
 }
 
 export default async function AdminUserActivityPage({
@@ -170,7 +170,7 @@ export default async function AdminUserActivityPage({
   const normalizedQuery = query.toLowerCase();
 
   if (error) {
-    return <ErrorState title="Failed to load user activity" description={error} />;
+    return <ErrorState title="تعذر تحميل سجل النشاط" description={error} />;
   }
 
   if (!user) {
@@ -237,13 +237,13 @@ export default async function AdminUserActivityPage({
           العودة إلى تفاصيل المستخدم
         </Link>
         <Link href={`/admin/users/${user.id}/roles`} className="btn small">
-          User Roles
+          أدوار المستخدم
         </Link>
         <Link href={`/admin/users/${user.id}/permissions`} className="btn small">
-          User Permissions
+          صلاحيات المستخدم
         </Link>
         <Link href={`/admin/users/${user.id}/sessions`} className="btn small">
-          User Sessions
+          الجلسات
         </Link>
       </div>
 
@@ -264,7 +264,7 @@ export default async function AdminUserActivityPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="ابحث داخل action"
+          placeholder="اSearch داخل action"
           className="search-input"
           style={{ minWidth: "280px" }}
         />
@@ -286,7 +286,7 @@ export default async function AdminUserActivityPage({
           href={buildFilterHref(user.id, "ALL", query, selectedSort, 1)}
           className={`btn ${selectedTargetType === "ALL" ? "primary" : "small"}`}
         >
-          All Target Types
+          جميع الأهداف
         </Link>
 
         {targetTypes.map((targetType) => (
@@ -305,25 +305,21 @@ export default async function AdminUserActivityPage({
           href={buildFilterHref(user.id, selectedTargetType, query, "newest", 1)}
           className={`btn ${selectedSort === "newest" ? "primary" : "small"}`}
         >
-          Newest First
+          الأحدث أولاً
         </Link>
         <Link
           href={buildFilterHref(user.id, selectedTargetType, query, "oldest", 1)}
           className={`btn ${selectedSort === "oldest" ? "primary" : "small"}`}
         >
-          Oldest First
+          الأقدم أولاً
         </Link>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> targetType={selectedTargetType}, search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
-        </p>
-      </div>
+      
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <p style={{ margin: 0 }}>
-          <strong>Showing:</strong> {visibleFrom}-{visibleTo} of {sortedAuditLogs.length}
+          <strong>عرض:</strong> {visibleFrom}-{visibleTo} of {sortedAuditLogs.length}
         </p>
       </div>
 
@@ -338,10 +334,10 @@ export default async function AdminUserActivityPage({
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Action</th>
-                  <th>Actor Type</th>
-                  <th>Target Type</th>
-                  <th>Created At</th>
+                  <th>الإجراء</th>
+                  <th>نوع المنفّذ</th>
+                  <th>نوع الهدف</th>
+                  <th>التاريخ</th>
                 </tr>
               </thead>
               <tbody>
@@ -376,7 +372,7 @@ export default async function AdminUserActivityPage({
               className="btn small"
               aria-disabled={safePage <= 1}
             >
-              Previous
+              السابق
             </Link>
 
             <span className="btn small">
@@ -394,7 +390,7 @@ export default async function AdminUserActivityPage({
               className="btn small"
               aria-disabled={safePage >= totalPages}
             >
-              Next
+              التالي
             </Link>
           </div>
         </>

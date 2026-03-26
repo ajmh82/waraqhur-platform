@@ -10,7 +10,7 @@ interface AdminRoleRecord {
   key: string;
   name: string;
   description: string | null;
-  isSystem: boolean;
+  isنظامي: boolean;
   usersCount: number;
   users: Array<{
     id: string;
@@ -63,7 +63,7 @@ export default async function AdminRoleDetailsPage({
   const { role, error } = await loadAdminRoleDetailsPageData(roleId);
 
   if (error) {
-    return <ErrorState title="Failed to load role details" description={error} />;
+    return <ErrorState title="تعذر تحميل تفاصيل الدور" description={error} />;
   }
 
   if (!role) {
@@ -90,7 +90,7 @@ export default async function AdminRoleDetailsPage({
           العودة إلى الأدوار
         </Link>
         <Link href={`/admin/roles/${role.id}/users`} className="btn small">
-          Role Users
+          مستخدمو الدور
         </Link>
       </div>
 
@@ -105,7 +105,7 @@ export default async function AdminRoleDetailsPage({
         <div className="state-card">
           <strong>نوع الدور</strong>
           <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {role.isSystem ? "SYSTEM" : "CUSTOM"}
+            {role.isنظامي ? "SYSTEM" : "CUSTOM"}
           </p>
         </div>
         <div className="state-card">
@@ -120,25 +120,21 @@ export default async function AdminRoleDetailsPage({
         </div>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> role={role.name}, key={role.key}, users={role.usersCount}, permissions={role.permissions.length}
-        </p>
-      </div>
+      
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <div style={{ display: "grid", gap: "12px" }}>
           <p><strong>الاسم:</strong> {role.name}</p>
-          <p><strong>Key:</strong> {role.key}</p>
+          <p><strong>المعرّف:</strong> {role.key}</p>
           <p><strong>الوصف:</strong> {role.description ?? "-"}</p>
-          <p><strong>نوع الدور:</strong> {role.isSystem ? "System" : "Custom"}</p>
+          <p><strong>نوع الدور:</strong> {role.isنظامي ? "نظامي" : "مخصص"}</p>
           <p><strong>تاريخ الإنشاء:</strong> {formatDateTimeInMakkah(role.createdAt, "ar-BH")}</p>
           <p><strong>آخر تحديث:</strong> {formatDateTimeInMakkah(role.updatedAt, "ar-BH")}</p>
         </div>
       </div>
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
-        <h2 style={{ marginTop: 0 }}>Permissions</h2>
+        <h2 style={{ marginTop: 0 }}>الصلاحيات</h2>
         {role.permissions.length === 0 ? (
           <p style={{ marginBottom: 0 }}>لا توجد صلاحيات مرتبطة بهذا الدور.</p>
         ) : (
@@ -153,7 +149,7 @@ export default async function AdminRoleDetailsPage({
       </div>
 
       <div className="state-card">
-        <h2 style={{ marginTop: 0 }}>Users</h2>
+        <h2 style={{ marginTop: 0 }}>المستخدمون</h2>
         {role.users.length === 0 ? (
           <p style={{ marginBottom: 0 }}>لا يوجد مستخدمون مرتبطون بهذا الدور.</p>
         ) : (
@@ -164,10 +160,10 @@ export default async function AdminRoleDetailsPage({
                   <strong>{user.username}</strong> ({user.email})
                 </p>
                 <p style={{ margin: "8px 0 0" }}>
-                  <strong>Status:</strong> {user.status}
+                  <strong>الحالة:</strong> {user.status}
                 </p>
                 <p style={{ margin: "8px 0 0" }}>
-                  <strong>Assigned at:</strong> {formatDateTimeInMakkah(user.assignedAt, "ar-BH")}
+                  <strong>تاريخ الإسناد:</strong> {formatDateTimeInMakkah(user.assignedAt, "ar-BH")}
                 </p>
               </div>
             ))}

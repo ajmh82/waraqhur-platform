@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") ?? "/timeline";
   const [isPending, startTransition] = useTransition();
-  const [email, setEmail] = useState("ajmh8233@gmail.com");
-  const [password, setPassword] = useState("12345678");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -16,14 +19,9 @@ export function LoginForm() {
 
     const response = await fetch("/api/auth/login", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({
-        email,
-        password,
-      }),
+      body: JSON.stringify({ email, password }),
     });
 
     const payload = await response.json().catch(() => null);
@@ -34,7 +32,7 @@ export function LoginForm() {
     }
 
     startTransition(() => {
-      router.push("/timeline");
+      router.push(redirectTo);
       router.refresh();
     });
   }
@@ -42,7 +40,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="state-card">
       <h2>تسجيل الدخول</h2>
-      <p>ادخل إلى حسابك للوصول إلى المتابعة والتفاعل وباقي ميزات ورق حر.</p>
+      <p>ادخل إلى حسابك للوصول إلى المتابعة والتفاعل وباقي ميزات وراق حر.</p>
 
       <div style={{ display: "grid", gap: "12px", marginTop: "18px" }}>
         <label style={{ display: "grid", gap: "6px" }}>
@@ -50,20 +48,19 @@ export function LoginForm() {
           <input
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className="search-input"
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="example@email.com"
             autoComplete="email"
             required
           />
         </label>
-
         <label style={{ display: "grid", gap: "6px" }}>
           <span>كلمة المرور</span>
           <input
             type="password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="search-input"
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="كلمة المرور"
             autoComplete="current-password"
             required
           />
@@ -71,15 +68,16 @@ export function LoginForm() {
       </div>
 
       {error ? (
-        <p style={{ color: "#ff7b7b", marginTop: "14px", marginBottom: 0 }}>
-          {error}
-        </p>
+        <p style={{ color: "var(--danger)", marginTop: "14px", marginBottom: 0 }}>{error}</p>
       ) : null}
 
-      <div style={{ marginTop: "18px" }}>
-        <button type="submit" className="btn primary" disabled={isPending}>
+      <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "18px" }}>
+        <button type="submit" className="btn-action" disabled={isPending}>
           {isPending ? "جارٍ تسجيل الدخول..." : "دخول"}
         </button>
+        <Link href="/register" style={{ color: "var(--muted)", fontSize: "14px" }}>
+          ليس لديك حساب؟ أنشئ واحداً
+        </Link>
       </div>
     </form>
   );

@@ -70,7 +70,7 @@ export default async function AdminUserDetailsPage({
   const { user, error } = await loadAdminUserDetailsPageData(userId);
 
   if (error) {
-    return <ErrorState title="Failed to load user" description={error} />;
+    return <ErrorState title="تعذر تحميل المستخدم" description={error} />;
   }
 
   if (!user) {
@@ -100,19 +100,19 @@ export default async function AdminUserDetailsPage({
           العودة إلى المستخدمين
         </Link>
         <Link href={`/admin/users/${user.id}/roles`} className="btn small">
-          User Roles
+          أدوار المستخدم
         </Link>
         <Link href={`/admin/users/${user.id}/permissions`} className="btn small">
-          User Permissions
+          صلاحيات المستخدم
         </Link>
         <Link href={`/admin/users/${user.id}/activity`} className="btn small">
-          User Activity
+          سجل النشاط
         </Link>
         <Link href={`/admin/users/${user.id}/sessions`} className="btn small">
-          User Sessions
+          الجلسات
         </Link>
         <Link href={`/admin/users/${user.id}/assign-role`} className="btn small">
-          Assign Role
+          إسناد دور
         </Link>
       </div>
 
@@ -141,15 +141,9 @@ export default async function AdminUserDetailsPage({
           <p style={{ fontSize: "16px", margin: "10px 0 0" }}>
             {user.lastActivityAt
               ? formatDateTimeInMakkah(user.lastActivityAt, "ar-BH")
-              : "No activity"}
+              : "لا يوجد نشاط"}
           </p>
         </div>
-      </div>
-
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> user={user.username}, status={user.status}, roles={roles.length}, sessions={sessions.length}
-        </p>
       </div>
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
@@ -163,7 +157,7 @@ export default async function AdminUserDetailsPage({
             <strong>آخر نشاط:</strong>{" "}
             {user.lastActivityAt
               ? formatDateTimeInMakkah(user.lastActivityAt, "ar-BH")
-              : "No activity"}
+              : "لا يوجد نشاط"}
           </p>
           <p><strong>تاريخ التسجيل:</strong> {formatDateTimeInMakkah(user.createdAt, "ar-BH")}</p>
           <p><strong>آخر تحديث:</strong> {formatDateTimeInMakkah(user.updatedAt, "ar-BH")}</p>

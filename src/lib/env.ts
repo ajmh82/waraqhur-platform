@@ -8,6 +8,10 @@ function requireEnv(name: string): string {
   return value;
 }
 
+function optionalEnv(name: string, fallback: string = ""): string {
+  return process.env[name]?.trim() || fallback;
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   appName: process.env.NEXT_PUBLIC_APP_NAME ?? "Waraqhur",
@@ -17,6 +21,7 @@ export const env = {
   mailProvider: process.env.MAIL_PROVIDER ?? "console",
   mailFromName: requireEnv("MAIL_FROM_NAME"),
   mailFromEmail: requireEnv("MAIL_FROM_EMAIL"),
+  postmarkServerToken: optionalEnv("POSTMARK_SERVER_TOKEN"),
   emailVerificationUrlBase: requireEnv("EMAIL_VERIFICATION_URL_BASE"),
   passwordResetUrlBase: requireEnv("PASSWORD_RESET_URL_BASE"),
 };

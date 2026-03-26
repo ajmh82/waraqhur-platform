@@ -4,131 +4,41 @@ import { dashboardApiGet } from "@/lib/dashboard-api";
 import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface CurrentUserResponse {
-  user: {
-    id: string;
-    email: string;
-    username: string;
-    status: string;
-    profile: {
-      displayName: string;
-      bio: string | null;
-      avatarUrl: string | null;
-      locale: string | null;
-      timezone: string | null;
-    } | null;
-  };
-  session: {
-    id: string;
-    expiresAt: string;
-    lastUsedAt: string | null;
-  };
+  user: { id: string; email: string; username: string; status: string; profile: { displayName: string } | null };
+  session: { id: string; expiresAt: string; lastUsedAt: string | null };
 }
 
-interface SecurityPageResult {
-  data: CurrentUserResponse | null;
-  error: string | null;
-}
-
-async function loadSecurityPageData(): Promise<SecurityPageResult> {
-  try {
-    const data = await dashboardApiGet<CurrentUserResponse>("/api/auth/me");
-    return { data, error: null };
-  } catch (error) {
-    return {
-      data: null,
-      error:
-        error instanceof Error ? error.message : "Unable to load the security page.",
-    };
-  }
+async function loadData() {
+  try { return { data: await dashboardApiGet<CurrentUserResponse>("/api/auth/me"), error: null }; }
+  catch (error) { return { data: null, error: error instanceof Error ? error.message : "تعذر التحميل." }; }
 }
 
 export default async function DashboardSecurityPage() {
-  const { data, error } = await loadSecurityPageData();
-
-  if (error || !data) {
-    return (
-      <ErrorState
-        title="Failed to load security page"
-        description={error ?? "Unable to load the security page."}
-      />
-    );
-  }
+  const { data, error } = await loadData();
+  if (error || !data) return <ErrorState title="تعذر تحميل صفحة الأمان" description={error ?? "تعذر التحميل."} />;
 
   return (
     <section className="dashboard-panel">
-      <SectionHeading
-        eyebrow="Security"
-        title="Security overview"
-        description="Session and account safety information arranged in a mobile-first layout that can later evolve into deeper security controls."
-      />
-
+      <SectionHeading eyebrow="الأمان" title="نظرة أمنية" description="معلومات الجلسة وحالة أمان الحساب." />
       <div className="dashboard-grid" style={{ marginBottom: "18px" }}>
-        <article className="dashboard-card">
-          <h3>Account status</h3>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{data.user.status}</p>
-        </article>
-        <article className="dashboard-card">
-          <h3>Session active</h3>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {data.session.lastUsedAt ? "Yes" : "Unknown"}
-          </p>
-        </article>
-        <article className="dashboard-card">
-          <h3>Profile attached</h3>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {data.user.profile ? "Yes" : "No"}
-          </p>
-        </article>
+        <article className="dashboard-card"><h3>حالة الحساب</h3><p style={{ fontSize: "28px", margin: "10px 0 0" }}>{data.user.status}</p></article>
+        <article className="dashboard-card"><h3>الجلسة نشطة</h3><p style={{ fontSize: "28px", margin: "10px 0 0" }}>{data.session.lastUsedAt ? "نعم" : "غير معروف"}</p></article>
+        <article className="dashboard-card"><h3>الملف مرفق</h3><p style={{ fontSize: "28px", margin: "10px 0 0" }}>{data.user.profile ? "نعم" : "لا"}</p></article>
       </div>
-
-      <article className="dashboard-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> user={data.user.username}, status={data.user.status}, sessionId={data.session.id}
-        </p>
-      </article>
-
       <div className="dashboard-grid">
         <article className="dashboard-card">
-          <h3>Current session</h3>
+          <h3>الجلسة الحالية</h3>
           <dl className="dashboard-detail-list">
-            <div>
-              <dt>Session ID</dt>
-              <dd>{data.session.id}</dd>
-            </div>
-            <div>
-              <dt>Expires at</dt>
-              <dd>{formatDateTimeInMakkah(data.session.expiresAt, "en-GB")}</dd>
-            </div>
-            <div>
-              <dt>Last used</dt>
-              <dd>
-                {data.session.lastUsedAt
-                  ? formatDateTimeInMakkah(data.session.lastUsedAt, "en-GB")
-                  : "Not available"}
-              </dd>
-            </div>
+            <div><dt>تنتهي في</dt><dd>{formatDateTimeInMakkah(data.session.expiresAt, "ar-BH")}</dd></div>
+            <div><dt>آخر استخدام</dt><dd>{data.session.lastUsedAt ? formatDateTimeInMakkah(data.session.lastUsedAt, "ar-BH") : "غير متوفر"}</dd></div>
           </dl>
         </article>
-
         <article className="dashboard-card">
-          <h3>Account security state</h3>
+          <h3>حالة الأمان</h3>
           <dl className="dashboard-detail-list">
-            <div>
-              <dt>Email address</dt>
-              <dd>{data.user.email}</dd>
-            </div>
-            <div>
-              <dt>Account status</dt>
-              <dd>{data.user.status}</dd>
-            </div>
-            <div>
-              <dt>Profile attached</dt>
-              <dd>{data.user.profile ? "Yes" : "No"}</dd>
-            </div>
-            <div>
-              <dt>Security readiness</dt>
-              <dd>Session-based authentication is active</dd>
-            </div>
+            <div><dt>البريد الإلكتروني</dt><dd>{data.user.email}</dd></div>
+            <div><dt>حالة الحساب</dt><dd>{data.user.status}</dd></div>
+            <div><dt>نوع المصادقة</dt><dd>مصادقة بالجلسات</dd></div>
           </dl>
         </article>
       </div>

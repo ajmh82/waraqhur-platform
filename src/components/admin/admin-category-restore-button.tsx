@@ -17,7 +17,7 @@ export function AdminCategoryRestoreButton({
   const [error, setError] = useState<string | null>(null);
 
   if (status !== "ARCHIVED") {
-    return <span className="btn small">Active</span>;
+    return <span className="btn small">نشط</span>;
   }
 
   async function handleRestore() {
@@ -54,7 +54,7 @@ export function AdminCategoryRestoreButton({
         onClick={handleRestore}
         disabled={isPending}
       >
-        {isPending ? "..." : "Restore"}
+        {isPending ? "..." : "استعادة"}
       </button>
 
       {error ? (

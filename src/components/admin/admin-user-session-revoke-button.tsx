@@ -52,7 +52,7 @@ export function AdminUserSessionRevokeButton({
         onClick={handleRevoke}
         disabled={isPending}
       >
-        {isPending ? "..." : "Revoke Session"}
+        {isPending ? "..." : "إلغاء الجلسة"}
       </button>
 
       {message ? <p className="admin-actions__message">{message}</p> : null}

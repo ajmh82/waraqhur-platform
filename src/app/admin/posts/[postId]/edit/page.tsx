@@ -78,7 +78,7 @@ export default async function AdminPostEditPage({
   const { post, error } = await loadAdminPostEditPageData(postId);
 
   if (error) {
-    return <ErrorState title="Failed to load post" description={error} />;
+    return <ErrorState title="تعذر تحميل المنشور" description={error} />;
   }
 
   if (!post) {
@@ -89,7 +89,7 @@ export default async function AdminPostEditPage({
     <section className="dashboard-panel">
       <SectionHeading
         eyebrow="Admin"
-        title={`Edit Post: ${post.title}`}
+        title={`تعديل المنشور: ${post.title}`}
         description="تعديل المنشور من داخل اللوحة الموحدة."
       />
 
@@ -105,16 +105,16 @@ export default async function AdminPostEditPage({
           العودة إلى المنشورات
         </Link>
         <Link href={`/admin/posts/${post.id}`} className="btn small">
-          Post Details
+          تفاصيل المنشور
         </Link>
         {post.category ? (
           <Link href={`/admin/categories/${post.category.id}`} className="btn small">
-            Open Category
+            فتح التصنيف
           </Link>
         ) : null}
         {post.source ? (
           <Link href={`/admin/sources/${post.source.id}`} className="btn small">
-            Open Source
+            فتح المصدر
           </Link>
         ) : null}
       </div>
@@ -145,11 +145,7 @@ export default async function AdminPostEditPage({
         </div>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> postId={post.id}, status={post.status}, visibility={post.visibility}, category={post.category?.name ?? "none"}, source={post.source?.name ?? "none"}
-        </p>
-      </div>
+      
 
       <AdminPostEditForm
         post={{

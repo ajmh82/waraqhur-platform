@@ -48,7 +48,7 @@ export function AdminSourceIngestButton({
         onClick={handleIngest}
         disabled={isPending}
       >
-        {isPending ? "..." : "Ingest"}
+        {isPending ? "..." : "جلب"}
       </button>
 
       {result ? (

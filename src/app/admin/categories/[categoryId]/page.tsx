@@ -145,13 +145,13 @@ export default async function AdminCategoryDetailsPage({
           العودة إلى التصنيفات
         </Link>
         <Link href={`/admin/categories/${category.id}/edit`} className="btn small">
-          Edit Category
+          تعديل التصنيف
         </Link>
         <Link href={`/admin/categories/${category.id}/sources`} className="btn small">
-          Category Sources
+          مصادر التصنيف
         </Link>
         <Link href={`/admin/categories/${category.id}/posts`} className="btn small">
-          Category Posts
+          منشورات التصنيف
         </Link>
       </div>
 
@@ -181,27 +181,23 @@ export default async function AdminCategoryDetailsPage({
         </div>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> category={category.name}, status={category.status}, sources={sourcesCount}, posts={postsCount}, published={publishedPostsCount}, draft={draftPostsCount}, archived={archivedPostsCount}
-        </p>
-      </div>
+      
 
       <div style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Link href={`/admin/categories/${category.id}/sources`} className="btn small">
-          All Sources
+          جميع المصادر
         </Link>
         <Link href={`/admin/categories/${category.id}/posts`} className="btn small">
-          All Posts
+          جميع المنشورات
         </Link>
         <Link href={`/admin/categories/${category.id}/posts?status=PUBLISHED`} className="btn small">
-          Published Only
+          المنشورة فقط
         </Link>
         <Link href={`/admin/categories/${category.id}/posts?status=DRAFT`} className="btn small">
-          Draft Only
+          المسودات فقط
         </Link>
         <Link href={`/admin/categories/${category.id}/posts?status=ARCHIVED`} className="btn small">
-          Archived Only
+          المؤرشفة فقط
         </Link>
       </div>
 

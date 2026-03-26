@@ -1,4 +1,4 @@
-.PHONY: help doctor quick status health verify build smoke release backup latest \
+.PHONY: help doctor quick status health verify build smoke release backup latest \ dev-cycle release-cycle
 	report snapshot maintain daily nightly menu shortcuts inventory env \
 	root-check sanity check logs app-shell db-shell db-status db-tables \
 	up down restart clean archive all update latest-artifacts \
@@ -158,3 +158,11 @@ helpme:
 
 all:
 	./all-in-one
+
+
+dev-cycle:
+	./dev-cycle
+
+
+release-cycle:
+	./release-cycle

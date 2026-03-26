@@ -49,7 +49,7 @@ export function AdminCategoryArchiveButton({
         onClick={handleArchive}
         disabled={isPending}
       >
-        {isPending ? "..." : "Archive"}
+        {isPending ? "..." : "أرشفة"}
       </button>
 
       {message ? (

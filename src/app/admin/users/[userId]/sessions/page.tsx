@@ -122,14 +122,14 @@ function getSortedSessions(
 
 function getSortLabel(sort: SortKey) {
   if (sort === "oldest") {
-    return "Oldest First";
+    return "الأقدم أولاً";
   }
 
   if (sort === "last-used") {
-    return "Last Used";
+    return "آخر استخدام";
   }
 
-  return "Newest First";
+  return "الأحدث أولاً";
 }
 
 export default async function AdminUserSessionsPage({
@@ -153,7 +153,7 @@ export default async function AdminUserSessionsPage({
   const normalizedQuery = query.toLowerCase();
 
   if (error) {
-    return <ErrorState title="Failed to load user sessions" description={error} />;
+    return <ErrorState title="تعذر تحميل الجلسات" description={error} />;
   }
 
   if (!user) {
@@ -212,7 +212,7 @@ export default async function AdminUserSessionsPage({
           العودة إلى تفاصيل المستخدم
         </Link>
         <Link href={`/admin/users/${user.id}/activity`} className="btn small">
-          User Activity
+          سجل النشاط
         </Link>
       </div>
 
@@ -229,7 +229,7 @@ export default async function AdminUserSessionsPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="ابحث داخل Session ID"
+          placeholder="اSearch داخل Session ID"
           className="search-input"
           style={{ minWidth: "280px" }}
         />
@@ -251,38 +251,34 @@ export default async function AdminUserSessionsPage({
           href={buildFilterHref(user.id, query, "newest", 1)}
           className={`btn ${selectedSort === "newest" ? "primary" : "small"}`}
         >
-          Newest First
+          الأحدث أولاً
         </Link>
         <Link
           href={buildFilterHref(user.id, query, "oldest", 1)}
           className={`btn ${selectedSort === "oldest" ? "primary" : "small"}`}
         >
-          Oldest First
+          الأقدم أولاً
         </Link>
         <Link
           href={buildFilterHref(user.id, query, "last-used", 1)}
           className={`btn ${selectedSort === "last-used" ? "primary" : "small"}`}
         >
-          Last Used
+          آخر استخدام
         </Link>
       </div>
 
-      <div className="state-card" style={{ marginBottom: "18px" }}>
-        <p style={{ margin: 0 }}>
-          <strong>Current view:</strong> search={query || "none"}, sort={getSortLabel(selectedSort)}, page={safePage}
-        </p>
-      </div>
+      
 
       <div className="state-card" style={{ marginBottom: "18px" }}>
         <p style={{ margin: 0 }}>
-          <strong>Showing:</strong> {visibleFrom}-{visibleTo} of {sortedSessions.length}
+          <strong>عرض:</strong> {visibleFrom}-{visibleTo} of {sortedSessions.length}
         </p>
       </div>
 
       {paginatedSessions.length === 0 ? (
         <EmptyState
           title="لا توجد جلسات"
-          description="لا توجد جلسات تطابق البحث الحالي."
+          description="لا توجد جلسات تطابق الSearch الحالي."
         />
       ) : (
         <>
@@ -290,11 +286,11 @@ export default async function AdminUserSessionsPage({
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Session ID</th>
-                  <th>Created At</th>
-                  <th>Last Used At</th>
-                  <th>Expires At</th>
-                  <th>Revoke</th>
+                  <th>معرّف الجلسة</th>
+                  <th>تاريخ الإنشاء</th>
+                  <th>آخر استخدام At</th>
+                  <th>تنتهي في</th>
+                  <th>إلغاء</th>
                 </tr>
               </thead>
               <tbody>
@@ -334,7 +330,7 @@ export default async function AdminUserSessionsPage({
               className="btn small"
               aria-disabled={safePage <= 1}
             >
-              Previous
+              السابق
             </Link>
 
             <span className="btn small">
@@ -351,7 +347,7 @@ export default async function AdminUserSessionsPage({
               className="btn small"
               aria-disabled={safePage >= totalPages}
             >
-              Next
+              التالي
             </Link>
           </div>
         </>
