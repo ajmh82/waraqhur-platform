@@ -1,7 +1,7 @@
+import Link from "next/link";
 import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
-import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface CurrentUserResponse {
   user: {
@@ -12,6 +12,7 @@ interface CurrentUserResponse {
     profile: {
       displayName: string;
       bio: string | null;
+      avatarUrl: string | null;
       locale: string | null;
       timezone: string | null;
     } | null;
@@ -32,7 +33,8 @@ async function loadData() {
   } catch (error) {
     return {
       data: null,
-      error: error instanceof Error ? error.message : "تعذر التحميل.",
+      error:
+        error instanceof Error ? error.message : "تعذر تحميل بيانات الحساب.",
     };
   }
 }
@@ -43,105 +45,109 @@ export default async function DashboardAccountPage() {
   if (error || !data) {
     return (
       <ErrorState
-        title="تعذر تحميل إعدادات الحساب"
-        description={error ?? "تعذر التحميل."}
+        title="تعذر تحميل الحساب"
+        description={error ?? "تعذر تحميل بيانات الحساب."}
       />
     );
   }
 
+  const profile = data.user.profile;
+
   return (
     <section className="dashboard-panel">
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+          marginBottom: "18px",
+        }}
+      >
+        <Link href="/dashboard/profile" className="btn small">
+          الملف الشخصي
+        </Link>
+        <Link href="/dashboard/settings" className="btn small">
+          الإعدادات
+        </Link>
+        <Link href="/dashboard/security" className="btn small">
+          الأمان
+        </Link>
+        <Link href="/search" className="btn small">
+          البحث
+        </Link>
+      </div>
+
       <SectionHeading
-        eyebrow="الحساب"
-        title="إعدادات الحساب"
-        description="عرض بيانات الحساب الأساسية وحالة الجلسة الحالية بشكل أوضح."
+        eyebrow="Account"
+        title="الحساب"
+        description="هذه الصفحة تعرض بيانات الحساب الأساسية المرتبطة بتسجيل الدخول والملف الشخصي."
       />
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "12px",
-          marginBottom: "18px",
+          gap: "16px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
         }}
       >
-        <article className="state-card">
-          <strong>حالة الحساب</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {data.user.status}
+        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+          <strong>اسم المستخدم</strong>
+          <p style={{ margin: "8px 0 0" }}>@{data.user.username}</p>
+        </div>
+
+        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+          <strong>البريد الإلكتروني</strong>
+          <p style={{ margin: "8px 0 0" }}>{data.user.email}</p>
+        </div>
+
+        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+          <strong>الحالة</strong>
+          <p style={{ margin: "8px 0 0" }}>{data.user.status}</p>
+        </div>
+
+        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+          <strong>الاسم المعروض</strong>
+          <p style={{ margin: "8px 0 0" }}>
+            {profile?.displayName ?? data.user.username}
           </p>
-        </article>
-        <article className="state-card">
+        </div>
+
+        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
           <strong>اللغة</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {data.user.profile?.locale ?? "غير محدد"}
+          <p style={{ margin: "8px 0 0" }}>
+            {profile?.locale?.startsWith("en") ? "English" : "العربية"}
           </p>
-        </article>
-        <article className="state-card">
+        </div>
+
+        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
           <strong>المنطقة الزمنية</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {data.user.profile?.timezone ?? "غير محدد"}
+          <p style={{ margin: "8px 0 0" }}>
+            {profile?.timezone ?? "Asia/Riyadh"}
           </p>
-        </article>
+        </div>
       </div>
 
       <div
         className="state-card"
         style={{
           maxWidth: "100%",
-          margin: "0 0 18px",
-          padding: "16px",
+          margin: "18px 0 0",
           display: "grid",
-          gap: "8px",
+          gap: "10px",
         }}
       >
-        <strong>ملخص سريع</strong>
-        <p style={{ margin: 0 }}>
-          هذه الصفحة تلخص بيانات الحساب الرسمية المرتبطة بك، مع معلومات الجلسة
-          الحالية التي تساعدك على متابعة وضع الحساب بسرعة.
-        </p>
-      </div>
-
-      <div className="dashboard-grid">
-        <article className="dashboard-card">
-          <h3>هوية الحساب</h3>
-          <dl className="dashboard-detail-list">
-            <div>
-              <dt>البريد الإلكتروني</dt>
-              <dd>{data.user.email}</dd>
-            </div>
-            <div>
-              <dt>اسم المستخدم</dt>
-              <dd>{data.user.username}</dd>
-            </div>
-            <div>
-              <dt>حالة الحساب</dt>
-              <dd>{data.user.status}</dd>
-            </div>
-            <div>
-              <dt>الاسم المعروض</dt>
-              <dd>{data.user.profile?.displayName ?? "غير محدد"}</dd>
-            </div>
-          </dl>
-        </article>
-
-        <article className="dashboard-card">
-          <h3>الجلسة النشطة</h3>
-          <dl className="dashboard-detail-list">
-            <div>
-              <dt>تنتهي في</dt>
-              <dd>{formatDateTimeInMakkah(data.session.expiresAt, "ar-BH")}</dd>
-            </div>
-            <div>
-              <dt>آخر نشاط</dt>
-              <dd>
-                {data.session.lastUsedAt
-                  ? formatDateTimeInMakkah(data.session.lastUsedAt, "ar-BH")
-                  : "غير متوفر"}
-              </dd>
-            </div>
-          </dl>
-        </article>
+        <strong>خطوات سريعة</strong>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <Link href="/dashboard/settings" className="btn small">
+            تعديل الإعدادات
+          </Link>
+          <Link href={`/u/${data.user.username}`} className="btn small">
+            فتح الملف العام
+          </Link>
+          <Link href="/messages" className="btn small">
+            فتح الرسائل
+          </Link>
+        </div>
       </div>
     </section>
   );

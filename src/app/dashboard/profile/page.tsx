@@ -1,7 +1,7 @@
+import Link from "next/link";
 import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
-import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface CurrentUserResponse {
   user: {
@@ -39,6 +39,10 @@ async function loadData() {
   }
 }
 
+function getInitial(value: string) {
+  return value.trim().charAt(0).toUpperCase() || "?";
+}
+
 export default async function DashboardProfilePage() {
   const { data, error } = await loadData();
 
@@ -46,122 +50,117 @@ export default async function DashboardProfilePage() {
     return (
       <ErrorState
         title="تعذر تحميل الملف الشخصي"
-        description={error ?? "تعذر تحميل البيانات."}
+        description={error ?? "تعذر تحميل الملف الشخصي."}
       />
     );
   }
 
+  const profile = data.user.profile;
+  const displayName = profile?.displayName ?? data.user.username;
+
   return (
     <section className="dashboard-panel">
-      <SectionHeading
-        eyebrow="الملف الشخصي"
-        title="نظرة عامة"
-        description="معلوماتك الشخصية الأساسية وحالة اكتمال ملفك الحالي."
-      />
-
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "12px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
           marginBottom: "18px",
         }}
       >
-        <article className="state-card">
-          <strong>حالة الملف</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {data.user.profile ? "مكتمل" : "غير مكتمل"}
-          </p>
-        </article>
-        <article className="state-card">
-          <strong>اللغة</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {data.user.profile?.locale ?? "غير محدد"}
-          </p>
-        </article>
-        <article className="state-card">
-          <strong>المنطقة الزمنية</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {data.user.profile?.timezone ?? "غير محدد"}
-          </p>
-        </article>
+        <Link href="/dashboard/settings" className="btn small">
+          الإعدادات
+        </Link>
+        <Link href={`/u/${data.user.username}`} className="btn small">
+          الملف العام
+        </Link>
+        <Link href="/messages" className="btn small">
+          الرسائل
+        </Link>
       </div>
+
+      <SectionHeading
+        eyebrow="Profile"
+        title="الملف الشخصي"
+        description="هنا تجد ملخصًا واضحًا لبياناتك العامة التي تظهر داخل المنصة."
+      />
 
       <div
         className="state-card"
         style={{
           maxWidth: "100%",
           margin: "0 0 18px",
-          padding: "16px",
           display: "grid",
-          gap: "8px",
+          gap: "16px",
         }}
       >
-        <strong>ملخص سريع</strong>
-        <p style={{ margin: 0 }}>
-          هذه الصفحة تعرض هويتك الأساسية داخل المنصة وما إذا كان ملفك الشخصي
-          يحتوي على المعلومات الضرورية مثل الاسم المعروض والنبذة واللغة.
-        </p>
-      </div>
+        <div
+          style={{
+            display: "flex",
+            gap: "14px",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            className="tweet-card__avatar"
+            style={{ width: "64px", height: "64px", fontSize: "24px" }}
+          >
+            {profile?.avatarUrl ? (
+              <img
+                src={profile.avatarUrl}
+                alt={data.user.username}
+                className="account-menu__avatar-image"
+              />
+            ) : (
+              getInitial(displayName)
+            )}
+          </div>
 
-      <div className="dashboard-grid">
-        <article className="dashboard-card">
-          <h3>الهوية</h3>
-          <dl className="dashboard-detail-list">
-            <div>
-              <dt>الاسم المعروض</dt>
-              <dd>{data.user.profile?.displayName ?? "غير محدد"}</dd>
-            </div>
-            <div>
-              <dt>اسم المستخدم</dt>
-              <dd>{data.user.username}</dd>
-            </div>
-            <div>
-              <dt>البريد الإلكتروني</dt>
-              <dd>{data.user.email}</dd>
-            </div>
-            <div>
-              <dt>حالة الحساب</dt>
-              <dd>{data.user.status}</dd>
-            </div>
-          </dl>
-        </article>
+          <div style={{ display: "grid", gap: "6px" }}>
+            <strong style={{ fontSize: "20px" }}>{displayName}</strong>
+            <span style={{ color: "var(--muted)" }}>@{data.user.username}</span>
+          </div>
+        </div>
 
-        <article className="dashboard-card">
-          <h3>تفاصيل الملف</h3>
-          <dl className="dashboard-detail-list">
-            <div>
-              <dt>النبذة</dt>
-              <dd>{data.user.profile?.bio ?? "لا توجد نبذة"}</dd>
-            </div>
-            <div>
-              <dt>اللغة</dt>
-              <dd>{data.user.profile?.locale ?? "غير محدد"}</dd>
-            </div>
-            <div>
-              <dt>المنطقة الزمنية</dt>
-              <dd>{data.user.profile?.timezone ?? "غير محدد"}</dd>
-            </div>
-          </dl>
-        </article>
+        <div
+          style={{
+            display: "grid",
+            gap: "12px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          }}
+        >
+          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+            <strong>البريد الإلكتروني</strong>
+            <p style={{ margin: "8px 0 0" }}>{data.user.email}</p>
+          </div>
 
-        <article className="dashboard-card">
-          <h3>الجلسة</h3>
-          <dl className="dashboard-detail-list">
-            <div>
-              <dt>تنتهي في</dt>
-              <dd>{formatDateTimeInMakkah(data.session.expiresAt, "ar-BH")}</dd>
-            </div>
-            <div>
-              <dt>آخر نشاط</dt>
-              <dd>
-                {data.session.lastUsedAt
-                  ? formatDateTimeInMakkah(data.session.lastUsedAt, "ar-BH")
-                  : "غير متوفر"}
-              </dd>
-            </div>
-          </dl>
-        </article>
+          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+            <strong>الحالة</strong>
+            <p style={{ margin: "8px 0 0" }}>{data.user.status}</p>
+          </div>
+
+          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+            <strong>اللغة</strong>
+            <p style={{ margin: "8px 0 0" }}>
+              {profile?.locale?.startsWith("en") ? "English" : "العربية"}
+            </p>
+          </div>
+
+          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+            <strong>المنطقة الزمنية</strong>
+            <p style={{ margin: "8px 0 0" }}>
+              {profile?.timezone ?? "Asia/Riyadh"}
+            </p>
+          </div>
+        </div>
+
+        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+          <strong>النبذة</strong>
+          <p style={{ margin: "8px 0 0" }}>
+            {profile?.bio ?? "لا توجد نبذة مضافة بعد."}
+          </p>
+        </div>
       </div>
     </section>
   );

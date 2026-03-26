@@ -120,13 +120,15 @@ model User {
   comments               Comment[]           @relation("CommentAuthor")
   likes                  Like[]
   bookmarks              Bookmark[]
+  directThreadsAsA       DirectThread[]      @relation("DirectThreadParticipantA")
+  directThreadsAsB       DirectThread[]      @relation("DirectThreadParticipantB")
+  sentDirectMessages     DirectMessage[]     @relation("DirectMessageSender")
   auditLogs              AuditLog[]
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
   @@index([status])
 }
-
 
 model Follow {
   followerId             String
@@ -421,6 +423,37 @@ model Comment {
   @@index([postId, status])
   @@index([authorUserId])
   @@index([parentId])
+}
+
+model DirectThread {
+  id                     String              @id @default(cuid())
+  participantAUserId     String
+  participantBUserId     String
+  participantA           User                @relation("DirectThreadParticipantA", fields: [participantAUserId], references: [id], onDelete: Cascade)
+  participantB           User                @relation("DirectThreadParticipantB", fields: [participantBUserId], references: [id], onDelete: Cascade)
+  messages               DirectMessage[]
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@unique([participantAUserId, participantBUserId])
+  @@index([participantAUserId, updatedAt])
+  @@index([participantBUserId, updatedAt])
+}
+
+model DirectMessage {
+  id                     String              @id @default(cuid())
+  threadId               String
+  senderUserId           String
+  body                   String
+  readAt                 DateTime?
+  thread                 DirectThread        @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender                 User                @relation("DirectMessageSender", fields: [senderUserId], references: [id], onDelete: Cascade)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([threadId, createdAt])
+  @@index([senderUserId, createdAt])
+  @@index([readAt])
 }
 
 model AuditLog {

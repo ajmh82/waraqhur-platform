@@ -1,46 +1,62 @@
 import type { ReactNode } from "react";
-import { AppHeader } from "@/components/layout/app-header";
-import { DashboardNav } from "@/components/dashboard/dashboard-nav";
+import Link from "next/link";
 
 export default function DashboardLayout({
   children,
-}: Readonly<{ children: ReactNode }>) {
+}: {
+  children: ReactNode;
+}) {
   return (
-    <main className="page-stack">
-      <div className="page-container">
-        <AppHeader />
-
-        <section
-          className="page-section"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "320px minmax(0, 1fr)",
-            gap: "20px",
-            alignItems: "start",
-          }}
-        >
-          <aside style={{ display: "grid", gap: "16px" }}>
-            <div
-              className="state-card"
-              style={{
-                maxWidth: "100%",
-                margin: 0,
-                display: "grid",
-                gap: "12px",
-              }}
-            >
-              <p className="section-heading__eyebrow">لوحة التحكم</p>
-              <h1 style={{ margin: 0, fontSize: "28px" }}>مساحتك الشخصية</h1>
-              <p style={{ margin: 0 }}>
-                هذه المساحة مخصصة لإدارة ملفك الشخصي، إعدادات الحساب، الأمان،
-                الدعوات، الإشعارات، والنشاط من مكان واحد واضح.
+    <main className="page-stack page-stack--social">
+      <div className="page-container page-container--social">
+        <section className="dashboard-shell">
+          <aside className="dashboard-shell__sidebar">
+            <div className="dashboard-shell__sidebar-card">
+              <p className="eyebrow" style={{ margin: 0 }}>
+                Dashboard
+              </p>
+              <h2 style={{ margin: "6px 0 0" }}>لوحة المستخدم</h2>
+              <p style={{ margin: "10px 0 0", color: "var(--muted)" }}>
+                مركز الوصول السريع إلى الحساب، النشاط، الرسائل، الإعدادات،
+                والإشعارات.
               </p>
             </div>
 
-            <DashboardNav />
+            <nav className="dashboard-shell__nav">
+              <Link href="/dashboard" className="dashboard-shell__nav-item">
+                الرئيسية
+              </Link>
+              <Link href="/dashboard/profile" className="dashboard-shell__nav-item">
+                الملف الشخصي
+              </Link>
+              <Link href="/dashboard/account" className="dashboard-shell__nav-item">
+                الحساب
+              </Link>
+              <Link href="/dashboard/settings" className="dashboard-shell__nav-item">
+                الإعدادات
+              </Link>
+              <Link href="/dashboard/security" className="dashboard-shell__nav-item">
+                الأمان
+              </Link>
+              <Link href="/dashboard/activity" className="dashboard-shell__nav-item">
+                النشاط
+              </Link>
+              <Link href="/dashboard/notifications" className="dashboard-shell__nav-item">
+                الإشعارات
+              </Link>
+              <Link href="/dashboard/invites" className="dashboard-shell__nav-item">
+                الدعوات
+              </Link>
+              <Link href="/messages" className="dashboard-shell__nav-item">
+                الرسائل
+              </Link>
+              <Link href="/search" className="dashboard-shell__nav-item">
+                البحث
+              </Link>
+            </nav>
           </aside>
 
-          <section style={{ minWidth: 0 }}>{children}</section>
+          <section className="dashboard-shell__content">{children}</section>
         </section>
       </div>
     </main>

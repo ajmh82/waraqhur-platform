@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { TimelineList } from "@/components/content/timeline-list";
+import { cookies } from "next/headers";
 import { SectionHeading } from "@/components/content/section-heading";
-import { AppHeader } from "@/components/layout/app-header";
-import { EmptyState } from "@/components/ui/empty-state";
+import { TimelineFeedClient } from "@/components/content/timeline-feed-client";
+import { TimelineSortTabs } from "@/components/content/timeline-sort-tabs";
+import { AppShell } from "@/components/layout/app-shell";
 import { ErrorState } from "@/components/ui/error-state";
+import { normalizeUiLocale, uiCopy, type UiLocale } from "@/lib/ui-copy";
 import { apiGet } from "@/lib/web-api";
 
-interface HomePageData {
+interface HomeTimelineData {
   posts: Array<{
     id: string;
     title: string;
@@ -15,227 +17,246 @@ interface HomePageData {
     createdAt: string;
     commentsCount: number;
     likesCount?: number;
-    category: {
+    category: { id: string; name: string; slug: string } | null;
+    source: { id: string; name: string; slug: string } | null;
+    author: { id: string; email: string; username: string } | null;
+    repostOfPost?: {
       id: string;
-      name: string;
-      slug: string;
+      title: string;
+      slug: string | null;
+      author: { id: string; username: string } | null;
     } | null;
-    source: {
+    quotedPost?: {
       id: string;
-      name: string;
-      slug: string;
+      title: string;
+      slug: string | null;
+      author: { id: string; username: string } | null;
     } | null;
-    author: {
-      id: string;
-      email: string;
-      username: string;
+    metadata?: {
+      ingestion?: {
+        originalUrl?: string | null;
+      };
     } | null;
   }>;
+  sortMode?: "latest" | "smart";
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  };
 }
 
-interface CategoriesData {
-  categories: Array<{
+interface CurrentUserLocaleData {
+  user: {
     id: string;
-    name: string;
-    slug: string;
-  }>;
+    username: string;
+    profile: {
+      locale: string | null;
+    } | null;
+  };
 }
 
-interface SourcesData {
-  sources: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    type?: string;
-  }>;
-}
+type SortMode = "latest" | "smart";
 
-interface HomePageResult {
-  postsData: HomePageData | null;
-  categoriesData: CategoriesData | null;
-  sourcesData: SourcesData | null;
-  error: string | null;
-}
-
-async function loadHomePageData(): Promise<HomePageResult> {
+async function getCurrentUser(): Promise<CurrentUserLocaleData["user"] | null> {
   try {
-    const [postsData, categoriesData, sourcesData] = await Promise.all([
-      apiGet<HomePageData>("/api/posts?sort=latest&page=1&limit=8"),
-      apiGet<CategoriesData>("/api/categories"),
-      apiGet<SourcesData>("/api/sources"),
-    ]);
+    const currentUser = await apiGet<CurrentUserLocaleData>("/api/auth/me");
+    return currentUser.user;
+  } catch {
+    return null;
+  }
+}
 
+async function loadHomeTimeline(sortMode: SortMode) {
+  try {
     return {
-      postsData,
-      categoriesData,
-      sourcesData,
+      data: await apiGet<HomeTimelineData>(
+        `/api/posts?sort=${sortMode}&page=1&limit=6`
+      ),
       error: null,
     };
   } catch (error) {
     return {
-      postsData: null,
-      categoriesData: null,
-      sourcesData: null,
+      data: null,
       error:
-        error instanceof Error
-          ? error.message
-          : "تعذر تحميل بيانات الصفحة الرئيسية.",
+        error instanceof Error ? error.message : "تعذر تحميل الصفحة الرئيسية.",
     };
   }
 }
 
-export default async function HomePage() {
-  const { postsData, categoriesData, sourcesData, error } =
-    await loadHomePageData();
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ sort?: string }>;
+}) {
+  const params = (await searchParams) ?? {};
+  const cookieStore = await cookies();
+  const savedSort = cookieStore.get("timeline_sort")?.value;
+  const currentUser = await getCurrentUser();
+  const locale: UiLocale = normalizeUiLocale(currentUser?.profile?.locale);
+  const copy = uiCopy[locale];
 
-  if (error || !postsData || !categoriesData || !sourcesData) {
+  const sortMode: SortMode =
+    params.sort === "smart" || params.sort === "latest"
+      ? params.sort
+      : savedSort === "smart" || savedSort === "latest"
+        ? savedSort
+        : "latest";
+
+  const { data, error } = await loadHomeTimeline(sortMode);
+
+  if (error || !data) {
     return (
-      <main className="page-stack">
-        <div className="page-container">
-          <AppHeader />
+      <AppShell>
+        <section className="page-section">
           <ErrorState
-            title="تعذر تحميل الصفحة الرئيسية"
-            description={error ?? "تعذر تحميل بيانات الصفحة الرئيسية."}
+            title={
+              locale === "en" ? "Unable to load home" : "تعذر تحميل الصفحة الرئيسية"
+            }
+            description={
+              error ??
+              (locale === "en"
+                ? "Unable to load home."
+                : "تعذر تحميل الصفحة الرئيسية.")
+            }
           />
-        </div>
-      </main>
+        </section>
+      </AppShell>
     );
   }
 
-  const featuredPosts = postsData.posts.slice(0, 8);
-  const featuredCategories = categoriesData.categories.slice(0, 6);
-  const featuredSources = sourcesData.sources.slice(0, 6);
+  const posts = data.posts ?? [];
+  const hasMore = Boolean(data.pagination?.hasMore);
+  const badge = sortMode === "smart" ? copy.smartSort : copy.latestSort;
 
   return (
-    <main className="page-stack">
-      <div className="page-container">
-        <AppHeader />
-
-        <section className="hero-panel">
-          <p className="eyebrow">وراق حر</p>
-
-          <h1 className="hero-panel__title">
-            منصة عربية حديثة لمتابعة الأخبار والمصادر والتصنيفات في واجهة واحدة.
-          </h1>
-
-          <p className="hero-panel__description">
-            الصفحة الرئيسية هنا لم تعد مجرد بداية عامة، بل نقطة دخول عملية
-            للموجز، والمصادر، والتصنيفات، بحيث يصل المستخدم سريعًا إلى زاوية
-            القراءة التي تناسبه.
-          </p>
-
-          <div className="hero-metrics">
-            <article className="hero-metric">
-              <strong>{postsData.posts.length}</strong>
-              <span>عنصر معروض</span>
-            </article>
-            <article className="hero-metric">
-              <strong>{categoriesData.categories.length}</strong>
-              <span>تصنيف</span>
-            </article>
-            <article className="hero-metric">
-              <strong>{sourcesData.sources.length}</strong>
-              <span>مصدر</span>
-            </article>
-          </div>
-
+    <AppShell>
+      <section className="page-section">
+        <div
+          style={{
+            marginBottom: "20px",
+            padding: "20px",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "18px",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))",
+            backdropFilter: "blur(8px)",
+            display: "grid",
+            gap: "16px",
+          }}
+        >
           <div
             style={{
               display: "flex",
+              justifyContent: "space-between",
               gap: "12px",
               flexWrap: "wrap",
-              marginTop: "22px",
+              alignItems: "center",
             }}
           >
-            <Link href="/timeline" className="btn">
-              اذهب إلى التايملاين
-            </Link>
-            <Link href="/login" className="btn small">
-              تسجيل الدخول
-            </Link>
-            <Link href="/register" className="btn small">
-              إنشاء حساب
-            </Link>
-          </div>
-        </section>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "6px 12px",
+                borderRadius: "999px",
+                fontSize: "13px",
+                fontWeight: 700,
+                color: "#dbeafe",
+                background: "rgba(59,130,246,0.14)",
+                border: "1px solid rgba(59,130,246,0.28)",
+              }}
+            >
+              {badge}
+            </span>
 
-        <section className="page-section">
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap",
+              }}
+            >
+              <Link href="/media" className="btn small">
+                {copy.media}
+              </Link>
+              <Link href="/search" className="btn small">
+                {copy.search}
+              </Link>
+              <Link href="/messages" className="btn small">
+                {copy.messages}
+              </Link>
+            </div>
+          </div>
+
           <SectionHeading
-            eyebrow="استكشاف سريع"
-            title="ابدأ من التصنيفات أو من المصادر"
-            description="يمكنك البدء من الموضوع الذي يهمك أو من الجهة التي تنشر المحتوى، بدل الاعتماد على موجز واحد فقط."
+            eyebrow={copy.homeEyebrow}
+            title={copy.homeTitle}
+            description={copy.homeDescription}
           />
 
           <div
+            className="state-card"
             style={{
+              maxWidth: "100%",
+              margin: 0,
+              padding: "16px",
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: "18px",
+              gap: "10px",
             }}
           >
-            <div className="state-card">
-              <h3 style={{ marginTop: 0 }}>تصنيفات بارزة</h3>
-              <div style={{ display: "grid", gap: "10px" }}>
-                {featuredCategories.length === 0 ? (
-                  <p style={{ margin: 0 }}>لا توجد تصنيفات متاحة حاليًا.</p>
-                ) : (
-                  featuredCategories.map((category) => (
-                    <Link
-                      key={category.id}
-                      href={`/categories/${category.slug}`}
-                      className="btn small"
-                    >
-                      {category.name}
-                    </Link>
-                  ))
-                )}
+            <strong>{copy.quickSummary}</strong>
+            <p style={{ margin: 0 }}>{copy.homeQuickSummary}</p>
+          </div>
+
+          {currentUser ? (
+            <div
+              className="state-card"
+              style={{
+                maxWidth: "100%",
+                margin: 0,
+                padding: "16px",
+                display: "grid",
+                gap: "12px",
+              }}
+            >
+              <strong>{copy.quickActions}</strong>
+              <p style={{ margin: 0 }}>{copy.quickActionsDescription}</p>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <Link href={`/u/${currentUser.username}`} className="btn small">
+                  {copy.myPublicProfile}
+                </Link>
+                <Link href="/messages" className="btn small">
+                  {copy.myMessages}
+                </Link>
+                <Link href="/dashboard/settings" className="btn small">
+                  {copy.mySettings}
+                </Link>
+                <Link href="/dashboard" className="btn small">
+                  {copy.openDashboard}
+                </Link>
               </div>
             </div>
+          ) : null}
 
-            <div className="state-card">
-              <h3 style={{ marginTop: 0 }}>مصادر بارزة</h3>
-              <div style={{ display: "grid", gap: "10px" }}>
-                {featuredSources.length === 0 ? (
-                  <p style={{ margin: 0 }}>لا توجد مصادر متاحة حاليًا.</p>
-                ) : (
-                  featuredSources.map((source) => (
-                    <Link
-                      key={source.id}
-                      href={`/sources/${source.slug}`}
-                      className="btn small"
-                    >
-                      {source.name}
-                    </Link>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
+          <TimelineSortTabs sortMode={sortMode} />
+        </div>
 
-        <section className="page-section">
-          <SectionHeading
-            eyebrow="أحدث ما وصل"
-            title="محتوى حديث من داخل المنصة"
-            description="هذه القائمة المختصرة تعرض أحدث العناصر المنشورة، ويمكنك الانتقال بعدها إلى التايملاين الكامل لمتابعة المزيد."
-          />
-
-          {featuredPosts.length === 0 ? (
-            <EmptyState
-              title="لا توجد أخبار منشورة بعد"
-              description="أضف مصادر ومحتوى أكثر حتى يبدأ الموجز الرئيسي بالعمل بشكل فعلي."
-            />
-          ) : (
-            <TimelineList posts={featuredPosts} />
-          )}
-
-          <div style={{ marginTop: "18px" }}>
-            <Link href="/timeline" className="btn">
-              عرض الموجز الكامل
-            </Link>
-          </div>
-        </section>
-      </div>
-    </main>
+        <TimelineFeedClient
+          initialPosts={posts}
+          initialHasMore={hasMore}
+          sortMode={sortMode}
+          pageSize={6}
+        />
+      </section>
+    </AppShell>
   );
 }

@@ -1,31 +1,40 @@
+import Link from "next/link";
 import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 import { formatDateTimeInMakkah } from "@/lib/date-time";
 
-interface InvitationsResponse {
-  invitations: Array<{
+interface InvitesResponse {
+  user: {
+    id: string;
+    username: string;
+  };
+  invites: Array<{
     id: string;
     email: string;
+    token: string;
     status: string;
+    maxUses: number;
     sentAt: string | null;
-    acceptedAt: string | null;
     expiresAt: string;
-    role: { name: string } | null;
+    acceptedAt: string | null;
+    revokedAt: string | null;
+    createdAt: string;
   }>;
 }
 
 async function loadData() {
   try {
     return {
-      data: await dashboardApiGet<InvitationsResponse>("/api/invitations"),
+      data: await dashboardApiGet<InvitesResponse>("/api/invitations"),
       error: null,
     };
   } catch (error) {
     return {
       data: null,
-      error: error instanceof Error ? error.message : "تعذر التحميل.",
+      error:
+        error instanceof Error ? error.message : "تعذر تحميل صفحة الدعوات.",
     };
   }
 }
@@ -37,107 +46,141 @@ export default async function DashboardInvitesPage() {
     return (
       <ErrorState
         title="تعذر تحميل الدعوات"
-        description={error ?? "تعذر التحميل."}
+        description={error ?? "تعذر تحميل صفحة الدعوات."}
       />
     );
   }
 
-  const invitations = data.invitations ?? [];
-  const pendingInvitations = invitations.filter(
-    (invitation) => invitation.status === "PENDING"
-  ).length;
-  const acceptedInvitations = invitations.filter(
-    (invitation) => invitation.acceptedAt
+  const activeInvites = data.invites.filter(
+    (invite) => invite.status === "PENDING" || invite.status === "SENT"
   ).length;
 
   return (
     <section className="dashboard-panel">
-      <SectionHeading
-        eyebrow="الدعوات"
-        title="سجل الدعوات"
-        description="تتبع الدعوات التي أنشأتها وحالتها الحالية بشكل أوضح."
-      />
-
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "12px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
           marginBottom: "18px",
         }}
       >
-        <article className="state-card">
-          <strong>إجمالي الدعوات</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {invitations.length}
-          </p>
-        </article>
-        <article className="state-card">
-          <strong>معلّقة</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {pendingInvitations}
-          </p>
-        </article>
-        <article className="state-card">
-          <strong>مقبولة</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {acceptedInvitations}
-          </p>
-        </article>
+        <Link href="/dashboard/settings" className="btn small">
+          الإعدادات
+        </Link>
+        <Link href="/dashboard/activity" className="btn small">
+          النشاط
+        </Link>
+        <Link href="/search" className="btn small">
+          البحث
+        </Link>
+        <Link href={`/u/${data.user.username}`} className="btn small">
+          الملف العام
+        </Link>
       </div>
+
+      <SectionHeading
+        eyebrow="Invites"
+        title="الدعوات"
+        description="راجع الدعوات التي تم إنشاؤها وحالتها الحالية من مكان واحد."
+      />
 
       <div
         className="state-card"
         style={{
           maxWidth: "100%",
           margin: "0 0 18px",
-          padding: "16px",
           display: "grid",
           gap: "8px",
         }}
       >
-        <strong>ملخص سريع</strong>
+        <strong>ملخص الدعوات</strong>
         <p style={{ margin: 0 }}>
-          تعرض هذه الصفحة جميع الدعوات التي أنشأتها، مع حالتها الحالية ووقت
-          الإرسال والانتهاء والدور المرتبط بها.
+          لديك {activeInvites} دعوة نشطة من أصل {data.invites.length} دعوة.
         </p>
       </div>
 
-      {invitations.length === 0 ? (
+      {data.invites.length === 0 ? (
         <EmptyState
-          title="لا توجد دعوات"
-          description="ستظهر الدعوات هنا عند إنشائها."
+          title="لا توجد دعوات بعد"
+          description="عندما تقوم بإنشاء أو استلام دعوات ستظهر هنا."
         />
       ) : (
         <div className="dashboard-list">
-          {invitations.map((invitation) => (
-            <article key={invitation.id} className="dashboard-card">
-              <h3>{invitation.email}</h3>
+          {data.invites.map((invite) => (
+            <article key={invite.id} className="dashboard-card">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  alignItems: "start",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ display: "grid", gap: "6px" }}>
+                  <strong>{invite.email}</strong>
+                  <span style={{ color: "var(--muted)", fontSize: "14px" }}>
+                    الحالة: {invite.status}
+                  </span>
+                </div>
 
-              <dl className="dashboard-detail-list">
-                <div>
-                  <dt>الحالة</dt>
-                  <dd>{invitation.status}</dd>
-                </div>
-                <div>
-                  <dt>الدور</dt>
-                  <dd>{invitation.role?.name ?? "غير محدد"}</dd>
-                </div>
-                <div>
-                  <dt>أُرسلت في</dt>
-                  <dd>
-                    {invitation.sentAt
-                      ? formatDateTimeInMakkah(invitation.sentAt, "ar-BH")
-                      : "لم تُرسل"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>تنتهي في</dt>
-                  <dd>
-                    {formatDateTimeInMakkah(invitation.expiresAt, "ar-BH")}
-                  </dd>
-                </div>
-              </dl>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "6px 10px",
+                    borderRadius: "999px",
+                    background:
+                      invite.status === "ACCEPTED"
+                        ? "rgba(34,197,94,0.14)"
+                        : invite.status === "REVOKED"
+                          ? "rgba(239,68,68,0.14)"
+                          : "rgba(59,130,246,0.14)",
+                    color:
+                      invite.status === "ACCEPTED"
+                        ? "#bbf7d0"
+                        : invite.status === "REVOKED"
+                          ? "#fecaca"
+                          : "#dbeafe",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                  }}
+                >
+                  {invite.status}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  marginTop: "12px",
+                  display: "grid",
+                  gap: "6px",
+                  color: "var(--muted)",
+                  fontSize: "14px",
+                }}
+              >
+                <span>عدد الاستخدامات: {invite.maxUses}</span>
+                <span>
+                  الإنشاء: {formatDateTimeInMakkah(invite.createdAt, "ar-BH")}
+                </span>
+                <span>
+                  الإرسال:{" "}
+                  {invite.sentAt
+                    ? formatDateTimeInMakkah(invite.sentAt, "ar-BH")
+                    : "لم تُرسل بعد"}
+                </span>
+                <span>
+                  الانتهاء: {formatDateTimeInMakkah(invite.expiresAt, "ar-BH")}
+                </span>
+                <span>
+                  القبول:{" "}
+                  {invite.acceptedAt
+                    ? formatDateTimeInMakkah(invite.acceptedAt, "ar-BH")
+                    : "لم تُقبل بعد"}
+                </span>
+              </div>
             </article>
           ))}
         </div>

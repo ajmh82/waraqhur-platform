@@ -1,33 +1,40 @@
+import Link from "next/link";
 import { SectionHeading } from "@/components/content/section-heading";
 import { ErrorState } from "@/components/ui/error-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 import { formatDateTimeInMakkah } from "@/lib/date-time";
 
-interface CurrentUserResponse {
+interface SecurityResponse {
   user: {
     id: string;
     email: string;
     username: string;
     status: string;
-    profile: { displayName: string } | null;
+    lastLoginAt: string | null;
+    emailVerifiedAt: string | null;
   };
-  session: {
+  sessions: Array<{
     id: string;
+    createdAt: string;
     expiresAt: string;
     lastUsedAt: string | null;
-  };
+    revokedAt: string | null;
+    ipAddress: string | null;
+    userAgent: string | null;
+  }>;
 }
 
 async function loadData() {
   try {
     return {
-      data: await dashboardApiGet<CurrentUserResponse>("/api/auth/me"),
+      data: await dashboardApiGet<SecurityResponse>("/api/dashboard/security"),
       error: null,
     };
   } catch (error) {
     return {
       data: null,
-      error: error instanceof Error ? error.message : "تعذر التحميل.",
+      error:
+        error instanceof Error ? error.message : "تعذر تحميل صفحة الأمان.",
     };
   }
 }
@@ -38,46 +45,77 @@ export default async function DashboardSecurityPage() {
   if (error || !data) {
     return (
       <ErrorState
-        title="تعذر تحميل صفحة الأمان"
-        description={error ?? "تعذر التحميل."}
+        title="تعذر تحميل الأمان"
+        description={error ?? "تعذر تحميل صفحة الأمان."}
       />
     );
   }
 
+  const activeSessions = data.sessions.filter((session) => !session.revokedAt);
+
   return (
     <section className="dashboard-panel">
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+          marginBottom: "18px",
+        }}
+      >
+        <Link href="/dashboard/settings" className="btn small">
+          الإعدادات
+        </Link>
+        <Link href="/dashboard/account" className="btn small">
+          الحساب
+        </Link>
+        <Link href="/messages" className="btn small">
+          الرسائل
+        </Link>
+        <Link href={`/u/${data.user.username}`} className="btn small">
+          الملف العام
+        </Link>
+      </div>
+
       <SectionHeading
-        eyebrow="الأمان"
-        title="نظرة أمنية"
-        description="متابعة حالة الجلسة الحالية ووضع الحساب الأمني من مكان واحد."
+        eyebrow="Security"
+        title="الأمان"
+        description="راجع حالة تسجيل الدخول والتحقق والجلسات النشطة المرتبطة بحسابك."
       />
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "12px",
+          gap: "16px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
           marginBottom: "18px",
         }}
       >
-        <article className="state-card">
-          <strong>حالة الحساب</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {data.user.status}
+        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+          <strong>البريد الإلكتروني</strong>
+          <p style={{ margin: "8px 0 0" }}>{data.user.email}</p>
+        </div>
+
+        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+          <strong>توثيق البريد</strong>
+          <p style={{ margin: "8px 0 0" }}>
+            {data.user.emailVerifiedAt ? "موثق" : "غير موثق"}
           </p>
-        </article>
-        <article className="state-card">
-          <strong>الجلسة نشطة</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {data.session.lastUsedAt ? "نعم" : "غير معروف"}
+        </div>
+
+        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+          <strong>آخر تسجيل دخول</strong>
+          <p style={{ margin: "8px 0 0" }}>
+            {data.user.lastLoginAt
+              ? formatDateTimeInMakkah(data.user.lastLoginAt, "ar-BH")
+              : "غير متوفر"}
           </p>
-        </article>
-        <article className="state-card">
-          <strong>الملف مرفق</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {data.user.profile ? "نعم" : "لا"}
-          </p>
-        </article>
+        </div>
+
+        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
+          <strong>الجلسات النشطة</strong>
+          <p style={{ margin: "8px 0 0" }}>{activeSessions.length}</p>
+        </div>
       </div>
 
       <div
@@ -85,54 +123,45 @@ export default async function DashboardSecurityPage() {
         style={{
           maxWidth: "100%",
           margin: "0 0 18px",
-          padding: "16px",
           display: "grid",
           gap: "8px",
         }}
       >
-        <strong>ملخص سريع</strong>
+        <strong>ملخص الأمان</strong>
         <p style={{ margin: 0 }}>
-          هذه الصفحة تعطيك نظرة مباشرة على وضع الجلسة الحالية، ووقت انتهاءها،
-          وحالة الحساب العامة من زاوية الأمان.
+          لديك {activeSessions.length} جلسة نشطة من أصل {data.sessions.length} جلسة
+          محفوظة في النظام.
         </p>
       </div>
 
-      <div className="dashboard-grid">
-        <article className="dashboard-card">
-          <h3>الجلسة الحالية</h3>
-          <dl className="dashboard-detail-list">
-            <div>
-              <dt>تنتهي في</dt>
-              <dd>{formatDateTimeInMakkah(data.session.expiresAt, "ar-BH")}</dd>
-            </div>
-            <div>
-              <dt>آخر استخدام</dt>
-              <dd>
-                {data.session.lastUsedAt
-                  ? formatDateTimeInMakkah(data.session.lastUsedAt, "ar-BH")
-                  : "غير متوفر"}
-              </dd>
-            </div>
-          </dl>
-        </article>
+      <div className="dashboard-list">
+        {data.sessions.map((session) => (
+          <article key={session.id} className="dashboard-card">
+            <strong>{session.userAgent ?? "جلسة بدون User Agent"}</strong>
 
-        <article className="dashboard-card">
-          <h3>حالة الأمان</h3>
-          <dl className="dashboard-detail-list">
-            <div>
-              <dt>البريد الإلكتروني</dt>
-              <dd>{data.user.email}</dd>
+            <div
+              style={{
+                marginTop: "10px",
+                display: "grid",
+                gap: "6px",
+                color: "var(--muted)",
+                fontSize: "14px",
+              }}
+            >
+              <span>IP: {session.ipAddress ?? "غير معروف"}</span>
+              <span>
+                آخر استخدام:{" "}
+                {session.lastUsedAt
+                  ? formatDateTimeInMakkah(session.lastUsedAt, "ar-BH")
+                  : "غير متوفر"}
+              </span>
+              <span>
+                انتهاء الجلسة: {formatDateTimeInMakkah(session.expiresAt, "ar-BH")}
+              </span>
+              <span>{session.revokedAt ? "تم إلغاء الجلسة" : "جلسة نشطة"}</span>
             </div>
-            <div>
-              <dt>حالة الحساب</dt>
-              <dd>{data.user.status}</dd>
-            </div>
-            <div>
-              <dt>نوع المصادقة</dt>
-              <dd>مصادقة بالجلسات</dd>
-            </div>
-          </dl>
-        </article>
+          </article>
+        ))}
       </div>
     </section>
   );

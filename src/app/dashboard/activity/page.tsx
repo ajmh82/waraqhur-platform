@@ -1,206 +1,224 @@
+import Link from "next/link";
 import { SectionHeading } from "@/components/content/section-heading";
-import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 import { formatDateTimeInMakkah } from "@/lib/date-time";
 
-interface CurrentUserResponse {
+interface ActivityResponse {
   user: {
     id: string;
     username: string;
-    email: string;
-    status: string;
-    profile: { displayName: string } | null;
+    profile: {
+      displayName: string;
+      avatarUrl: string | null;
+    } | null;
   };
-  session: {
-    id: string;
-    expiresAt: string;
-    lastUsedAt: string | null;
-  };
-}
-
-interface NotificationsResponse {
-  notifications: Array<{
+  posts: Array<{
     id: string;
     title: string;
+    slug: string | null;
     createdAt: string;
-    readAt: string | null;
+    commentsCount: number;
+    likesCount?: number;
   }>;
-}
-
-interface InvitationsResponse {
-  invitations: Array<{
+  comments: Array<{
     id: string;
-    email: string;
-    status: string;
+    content: string;
     createdAt: string;
-    acceptedAt: string | null;
+    post: {
+      id: string;
+      title: string;
+      slug: string | null;
+    } | null;
   }>;
 }
 
 async function loadData() {
   try {
-    const [currentUser, notifications, invitations] = await Promise.all([
-      dashboardApiGet<CurrentUserResponse>("/api/auth/me"),
-      dashboardApiGet<NotificationsResponse>("/api/notifications"),
-      dashboardApiGet<InvitationsResponse>("/api/invitations"),
-    ]);
-
     return {
-      currentUser,
-      notifications,
-      invitations,
+      data: await dashboardApiGet<ActivityResponse>("/api/dashboard/activity"),
       error: null,
     };
   } catch (error) {
     return {
-      currentUser: null,
-      notifications: null,
-      invitations: null,
-      error: error instanceof Error ? error.message : "تعذر التحميل.",
+      data: null,
+      error:
+        error instanceof Error ? error.message : "تعذر تحميل صفحة النشاط.",
     };
   }
 }
 
-export default async function DashboardActivityPage() {
-  const { currentUser, notifications, invitations, error } = await loadData();
+function truncate(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
 
-  if (error || !currentUser || !notifications || !invitations) {
+  return `${value.slice(0, maxLength).trimEnd()}...`;
+}
+
+export default async function DashboardActivityPage() {
+  const { data, error } = await loadData();
+
+  if (error || !data) {
     return (
       <ErrorState
         title="تعذر تحميل النشاط"
-        description={error ?? "تعذر التحميل."}
+        description={error ?? "تعذر تحميل صفحة النشاط."}
       />
     );
   }
 
-  const allNotifications = notifications.notifications ?? [];
-  const allInvitations = invitations.invitations ?? [];
-  const unreadNotifications = allNotifications.filter(
-    (notification) => !notification.readAt
-  ).length;
-  const acceptedInvitations = allInvitations.filter(
-    (invitation) => invitation.acceptedAt
-  ).length;
+  const totalItems = data.posts.length + data.comments.length;
 
   return (
     <section className="dashboard-panel">
-      <SectionHeading
-        eyebrow="النشاط"
-        title="ملخص النشاط"
-        description="نظرة شاملة على نشاط حسابك والجلسة والإشعارات والدعوات."
-      />
-
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "12px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
           marginBottom: "18px",
         }}
       >
-        <article className="state-card">
-          <strong>إشعارات غير مقروءة</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {unreadNotifications}
-          </p>
-        </article>
-        <article className="state-card">
-          <strong>دعوات مقبولة</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {acceptedInvitations}
-          </p>
-        </article>
-        <article className="state-card">
-          <strong>حالة الحساب</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {currentUser.user.status}
-          </p>
-        </article>
+        <Link href={`/u/${data.user.username}`} className="btn small">
+          الملف العام
+        </Link>
+        <Link href="/messages" className="btn small">
+          الرسائل
+        </Link>
+        <Link href="/search" className="btn small">
+          البحث
+        </Link>
+        <Link href="/dashboard/settings" className="btn small">
+          الإعدادات
+        </Link>
       </div>
+
+      <SectionHeading
+        eyebrow="Activity"
+        title="النشاط"
+        description="هنا تجد ملخصًا لأحدث ما قمت به داخل المنصة من منشورات وتعليقات."
+      />
 
       <div
         className="state-card"
         style={{
           maxWidth: "100%",
           margin: "0 0 18px",
-          padding: "16px",
           display: "grid",
           gap: "8px",
         }}
       >
-        <strong>ملخص سريع</strong>
+        <strong>ملخص النشاط</strong>
         <p style={{ margin: 0 }}>
-          هذه الصفحة تعطيك نظرة مركزة على الحساب من زاوية النشاط: آخر استخدام،
-          وضع الإشعارات، ووضع الدعوات المرتبطة بحسابك.
+          لديك {data.posts.length} منشورًا و{data.comments.length} تعليقًا ظاهرًا
+          في هذا الملخص، بإجمالي {totalItems} عنصرًا.
         </p>
       </div>
 
-      <div className="dashboard-grid">
-        <article className="dashboard-card">
-          <h3>نشاط الجلسة</h3>
-          <dl className="dashboard-detail-list">
-            <div>
-              <dt>آخر استخدام</dt>
-              <dd>
-                {currentUser.session.lastUsedAt
-                  ? formatDateTimeInMakkah(
-                      currentUser.session.lastUsedAt,
-                      "ar-BH"
-                    )
-                  : "غير متوفر"}
-              </dd>
-            </div>
-            <div>
-              <dt>تنتهي في</dt>
-              <dd>
-                {formatDateTimeInMakkah(currentUser.session.expiresAt, "ar-BH")}
-              </dd>
-            </div>
-          </dl>
-        </article>
+      <div style={{ display: "grid", gap: "20px" }}>
+        <section>
+          <div className="section-heading">
+            <p className="section-heading__eyebrow">Posts</p>
+            <h2>المنشورات</h2>
+          </div>
 
-        <article className="dashboard-card">
-          <h3>الإشعارات</h3>
-          {allNotifications.length === 0 ? (
+          {data.posts.length === 0 ? (
             <EmptyState
-              title="لا توجد إشعارات"
-              description="لا يوجد نشاط إشعارات بعد."
+              title="لا توجد منشورات بعد"
+              description="عندما تبدأ بالنشر سيظهر أحدث نشاطك هنا."
             />
           ) : (
-            <dl className="dashboard-detail-list">
-              <div>
-                <dt>الإجمالي</dt>
-                <dd>{allNotifications.length}</dd>
-              </div>
-              <div>
-                <dt>غير مقروءة</dt>
-                <dd>{unreadNotifications}</dd>
-              </div>
-            </dl>
-          )}
-        </article>
+            <div className="dashboard-list">
+              {data.posts.map((post) => (
+                <article key={post.id} className="dashboard-card">
+                  <strong>{post.title}</strong>
 
-        <article className="dashboard-card">
-          <h3>الدعوات</h3>
-          {allInvitations.length === 0 ? (
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      display: "flex",
+                      gap: "14px",
+                      flexWrap: "wrap",
+                      color: "var(--muted)",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <span>{formatDateTimeInMakkah(post.createdAt, "ar-BH")}</span>
+                    <span>{post.commentsCount} تعليق</span>
+                    <span>{post.likesCount ?? 0} إعجاب</span>
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "14px",
+                      display: "flex",
+                      gap: "10px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Link
+                      href={post.slug ? `/posts/${post.slug}` : "#"}
+                      className="btn small"
+                    >
+                      فتح المنشور
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <div className="section-heading">
+            <p className="section-heading__eyebrow">Comments</p>
+            <h2>التعليقات</h2>
+          </div>
+
+          {data.comments.length === 0 ? (
             <EmptyState
-              title="لا توجد دعوات"
-              description="لا يوجد نشاط دعوات بعد."
+              title="لا توجد تعليقات بعد"
+              description="عندما تبدأ بالتعليق سيظهر أحدث نشاطك هنا."
             />
           ) : (
-            <dl className="dashboard-detail-list">
-              <div>
-                <dt>الإجمالي</dt>
-                <dd>{allInvitations.length}</dd>
-              </div>
-              <div>
-                <dt>مقبولة</dt>
-                <dd>{acceptedInvitations}</dd>
-              </div>
-            </dl>
+            <div className="dashboard-list">
+              {data.comments.map((comment) => (
+                <article key={comment.id} className="dashboard-card">
+                  <strong>
+                    {comment.post?.title ?? "تعليق بدون منشور مرتبط"}
+                  </strong>
+
+                  <p style={{ marginTop: "10px" }}>
+                    {truncate(comment.content, 180)}
+                  </p>
+
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      color: "var(--muted)",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {formatDateTimeInMakkah(comment.createdAt, "ar-BH")}
+                  </div>
+
+                  {comment.post?.slug ? (
+                    <div style={{ marginTop: "14px" }}>
+                      <Link
+                        href={`/posts/${comment.post.slug}`}
+                        className="btn small"
+                      >
+                        فتح المنشور
+                      </Link>
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
           )}
-        </article>
+        </section>
       </div>
     </section>
   );

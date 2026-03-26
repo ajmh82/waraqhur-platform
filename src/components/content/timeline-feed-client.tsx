@@ -40,12 +40,14 @@ type Props = {
   initialPosts: PostItem[];
   initialHasMore: boolean;
   sortMode: SortMode;
+  pageSize?: number;
 };
 
 export function TimelineFeedClient({
   initialPosts,
   initialHasMore,
   sortMode,
+  pageSize = 10,
 }: Props) {
   const [posts, setPosts] = useState<PostItem[]>(initialPosts);
   const [page, setPage] = useState(1);
@@ -60,13 +62,13 @@ export function TimelineFeedClient({
     setHasMore(initialHasMore);
     setLoadingMore(false);
     setLoadError(null);
-  }, [initialPosts, initialHasMore, sortMode]);
+  }, [initialPosts, initialHasMore, sortMode, pageSize]);
 
   const postIds = useMemo(() => new Set(posts.map((post) => post.id)), [posts]);
 
   async function loadMorePosts(nextPage: number) {
     const response = await fetch(
-      `/api/posts?sort=${sortMode}&page=${nextPage}&limit=10`,
+      `/api/posts?sort=${sortMode}&page=${nextPage}&limit=${pageSize}`,
       {
         credentials: "include",
         cache: "no-store",
@@ -115,7 +117,7 @@ export function TimelineFeedClient({
         }
       },
       {
-        rootMargin: "300px 0px",
+        rootMargin: "800px 0px",
         threshold: 0.01,
       }
     );
@@ -123,7 +125,7 @@ export function TimelineFeedClient({
     observer.observe(node);
 
     return () => observer.disconnect();
-  }, [hasMore, loadingMore, page, postIds, sortMode]);
+  }, [hasMore, loadingMore, page, postIds, sortMode, pageSize]);
 
   if (posts.length === 0) {
     return (
@@ -136,25 +138,6 @@ export function TimelineFeedClient({
 
   return (
     <div style={{ display: "grid", gap: "14px" }}>
-      <div
-        className="state-card"
-        style={{
-          padding: "14px 16px",
-          display: "flex",
-          justifyContent: "space-between",
-          gap: "12px",
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        <strong>عدد العناصر المعروضة الآن: {posts.length}</strong>
-        <span style={{ color: "var(--muted)", fontSize: "14px" }}>
-          {sortMode === "smart"
-            ? "الوضع الحالي: الترتيب الذكي"
-            : "الوضع الحالي: الأحدث أولًا"}
-        </span>
-      </div>
-
       <TimelineList posts={posts} />
 
       {loadError ? (
@@ -213,7 +196,7 @@ export function TimelineFeedClient({
             borderRadius: "14px",
           }}
         >
-          {loadingMore ? "جاري تحميل المزيد..." : "مرر لأسفل لتحميل المزيد"}
+          {loadingMore ? "جاري تحميل المزيد..." : "اسحب لأسفل وسيتم تحميل المزيد تلقائيًا"}
         </div>
       ) : (
         <div

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SectionHeading } from "@/components/content/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -5,15 +6,17 @@ import { dashboardApiGet } from "@/lib/dashboard-api";
 import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface NotificationsResponse {
+  user: {
+    id: string;
+    username: string;
+  };
   notifications: Array<{
     id: string;
     title: string;
     body: string;
     status: string;
-    sentAt: string | null;
-    readAt: string | null;
     createdAt: string;
-    payload: { event: string } | null;
+    readAt: string | null;
   }>;
 }
 
@@ -26,7 +29,8 @@ async function loadData() {
   } catch (error) {
     return {
       data: null,
-      error: error instanceof Error ? error.message : "تعذر التحميل.",
+      error:
+        error instanceof Error ? error.message : "تعذر تحميل الإشعارات.",
     };
   }
 }
@@ -38,95 +42,120 @@ export default async function DashboardNotificationsPage() {
     return (
       <ErrorState
         title="تعذر تحميل الإشعارات"
-        description={error ?? "تعذر التحميل."}
+        description={error ?? "تعذر تحميل الإشعارات."}
       />
     );
   }
 
-  const notifications = data.notifications ?? [];
-  const unread = notifications.filter((notification) => !notification.readAt).length;
-  const read = notifications.length - unread;
+  const unreadCount = data.notifications.filter(
+    (notification) => !notification.readAt
+  ).length;
 
   return (
     <section className="dashboard-panel">
-      <SectionHeading
-        eyebrow="الإشعارات"
-        title="إشعاراتك"
-        description="جميع التنبيهات الواردة إلى حسابك مع ملخص سريع لحالتها الحالية."
-      />
-
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "12px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
           marginBottom: "18px",
         }}
       >
-        <article className="state-card">
-          <strong>الإجمالي</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {notifications.length}
-          </p>
-        </article>
-        <article className="state-card">
-          <strong>غير مقروءة</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{unread}</p>
-        </article>
-        <article className="state-card">
-          <strong>مقروءة</strong>
-          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>{read}</p>
-        </article>
+        <Link href="/dashboard/activity" className="btn small">
+          النشاط
+        </Link>
+        <Link href="/messages" className="btn small">
+          الرسائل
+        </Link>
+        <Link href="/search" className="btn small">
+          البحث
+        </Link>
+        <Link href={`/u/${data.user.username}`} className="btn small">
+          الملف العام
+        </Link>
       </div>
+
+      <SectionHeading
+        eyebrow="Notifications"
+        title="الإشعارات"
+        description="هذه الصفحة تجمع أحدث التنبيهات والإشعارات المرتبطة بحسابك."
+      />
 
       <div
         className="state-card"
         style={{
           maxWidth: "100%",
           margin: "0 0 18px",
-          padding: "16px",
           display: "grid",
           gap: "8px",
         }}
       >
-        <strong>ملخص سريع</strong>
+        <strong>ملخص الإشعارات</strong>
         <p style={{ margin: 0 }}>
-          ستظهر هنا جميع الإشعارات المرتبطة بحسابك مثل التنبيهات والتحديثات
-          المهمة، مع توضيح ما إذا كانت مقروءة أو لا.
+          لديك {unreadCount} إشعارًا غير مقروء من أصل {data.notifications.length}{" "}
+          إشعار.
         </p>
       </div>
 
-      {notifications.length === 0 ? (
+      {data.notifications.length === 0 ? (
         <EmptyState
-          title="لا توجد إشعارات"
-          description="ستظهر الإشعارات هنا عند حدوث أحداث مهمة."
+          title="لا توجد إشعارات بعد"
+          description="ستظهر الإشعارات الجديدة هنا عندما تتوفر."
         />
       ) : (
         <div className="dashboard-list">
-          {notifications.map((notification) => (
+          {data.notifications.map((notification) => (
             <article key={notification.id} className="dashboard-card">
-              <h3>{notification.title}</h3>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  alignItems: "start",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ display: "grid", gap: "6px" }}>
+                  <strong>{notification.title}</strong>
+                  <span style={{ color: "var(--muted)", fontSize: "14px" }}>
+                    {notification.body}
+                  </span>
+                </div>
 
-              <p style={{ color: "var(--muted)", margin: "6px 0 12px" }}>
-                {notification.body}
-              </p>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "6px 10px",
+                    borderRadius: "999px",
+                    background: notification.readAt
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(34, 199, 255, 0.16)",
+                    color: notification.readAt ? "var(--muted)" : "#d5f3ff",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                  }}
+                >
+                  {notification.readAt ? "مقروء" : "جديد"}
+                </span>
+              </div>
 
-              <dl className="dashboard-detail-list">
-                <div>
-                  <dt>الحالة</dt>
-                  <dd>{notification.readAt ? "مقروء" : "غير مقروء"}</dd>
-                </div>
-                <div>
-                  <dt>نوع الحدث</dt>
-                  <dd>{notification.payload?.event ?? "عام"}</dd>
-                </div>
-                <div>
-                  <dt>التاريخ</dt>
-                  <dd>
-                    {formatDateTimeInMakkah(notification.createdAt, "ar-BH")}
-                  </dd>
-                </div>
-              </dl>
+              <div
+                style={{
+                  marginTop: "12px",
+                  display: "flex",
+                  gap: "14px",
+                  flexWrap: "wrap",
+                  color: "var(--muted)",
+                  fontSize: "14px",
+                }}
+              >
+                <span>{notification.status}</span>
+                <span>
+                  {formatDateTimeInMakkah(notification.createdAt, "ar-BH")}
+                </span>
+              </div>
             </article>
           ))}
         </div>
