@@ -63,15 +63,19 @@ export function TimelineSortTabs({ sortMode }: { sortMode: SortMode }) {
       }}
     >
       <button
+        type="button"
         onClick={() => changeSort("latest")}
         style={tabStyle(sortMode === "latest")}
+        aria-pressed={sortMode === "latest"}
       >
         🕒 الأحدث
       </button>
 
       <button
+        type="button"
         onClick={() => changeSort("smart")}
         style={tabStyle(sortMode === "smart")}
+        aria-pressed={sortMode === "smart"}
       >
         ✨ الذكي
       </button>

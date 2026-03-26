@@ -63,12 +63,14 @@ interface PostCardProps {
 export function PostCard({ post }: PostCardProps) {
   const href = post.slug ? `/posts/${post.slug}` : "/timeline";
   const originalUrl = post.metadata?.ingestion?.originalUrl ?? null;
+  const provider = post.metadata?.ingestion?.provider ?? null;
 
   return (
     <article className="tweet-card">
       {post.repostOfPost ? (
         <div className="tweet-card__repost-bar">
-          🔁 إعادة نشر{post.repostOfPost.author ? ` من @${post.repostOfPost.author.username}` : ""}
+          🔁 إعادة نشر
+          {post.repostOfPost.author ? ` من @${post.repostOfPost.author.username}` : ""}
         </div>
       ) : null}
 
@@ -88,9 +90,22 @@ export function PostCard({ post }: PostCardProps) {
                 "كاتب غير معروف"
               )}
             </span>
-            <span className="tweet-card__time">
-              {formatRelativeTime(post.createdAt)}
-            </span>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                alignItems: "center",
+                flexWrap: "wrap",
+                color: "rgba(255,255,255,0.58)",
+                fontSize: "13px",
+              }}
+            >
+              <span className="tweet-card__time">
+                {formatRelativeTime(post.createdAt)}
+              </span>
+              {provider ? <span>• {provider}</span> : null}
+            </div>
           </div>
 
           <div className="tweet-card__badges">
@@ -108,26 +123,65 @@ export function PostCard({ post }: PostCardProps) {
 
           {post.excerpt ? (
             <p className="tweet-card__excerpt">{post.excerpt}</p>
-          ) : null}
+          ) : (
+            <p
+              className="tweet-card__excerpt"
+              style={{ color: "rgba(255,255,255,0.52)" }}
+            >
+              لا يوجد ملخص مختصر لهذا المنشور حتى الآن.
+            </p>
+          )}
 
           {post.quotedPost ? (
             <div className="tweet-card__quote">
               <strong>
-                اقتباس{post.quotedPost.author ? ` من @${post.quotedPost.author.username}` : ""}
+                اقتباس
+                {post.quotedPost.author ? ` من @${post.quotedPost.author.username}` : ""}
               </strong>
               <p>{post.quotedPost.title}</p>
             </div>
           ) : null}
 
-          <div style={{ display: "flex", gap: "10px", marginTop: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginTop: "10px",
+              color: "rgba(255,255,255,0.62)",
+              fontSize: "13px",
+            }}
+          >
+            <span>💬 {post.commentsCount} تعليق</span>
+            <span>❤️ {post.likesCount ?? 0} إعجاب</span>
+            {post.source ? <span>📡 {post.source.name}</span> : null}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              marginTop: "12px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <LikePostButton postId={post.id} initialLikesCount={post.likesCount ?? 0} />
             <BookmarkPostButton postId={post.id} />
             <RepostPostButton postId={post.id} />
+
             <Link href={href} className="btn small">
-              💬 {post.commentsCount}
+              قراءة ومناقشة
             </Link>
+
             {originalUrl ? (
-              <a href={originalUrl} target="_blank" rel="noreferrer" className="btn small">
+              <a
+                href={originalUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn small"
+              >
                 🔗 المصدر
               </a>
             ) : null}

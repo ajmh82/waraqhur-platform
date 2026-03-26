@@ -21,7 +21,9 @@ export function CommentForm({
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit() {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
     const trimmed = content.trim();
     if (!trimmed) return;
 
@@ -41,7 +43,9 @@ export function CommentForm({
     const payload = await response.json().catch(() => null);
 
     if (!response.ok || !payload?.success) {
-      setError(payload?.error?.message ?? "تعذر إرسال التعليق. تأكد من تسجيل الدخول.");
+      setError(
+        payload?.error?.message ?? "تعذر إرسال التعليق. تأكد من تسجيل الدخول."
+      );
       return;
     }
 
@@ -54,7 +58,7 @@ export function CommentForm({
   }
 
   return (
-    <div className="comment-form">
+    <form onSubmit={handleSubmit} className="comment-form">
       <textarea
         className="comment-form__input"
         value={content}
@@ -64,23 +68,42 @@ export function CommentForm({
         maxLength={2000}
         disabled={isPending}
       />
+
       {error ? <p className="comment-form__error">{error}</p> : null}
-      <div className="comment-form__actions">
-        <button
-          type="button"
-          className="btn-action"
-          onClick={handleSubmit}
-          disabled={isPending || !content.trim()}
-        >
-          {isPending ? "جارٍ الإرسال..." : parentId ? "إرسال الرد" : "إرسال التعليق"}
-        </button>
-        {onCancel ? (
-          <button type="button" className="btn-action" onClick={onCancel} disabled={isPending}>
-            إلغاء
+
+      <div
+        className="comment-form__actions"
+        style={{
+          display: "flex",
+          gap: "10px",
+          alignItems: "center",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button
+            type="submit"
+            className="btn-action"
+            disabled={isPending || !content.trim()}
+          >
+            {isPending ? "جارٍ الإرسال..." : parentId ? "إرسال الرد" : "إرسال التعليق"}
           </button>
-        ) : null}
+
+          {onCancel ? (
+            <button
+              type="button"
+              className="btn-action"
+              onClick={onCancel}
+              disabled={isPending}
+            >
+              إلغاء
+            </button>
+          ) : null}
+        </div>
+
         <span className="comment-form__counter">{content.length}/2000</span>
       </div>
-    </div>
+    </form>
   );
 }
