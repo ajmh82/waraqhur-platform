@@ -14,6 +14,7 @@ interface HomePageData {
     excerpt: string | null;
     createdAt: string;
     commentsCount: number;
+    likesCount?: number;
     category: {
       id: string;
       name: string;
@@ -45,6 +46,7 @@ interface SourcesData {
     id: string;
     name: string;
     slug: string;
+    type?: string;
   }>;
 }
 
@@ -58,7 +60,7 @@ interface HomePageResult {
 async function loadHomePageData(): Promise<HomePageResult> {
   try {
     const [postsData, categoriesData, sourcesData] = await Promise.all([
-      apiGet<HomePageData>("/api/posts"),
+      apiGet<HomePageData>("/api/posts?sort=latest&page=1&limit=8"),
       apiGet<CategoriesData>("/api/categories"),
       apiGet<SourcesData>("/api/sources"),
     ]);
@@ -111,19 +113,21 @@ export default async function HomePage() {
 
         <section className="hero-panel">
           <p className="eyebrow">وراق حر</p>
+
           <h1 className="hero-panel__title">
-            موجز عربي حديث يجمع الأخبار والمصادر والتصنيفات في واجهة واحدة.
+            منصة عربية حديثة لمتابعة الأخبار والمصادر والتصنيفات في واجهة واحدة.
           </h1>
+
           <p className="hero-panel__description">
-            هذه النسخة من ورق حر تسير نحو أن تكون منصة أخبار اجتماعية عربية:
-            موجز سريع، مصادر واضحة، تصنيفات منظمة، وبنية قوية جاهزة للتوسع
-            لاحقًا نحو تجربة شبيهة بتويتر ولكن بهوية تحريرية أوضح وأكثر احترافية.
+            الصفحة الرئيسية هنا لم تعد مجرد بداية عامة، بل نقطة دخول عملية
+            للموجز، والمصادر، والتصنيفات، بحيث يصل المستخدم سريعًا إلى زاوية
+            القراءة التي تناسبه.
           </p>
 
           <div className="hero-metrics">
             <article className="hero-metric">
               <strong>{postsData.posts.length}</strong>
-              <span>منشور وخبر</span>
+              <span>عنصر معروض</span>
             </article>
             <article className="hero-metric">
               <strong>{categoriesData.categories.length}</strong>
@@ -134,13 +138,32 @@ export default async function HomePage() {
               <span>مصدر</span>
             </article>
           </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              flexWrap: "wrap",
+              marginTop: "22px",
+            }}
+          >
+            <Link href="/timeline" className="btn">
+              اذهب إلى التايملاين
+            </Link>
+            <Link href="/login" className="btn small">
+              تسجيل الدخول
+            </Link>
+            <Link href="/register" className="btn small">
+              إنشاء حساب
+            </Link>
+          </div>
         </section>
 
         <section className="page-section">
           <SectionHeading
-            eyebrow="اكتشف بسرعة"
+            eyebrow="استكشاف سريع"
             title="ابدأ من التصنيفات أو من المصادر"
-            description="بدل القراءة من موجز واحد فقط، يمكنك البدء من زاوية الاهتمام: تصنيف محدد أو مصدر محدد."
+            description="يمكنك البدء من الموضوع الذي يهمك أو من الجهة التي تنشر المحتوى، بدل الاعتماد على موجز واحد فقط."
           />
 
           <div
@@ -192,9 +215,9 @@ export default async function HomePage() {
 
         <section className="page-section">
           <SectionHeading
-            eyebrow="الموجز الرئيسي"
-            title="آخر الأخبار من المصادر النشطة"
-            description="هذه الصفحة مصممة لتكون واجهة القراءة اليومية السريعة: المصدر ظاهر، التصنيف واضح، والمحتوى معروض بطريقة مناسبة لمنصة أخبار اجتماعية عربية حديثة."
+            eyebrow="أحدث ما وصل"
+            title="محتوى حديث من داخل المنصة"
+            description="هذه القائمة المختصرة تعرض أحدث العناصر المنشورة، ويمكنك الانتقال بعدها إلى التايملاين الكامل لمتابعة المزيد."
           />
 
           {featuredPosts.length === 0 ? (
@@ -205,6 +228,12 @@ export default async function HomePage() {
           ) : (
             <TimelineList posts={featuredPosts} />
           )}
+
+          <div style={{ marginTop: "18px" }}>
+            <Link href="/timeline" className="btn">
+              عرض الموجز الكامل
+            </Link>
+          </div>
         </section>
       </div>
     </main>
