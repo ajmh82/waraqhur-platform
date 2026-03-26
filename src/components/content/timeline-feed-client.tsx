@@ -106,7 +106,9 @@ export function TimelineFeedClient({
           await loadMorePosts(page + 1);
         } catch (error) {
           setLoadError(
-            error instanceof Error ? error.message : "تعذر تحميل المزيد من المنشورات."
+            error instanceof Error
+              ? error.message
+              : "تعذر تحميل المزيد من المنشورات."
           );
         } finally {
           setLoadingMore(false);
@@ -147,7 +149,9 @@ export function TimelineFeedClient({
       >
         <strong>عدد العناصر المعروضة الآن: {posts.length}</strong>
         <span style={{ color: "var(--muted)", fontSize: "14px" }}>
-          {sortMode === "smart" ? "الوضع الحالي: الترتيب الذكي" : "الوضع الحالي: الأحدث أولًا"}
+          {sortMode === "smart"
+            ? "الوضع الحالي: الترتيب الذكي"
+            : "الوضع الحالي: الأحدث أولًا"}
         </span>
       </div>
 
@@ -168,6 +172,7 @@ export function TimelineFeedClient({
           }}
         >
           <span>{loadError}</span>
+
           {hasMore ? (
             <button
               type="button"

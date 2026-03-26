@@ -70,7 +70,9 @@ export function PostCard({ post }: PostCardProps) {
       {post.repostOfPost ? (
         <div className="tweet-card__repost-bar">
           🔁 إعادة نشر
-          {post.repostOfPost.author ? ` من @${post.repostOfPost.author.username}` : ""}
+          {post.repostOfPost.author
+            ? ` من @${post.repostOfPost.author.username}`
+            : ""}
         </div>
       ) : null}
 
@@ -113,7 +115,10 @@ export function PostCard({ post }: PostCardProps) {
               <SourceBadge name={post.source.name} slug={post.source.slug} />
             ) : null}
             {post.category ? (
-              <CategoryBadge name={post.category.name} slug={post.category.slug} />
+              <CategoryBadge
+                name={post.category.name}
+                slug={post.category.slug}
+              />
             ) : null}
           </div>
 
@@ -136,7 +141,9 @@ export function PostCard({ post }: PostCardProps) {
             <div className="tweet-card__quote">
               <strong>
                 اقتباس
-                {post.quotedPost.author ? ` من @${post.quotedPost.author.username}` : ""}
+                {post.quotedPost.author
+                  ? ` من @${post.quotedPost.author.username}`
+                  : ""}
               </strong>
               <p>{post.quotedPost.title}</p>
             </div>
@@ -167,7 +174,10 @@ export function PostCard({ post }: PostCardProps) {
               flexWrap: "wrap",
             }}
           >
-            <LikePostButton postId={post.id} initialLikesCount={post.likesCount ?? 0} />
+            <LikePostButton
+              postId={post.id}
+              initialLikesCount={post.likesCount ?? 0}
+            />
             <BookmarkPostButton postId={post.id} />
             <RepostPostButton postId={post.id} />
 

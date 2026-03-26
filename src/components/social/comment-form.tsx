@@ -50,6 +50,7 @@ export function CommentForm({
     }
 
     setContent("");
+
     startTransition(() => {
       router.refresh();
     });
@@ -62,7 +63,7 @@ export function CommentForm({
       <textarea
         className="comment-form__input"
         value={content}
-        onChange={(e) => setContent(e.target.value)}
+        onChange={(event) => setContent(event.target.value)}
         placeholder={placeholder}
         rows={3}
         maxLength={2000}
@@ -87,7 +88,11 @@ export function CommentForm({
             className="btn-action"
             disabled={isPending || !content.trim()}
           >
-            {isPending ? "جارٍ الإرسال..." : parentId ? "إرسال الرد" : "إرسال التعليق"}
+            {isPending
+              ? "جارٍ الإرسال..."
+              : parentId
+                ? "إرسال الرد"
+                : "إرسال التعليق"}
           </button>
 
           {onCancel ? (
