@@ -33,7 +33,9 @@ interface PostRecord {
   author: { id: string; email: string; username: string } | null;
 }
 
-interface PostsData { posts: PostRecord[] }
+interface PostsData {
+  posts: PostRecord[];
+}
 
 interface FlatComment {
   id: string;
@@ -50,9 +52,17 @@ interface CommentNode extends FlatComment {
   replies: CommentNode[];
 }
 
-interface CommentsData { comments: FlatComment[] }
-interface SourceListData { sources: Array<{ id: string; slug: string }> }
-interface SourcePostsData { posts: PostRecord[] }
+interface CommentsData {
+  comments: FlatComment[];
+}
+
+interface SourceListData {
+  sources: Array<{ id: string; slug: string }>;
+}
+
+interface SourcePostsData {
+  posts: PostRecord[];
+}
 
 interface PostPageResult {
   post: PostRecord | null;
@@ -64,8 +74,8 @@ function buildCommentTree(flat: FlatComment[]): CommentNode[] {
   const map = new Map<string, CommentNode>();
   const roots: CommentNode[] = [];
 
-  for (const c of flat) {
-    map.set(c.id, { ...c, replies: [] });
+  for (const comment of flat) {
+    map.set(comment.id, { ...comment, replies: [] });
   }
 
   for (const node of map.values()) {
@@ -76,9 +86,14 @@ function buildCommentTree(flat: FlatComment[]): CommentNode[] {
     }
   }
 
-  roots.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  roots.sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
   for (const node of map.values()) {
-    node.replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    node.replies.sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
   }
 
   return roots;
@@ -87,38 +102,68 @@ function buildCommentTree(flat: FlatComment[]): CommentNode[] {
 async function loadPostBySlug(slug: string) {
   const timelineData = await apiGet<PostsData>("/api/posts");
   const directMatch = timelineData.posts.find((item) => item.slug === slug);
-  if (directMatch) return directMatch;
+
+  if (directMatch) {
+    return directMatch;
+  }
 
   const sourcesData = await apiGet<SourceListData>("/api/sources");
+
   for (const source of sourcesData.sources) {
     try {
       const sourceData = await apiGet<SourcePostsData>(`/sources/${source.slug}`);
       const sourceMatch = sourceData.posts.find((item) => item.slug === slug);
-      if (sourceMatch) return sourceMatch;
-    } catch { continue }
+
+      if (sourceMatch) {
+        return sourceMatch;
+      }
+    } catch {
+      continue;
+    }
   }
+
   return null;
 }
 
 async function loadPostPageData(slug: string): Promise<PostPageResult> {
   try {
     const post = await loadPostBySlug(slug);
-    if (!post) return { post: null, comments: [], error: null };
-    const commentsData = await apiGet<CommentsData>(`/api/comments?postId=${post.id}`);
-    const tree = buildCommentTree(commentsData.comments);
-    return { post, comments: tree, error: null };
+
+    if (!post) {
+      return { post: null, comments: [], error: null };
+    }
+
+    const commentsData = await apiGet<CommentsData>(
+      `/api/comments?postId=${post.id}`
+    );
+
+    return {
+      post,
+      comments: buildCommentTree(commentsData.comments),
+      error: null,
+    };
   } catch (error) {
     return {
-      post: null, comments: [],
-      error: error instanceof Error ? error.message : "تعذر تحميل بيانات المنشور.",
+      post: null,
+      comments: [],
+      error:
+        error instanceof Error ? error.message : "تعذر تحميل بيانات المنشور.",
     };
   }
 }
 
+function countComments(nodes: CommentNode[]): number {
+  return nodes.reduce((sum, node) => sum + 1 + countComments(node.replies), 0);
+}
+
 function CommentThread({
-  comments, postId, depth = 0,
+  comments,
+  postId,
+  depth = 0,
 }: {
-  comments: CommentNode[]; postId: string; depth?: number;
+  comments: CommentNode[];
+  postId: string;
+  depth?: number;
 }) {
   return (
     <div className="comment-thread">
@@ -126,29 +171,45 @@ function CommentThread({
         <article
           key={comment.id}
           className={`comment-item ${depth > 0 ? "comment-item--nested" : ""}`}
-          style={depth > 0 ? { marginRight: `${Math.min(depth * 20, 60)}px` } : undefined}
+          style={
+            depth > 0
+              ? { marginRight: `${Math.min(depth * 20, 60)}px` }
+              : undefined
+          }
         >
           <div className="comment-item__avatar">
             {(comment.author?.username ?? "؟").charAt(0).toUpperCase()}
           </div>
+
           <div className="comment-item__body">
             <div className="comment-item__header">
               <strong className="comment-item__author">
                 {comment.author ? (
-                  <Link href={`/u/${comment.author.username}`}>{comment.author.username}</Link>
-                ) : "مستخدم غير معروف"}
+                  <Link href={`/u/${comment.author.username}`}>
+                    {comment.author.username}
+                  </Link>
+                ) : (
+                  "مستخدم غير معروف"
+                )}
               </strong>
+
               <span className="comment-item__time">
                 {formatRelativeTime(comment.createdAt)}
               </span>
             </div>
+
             <p className="comment-item__text">{comment.content}</p>
+
             <ReplyToggleButton postId={postId} commentId={comment.id} />
           </div>
 
           {comment.replies.length > 0 ? (
             <div className="comment-item__replies">
-              <CommentThread comments={comment.replies} postId={postId} depth={depth + 1} />
+              <CommentThread
+                comments={comment.replies}
+                postId={postId}
+                depth={depth + 1}
+              />
             </div>
           ) : null}
         </article>
@@ -176,70 +237,233 @@ export default async function PostPage({
     );
   }
 
-  if (!post) notFound();
+  if (!post) {
+    notFound();
+  }
 
   const originalUrl = post.metadata?.ingestion?.originalUrl ?? null;
-  const totalComments = (function countAll(nodes: CommentNode[]): number {
-    return nodes.reduce((sum, n) => sum + 1 + countAll(n.replies), 0);
-  })(comments);
+  const provider = post.metadata?.ingestion?.provider ?? null;
+  const fetchedAt = post.metadata?.ingestion?.fetchedAt ?? null;
+  const totalComments = countComments(comments);
 
   return (
     <main className="page-stack">
       <div className="page-container">
         <AppHeader />
 
-        <article className="post-detail-v2">
-          <div className="post-detail-v2__top">
-            <div className="tweet-card__avatar tweet-card__avatar--lg">
-              {(post.author?.username ?? "؟").charAt(0).toUpperCase()}
+        <section className="page-section">
+          <div
+            className="state-card"
+            style={{
+              display: "grid",
+              gap: "18px",
+              padding: "22px",
+              maxWidth: "100%",
+              margin: 0,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: "16px",
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <Link href="/timeline" className="btn small">
+                العودة إلى الموجز
+              </Link>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  color: "var(--muted)",
+                  fontSize: "14px",
+                }}
+              >
+                <span>{formatDateTimeInMakkah(post.createdAt, "ar-BH")}</span>
+                <span>•</span>
+                <span>{formatRelativeTime(post.createdAt)}</span>
+              </div>
             </div>
-            <div>
-              <strong className="post-detail-v2__author">
-                {post.author ? (
-                  <Link href={`/u/${post.author.username}`}>{post.author.username}</Link>
-                ) : "كاتب غير معروف"}
-              </strong>
-              <span className="post-detail-v2__time">
-                {formatDateTimeInMakkah(post.createdAt, "ar-BH")}
-              </span>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "14px",
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <div className="tweet-card__avatar tweet-card__avatar--lg">
+                {(post.author?.username ?? "؟").charAt(0).toUpperCase()}
+              </div>
+
+              <div style={{ display: "grid", gap: "6px" }}>
+                <strong style={{ fontSize: "18px" }}>
+                  {post.author ? (
+                    <Link href={`/u/${post.author.username}`}>
+                      {post.author.username}
+                    </Link>
+                  ) : (
+                    "كاتب غير معروف"
+                  )}
+                </strong>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    flexWrap: "wrap",
+                    color: "var(--muted)",
+                    fontSize: "14px",
+                  }}
+                >
+                  {provider ? <span>المزوّد: {provider}</span> : null}
+                  {post.source ? <span>المصدر: {post.source.name}</span> : null}
+                </div>
+              </div>
             </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap",
+              }}
+            >
+              {post.source ? (
+                <SourceBadge name={post.source.name} slug={post.source.slug} />
+              ) : null}
+
+              {post.category ? (
+                <CategoryBadge
+                  name={post.category.name}
+                  slug={post.category.slug}
+                />
+              ) : null}
+            </div>
+
+            <div style={{ display: "grid", gap: "14px" }}>
+              <h1 style={{ margin: 0, lineHeight: 1.4 }}>{post.title}</h1>
+
+              {post.excerpt ? (
+                <p
+                  style={{
+                    margin: 0,
+                    color: "var(--muted)",
+                    lineHeight: 1.9,
+                    fontSize: "16px",
+                  }}
+                >
+                  {post.excerpt}
+                </p>
+              ) : null}
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "12px",
+              }}
+            >
+              <div className="state-card" style={{ padding: "14px", margin: 0, maxWidth: "100%" }}>
+                <strong>الإعجابات</strong>
+                <p style={{ margin: "8px 0 0", fontSize: "28px" }}>
+                  {post.likesCount ?? 0}
+                </p>
+              </div>
+
+              <div className="state-card" style={{ padding: "14px", margin: 0, maxWidth: "100%" }}>
+                <strong>التعليقات</strong>
+                <p style={{ margin: "8px 0 0", fontSize: "28px" }}>
+                  {totalComments}
+                </p>
+              </div>
+
+              <div className="state-card" style={{ padding: "14px", margin: 0, maxWidth: "100%" }}>
+                <strong>حالة المحتوى</strong>
+                <p style={{ margin: "8px 0 0", fontSize: "16px" }}>
+                  {post.content ? "نص كامل متاح" : "ملخص فقط"}
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <LikePostButton
+                postId={post.id}
+                initialLikesCount={post.likesCount ?? 0}
+              />
+
+              <BookmarkPostButton postId={post.id} />
+
+              {originalUrl ? (
+                <a
+                  href={originalUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-action"
+                >
+                  المصدر الأصلي
+                </a>
+              ) : null}
+            </div>
+
+            <div
+              className="state-card"
+              style={{
+                padding: "18px",
+                lineHeight: 2,
+                whiteSpace: "pre-wrap",
+                maxWidth: "100%",
+                margin: 0,
+              }}
+            >
+              {post.content ?? "لا يوجد محتوى كامل لهذا المنشور حتى الآن."}
+            </div>
+
+            {(originalUrl || fetchedAt) && (
+              <div
+                style={{
+                  display: "flex",
+                  gap: "14px",
+                  flexWrap: "wrap",
+                  color: "var(--muted)",
+                  fontSize: "14px",
+                }}
+              >
+                {originalUrl ? (
+                  <span>الرابط الأصلي متاح لقراءة المصدر الكامل.</span>
+                ) : null}
+
+                {fetchedAt ? (
+                  <span>
+                    آخر جلب: {formatDateTimeInMakkah(fetchedAt, "ar-BH")}
+                  </span>
+                ) : null}
+              </div>
+            )}
           </div>
-
-          <div className="post-detail-v2__badges">
-            {post.source ? <SourceBadge name={post.source.name} slug={post.source.slug} /> : null}
-            {post.category ? <CategoryBadge name={post.category.name} slug={post.category.slug} /> : null}
-          </div>
-
-          <h1 className="post-detail-v2__title">{post.title}</h1>
-
-          {post.excerpt ? <p className="post-detail-v2__excerpt">{post.excerpt}</p> : null}
-
-          <div className="post-detail-v2__content">
-            {post.content ?? "لا يوجد محتوى كامل لهذا المنشور حتى الآن."}
-          </div>
-
-          <div className="post-detail-v2__stats">
-            <span>❤️ {post.likesCount ?? 0} إعجاب</span>
-            <span>💬 {totalComments} تعليق</span>
-          </div>
-
-          <div className="post-detail-v2__actions">
-            <LikePostButton postId={post.id} initialLikesCount={post.likesCount ?? 0} />
-            <BookmarkPostButton postId={post.id} />
-            {originalUrl ? (
-              <a href={originalUrl} target="_blank" rel="noreferrer" className="btn-action">
-                🔗 المصدر الأصلي
-              </a>
-            ) : null}
-            <Link href="/timeline" className="btn-action">← العودة للموجز</Link>
-          </div>
-        </article>
+        </section>
 
         <section className="page-section">
           <div className="section-heading">
             <p className="section-heading__eyebrow">شارك رأيك</p>
             <h2>أضف تعليقاً</h2>
           </div>
+
           <CommentForm postId={post.id} />
         </section>
 
