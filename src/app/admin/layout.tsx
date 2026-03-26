@@ -23,8 +23,14 @@ async function checkAdminAccess(): Promise<AdminAccessResult> {
   try {
     const current = await getCurrentUserFromSession(sessionValue);
     const hasAdminAccess = await userHasAnyPermission(current.user.id, [
-      "users.manage", "invites.read", "roles.read", "sources.manage",
-      "comments.moderate", "audit.read", "categories.manage", "posts.update",
+      "users.manage",
+      "invites.read",
+      "roles.read",
+      "sources.manage",
+      "comments.moderate",
+      "audit.read",
+      "categories.manage",
+      "posts.update",
     ]);
 
     if (!hasAdminAccess) {
@@ -50,18 +56,38 @@ export default async function AdminLayout({
     <main className="page-stack">
       <div className="page-container">
         <AppHeader />
-        <section className="dashboard-shell">
-          <aside className="dashboard-shell__sidebar">
-            <div className="dashboard-shell__sidebar-card">
+
+        <section
+          className="page-section"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "320px minmax(0, 1fr)",
+            gap: "20px",
+            alignItems: "start",
+          }}
+        >
+          <aside style={{ display: "grid", gap: "16px" }}>
+            <div
+              className="state-card"
+              style={{
+                maxWidth: "100%",
+                margin: 0,
+                display: "grid",
+                gap: "12px",
+              }}
+            >
               <p className="section-heading__eyebrow">لوحة الإدارة</p>
-              <h1 className="dashboard-shell__title">مساحة الإدارة</h1>
-              <p className="dashboard-shell__description">
-                إدارة المستخدمين والدعوات والأدوار والمصادر والتصنيفات والمنشورات والتعليقات وسجل العمليات من مكان واحد محمي.
+              <h1 style={{ margin: 0, fontSize: "28px" }}>مساحة الإدارة</h1>
+              <p style={{ margin: 0 }}>
+                هذه المنطقة مخصصة لإدارة المستخدمين، المحتوى، المصادر، التصنيفات،
+                التعليقات، الدعوات، وسجل العمليات من مكان واحد محمي وواضح.
               </p>
             </div>
+
             <AdminNav />
           </aside>
-          <section className="dashboard-shell__content">{children}</section>
+
+          <section style={{ minWidth: 0 }}>{children}</section>
         </section>
       </div>
     </main>

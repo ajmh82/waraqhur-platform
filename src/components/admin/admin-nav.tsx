@@ -4,7 +4,7 @@ const adminLinks = [
   {
     href: "/admin",
     label: "الرئيسية",
-    description: "نقطة الدخول السريعة إلى أقسام الإدارة.",
+    description: "المدخل الرئيسي لجميع أقسام الإدارة.",
   },
   {
     href: "/admin/users",
@@ -14,12 +14,12 @@ const adminLinks = [
   {
     href: "/admin/posts",
     label: "المنشورات",
-    description: "إدارة المحتوى والتحرير والمتابعة.",
+    description: "إدارة المحتوى والتحرير والحذف والمتابعة.",
   },
   {
     href: "/admin/sources",
     label: "المصادر",
-    description: "المصادر، الصحة التشغيلية، والـ ingest.",
+    description: "الصحة التشغيلية، الجلب، والمراجعة السريعة.",
   },
   {
     href: "/admin/categories",
@@ -29,22 +29,22 @@ const adminLinks = [
   {
     href: "/admin/comments",
     label: "التعليقات",
-    description: "مراجعة التعليقات والردود والتفاعل.",
+    description: "مراجعة النقاشات والردود والتفاعل.",
   },
   {
     href: "/admin/invites",
     label: "الدعوات",
-    description: "إدارة الدعوات المرسلة والحالة الحالية.",
+    description: "متابعة الدعوات المرسلة وحالاتها.",
   },
   {
     href: "/admin/roles",
     label: "الأدوار",
-    description: "الصلاحيات ومستويات الوصول.",
+    description: "مستويات الوصول والصلاحيات الإدارية.",
   },
   {
     href: "/admin/audit-logs",
     label: "سجل العمليات",
-    description: "مراجعة الأحداث الإدارية الحساسة.",
+    description: "متابعة الأحداث والعمليات الحساسة.",
   },
 ] as const;
 

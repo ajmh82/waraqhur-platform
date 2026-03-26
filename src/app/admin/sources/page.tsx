@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { SectionHeading } from "@/components/content/section-heading";
 import { SourceIngestButton } from "@/components/admin/source-ingest-button";
 
 type SourceHealth = "HEALTHY" | "DEGRADED" | "BROKEN" | "STATIC";
@@ -47,7 +49,7 @@ function healthStyle(health?: SourceHealth | null): CSSProperties {
 
 function formatDate(date?: string | null) {
   if (!date) return "-";
-  return new Date(date).toLocaleString();
+  return new Date(date).toLocaleString("ar-BH");
 }
 
 export default async function SourcesPage() {
@@ -62,83 +64,131 @@ export default async function SourcesPage() {
   }));
 
   const summaryStats = {
-    healthy: sourceConfigs.filter((entry) => entry.config.statusHealth === "HEALTHY").length,
-    broken: sourceConfigs.filter((entry) => entry.config.statusHealth === "BROKEN").length,
-    degraded: sourceConfigs.filter((entry) => entry.config.statusHealth === "DEGRADED").length,
-    static: sourceConfigs.filter((entry) => entry.config.statusHealth === "STATIC").length,
+    total: sourceConfigs.length,
+    healthy: sourceConfigs.filter(
+      (entry) => entry.config.statusHealth === "HEALTHY"
+    ).length,
+    broken: sourceConfigs.filter(
+      (entry) => entry.config.statusHealth === "BROKEN"
+    ).length,
+    degraded: sourceConfigs.filter(
+      (entry) => entry.config.statusHealth === "DEGRADED"
+    ).length,
+    static: sourceConfigs.filter(
+      (entry) => entry.config.statusHealth === "STATIC"
+    ).length,
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <section className="dashboard-panel">
+      <SectionHeading
+        eyebrow="الإدارة"
+        title="إدارة المصادر"
+        description="متابعة حالة المصادر، الصحة التشغيلية، وعمليات الجلب من مكان واحد واضح."
+      />
+
       <div
         style={{
-          display: "flex",
-          gap: 16,
-          flexWrap: "wrap",
-          marginBottom: 20,
-          fontWeight: 800,
-          fontSize: 15,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "12px",
+          marginBottom: "18px",
         }}
       >
-        <div style={{ color: "#22c55e" }}>🟢 {summaryStats.healthy} Healthy</div>
-        <div style={{ color: "#ef4444" }}>🔴 {summaryStats.broken} Broken</div>
-        <div style={{ color: "#f59e0b" }}>🟡 {summaryStats.degraded} Degraded</div>
-        <div style={{ color: "#a1a1aa" }}>⚪ {summaryStats.static} Static</div>
+        <div className="state-card">
+          <strong>إجمالي المصادر</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
+            {summaryStats.total}
+          </p>
+        </div>
+        <div className="state-card">
+          <strong>سليمة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0", color: "#22c55e" }}>
+            {summaryStats.healthy}
+          </p>
+        </div>
+        <div className="state-card">
+          <strong>متدهورة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0", color: "#f59e0b" }}>
+            {summaryStats.degraded}
+          </p>
+        </div>
+        <div className="state-card">
+          <strong>معطلة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0", color: "#ef4444" }}>
+            {summaryStats.broken}
+          </p>
+        </div>
+        <div className="state-card">
+          <strong>ثابتة</strong>
+          <p style={{ fontSize: "28px", margin: "10px 0 0", color: "#a1a1aa" }}>
+            {summaryStats.static}
+          </p>
+        </div>
       </div>
 
-      <h1 style={{ fontSize: 26, fontWeight: "bold", marginBottom: 20 }}>
-        📡 Sources Dashboard
-      </h1>
-
       <div
+        className="state-card"
         style={{
-          overflowX: "auto",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: 16,
-          background: "rgba(255,255,255,0.02)",
+          maxWidth: "100%",
+          margin: "0 0 18px",
+          padding: "16px",
+          display: "grid",
+          gap: "10px",
         }}
       >
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1100 }}>
+        <strong>ملخص سريع</strong>
+        <p style={{ margin: 0 }}>
+          هذه الصفحة مخصصة لمراجعة أداء كل مصدر ومعرفة ما إذا كان يعمل بشكل طبيعي
+          أو يحتاج تدخلًا، مع تنفيذ الجلب اليدوي مباشرة عند الحاجة.
+        </p>
+      </div>
+
+      <div className="admin-table-wrap">
+        <table className="admin-table">
           <thead>
-            <tr style={{ textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-              <th style={{ padding: 14 }}>الاسم</th>
-              <th style={{ padding: 14 }}>النوع</th>
-              <th style={{ padding: 14 }}>الحالة</th>
-              <th style={{ padding: 14 }}>الصحة</th>
-              <th style={{ padding: 14 }}>آخر نجاح</th>
-              <th style={{ padding: 14 }}>آخر خطأ</th>
-              <th style={{ padding: 14 }}>فشل متتالي</th>
-              <th style={{ padding: 14 }}>الإجراء</th>
+            <tr>
+              <th>الاسم</th>
+              <th>النوع</th>
+              <th>الحالة</th>
+              <th>الصحة</th>
+              <th>آخر نجاح</th>
+              <th>آخر خطأ</th>
+              <th>فشل متتالي</th>
+              <th>عرض</th>
+              <th>إجراء</th>
             </tr>
           </thead>
 
           <tbody>
             {sourceConfigs.map(({ source, config }) => (
-              <tr
-                key={source.id}
-                style={{
-                  borderBottom: "1px solid rgba(255,255,255,0.06)",
-                  verticalAlign: "top",
-                }}
-              >
-                <td style={{ padding: 14, fontWeight: 700 }}>{source.name}</td>
-                <td style={{ padding: 14 }}>{source.type}</td>
-                <td style={{ padding: 14 }}>{source.status}</td>
-                <td style={{ padding: 14 }}>
+              <tr key={source.id}>
+                <td>{source.name}</td>
+                <td>{source.type}</td>
+                <td>{source.status}</td>
+                <td>
                   <span style={healthStyle(config.statusHealth)}>
                     {config.statusHealth || "-"}
                   </span>
                 </td>
-                <td style={{ padding: 14, whiteSpace: "nowrap" }}>
-                  {formatDate(config.lastSuccessAt)}
-                </td>
-                <td style={{ padding: 14, color: "#fca5a5", maxWidth: 320 }}>
+                <td>{formatDate(config.lastSuccessAt)}</td>
+                <td style={{ color: "#fca5a5" }}>
                   {config.lastErrorMessage || "-"}
                 </td>
-                <td style={{ padding: 14 }}>{config.consecutiveFailures || 0}</td>
-                <td style={{ padding: 14 }}>
+                <td>{config.consecutiveFailures || 0}</td>
+                <td>
+                  <Link href={`/admin/sources/${source.id}`} className="btn small">
+                    تفاصيل
+                  </Link>
+                </td>
+                <td>
                   {source.type === "MANUAL" ? (
-                    <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 13 }}>
+                    <span
+                      style={{
+                        color: "rgba(255,255,255,0.45)",
+                        fontSize: "13px",
+                      }}
+                    >
                       غير مطلوب
                     </span>
                   ) : (
@@ -150,6 +200,6 @@ export default async function SourcesPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 }
