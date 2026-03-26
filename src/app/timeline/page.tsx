@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { SectionHeading } from "@/components/content/section-heading";
 import { TimelineFeedClient } from "@/components/content/timeline-feed-client";
@@ -50,7 +51,9 @@ type SortMode = "latest" | "smart";
 async function loadData(sortMode: SortMode) {
   try {
     return {
-      data: await apiGet<TimelinePageData>(`/api/posts?sort=${sortMode}&page=1&limit=10`),
+      data: await apiGet<TimelinePageData>(
+        `/api/posts?sort=${sortMode}&page=1&limit=10`
+      ),
       error: null,
     };
   } catch (error) {
@@ -123,19 +126,23 @@ export default async function TimelinePage({
           <div
             style={{
               marginBottom: "20px",
-              padding: "18px",
+              padding: "20px",
               border: "1px solid rgba(255,255,255,0.08)",
               borderRadius: "18px",
               background:
                 "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))",
               backdropFilter: "blur(8px)",
+              display: "grid",
+              gap: "16px",
             }}
           >
             <div
               style={{
                 display: "flex",
-                justifyContent: "flex-start",
-                marginBottom: "10px",
+                justifyContent: "space-between",
+                gap: "12px",
+                flexWrap: "wrap",
+                alignItems: "center",
               }}
             >
               <span
@@ -154,6 +161,21 @@ export default async function TimelinePage({
               >
                 {modeMeta.badge}
               </span>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <Link href="/" className="btn small">
+                  الصفحة الرئيسية
+                </Link>
+                <Link href="/dashboard/activity" className="btn small">
+                  نشاطي
+                </Link>
+              </div>
             </div>
 
             <SectionHeading
@@ -161,6 +183,23 @@ export default async function TimelinePage({
               title={modeMeta.title}
               description={modeMeta.description}
             />
+
+            <div
+              className="state-card"
+              style={{
+                maxWidth: "100%",
+                margin: 0,
+                padding: "16px",
+                display: "grid",
+                gap: "10px",
+              }}
+            >
+              <strong>ملخص سريع</strong>
+              <p style={{ margin: 0 }}>
+                هذا هو مركز القراءة اليومي داخل المنصة. بدّل بين الأحدث والترتيب
+                الذكي حسب الطريقة التي تريد بها استهلاك المحتوى.
+              </p>
+            </div>
 
             <TimelineSortTabs sortMode={sortMode} />
           </div>
