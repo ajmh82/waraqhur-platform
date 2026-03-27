@@ -1,3 +1,0 @@
-Files containing hardcoded Arabic UI text:
-
-Files containing hardcoded English UI text:

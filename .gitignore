@@ -45,3 +45,9 @@ backups/
 reports/
 
 archives/
+
+# local ops artifacts
+.ops-reports/
+*.log
+cookies.txt
+*.bak

@@ -1,9 +1,0 @@
-== Smoke: http://127.0.0.1:3000 ==
-/api/health -> 401
-/timeline -> 401
-/media -> 401
-/search -> 401
-/messages -> 401
-/compose -> 401
-/dashboard -> 401
-== Smoke done ==
