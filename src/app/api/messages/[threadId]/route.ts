@@ -67,16 +67,8 @@ export async function GET(
         OR: [{ participantAUserId: userId }, { participantBUserId: userId }],
       },
       include: {
-        participantA: {
-          include: {
-            profile: true,
-          },
-        },
-        participantB: {
-          include: {
-            profile: true,
-          },
-        },
+        participantA: { include: { profile: true } },
+        participantB: { include: { profile: true } },
       },
     });
 
@@ -84,10 +76,7 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          error: {
-            code: "THREAD_NOT_FOUND",
-            message: "Thread not found",
-          },
+          error: { code: "THREAD_NOT_FOUND", message: "Thread not found" },
         },
         { status: 404 }
       );
@@ -96,42 +85,20 @@ export async function GET(
     await prisma.directMessage.updateMany({
       where: {
         threadId: thread.id,
-        senderUserId: {
-          not: userId,
-        },
+        senderUserId: { not: userId },
         readAt: null,
       },
-      data: {
-        readAt: new Date(),
-      },
+      data: { readAt: new Date() },
     });
 
     const refreshedThread = await prisma.directThread.findFirst({
-      where: {
-        id: thread.id,
-      },
+      where: { id: thread.id },
       include: {
-        participantA: {
-          include: {
-            profile: true,
-          },
-        },
-        participantB: {
-          include: {
-            profile: true,
-          },
-        },
+        participantA: { include: { profile: true } },
+        participantB: { include: { profile: true } },
         messages: {
-          orderBy: {
-            createdAt: "asc",
-          },
-          include: {
-            sender: {
-              include: {
-                profile: true,
-              },
-            },
-          },
+          orderBy: { createdAt: "asc" },
+          include: { sender: { include: { profile: true } } },
         },
       },
     });
@@ -140,10 +107,7 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          error: {
-            code: "THREAD_NOT_FOUND",
-            message: "Thread not found",
-          },
+          error: { code: "THREAD_NOT_FOUND", message: "Thread not found" },
         },
         { status: 404 }
       );
@@ -162,8 +126,7 @@ export async function GET(
           otherUser: {
             id: otherUser.id,
             username: otherUser.username,
-            displayName:
-              otherUser.profile?.displayName ?? otherUser.username,
+            displayName: otherUser.profile?.displayName ?? otherUser.username,
             avatarUrl: otherUser.profile?.avatarUrl ?? null,
           },
           messages: refreshedThread.messages.map((message) => ({
@@ -190,8 +153,7 @@ export async function GET(
         success: false,
         error: {
           code: "GET_THREAD_FAILED",
-          message:
-            error instanceof Error ? error.message : "Failed to load thread",
+          message: error instanceof Error ? error.message : "Failed to load thread",
         },
       },
       { status: 400 }
@@ -213,8 +175,7 @@ export async function POST(
     const { threadId } = await context.params;
     const userId = auth.current.user.id;
     const body = await request.json();
-    const messageBody =
-      typeof body.body === "string" ? body.body.trim() : "";
+    const messageBody = typeof body.body === "string" ? body.body.trim() : "";
 
     if (!messageBody) {
       return NextResponse.json(
@@ -240,10 +201,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error: {
-            code: "THREAD_NOT_FOUND",
-            message: "Thread not found",
-          },
+          error: { code: "THREAD_NOT_FOUND", message: "Thread not found" },
         },
         { status: 404 }
       );
@@ -258,12 +216,8 @@ export async function POST(
     });
 
     await prisma.directThread.update({
-      where: {
-        id: thread.id,
-      },
-      data: {
-        updatedAt: new Date(),
-      },
+      where: { id: thread.id },
+      data: { updatedAt: new Date() },
     });
 
     return NextResponse.json({
@@ -282,8 +236,7 @@ export async function POST(
         success: false,
         error: {
           code: "SEND_MESSAGE_FAILED",
-          message:
-            error instanceof Error ? error.message : "Failed to send message",
+          message: error instanceof Error ? error.message : "Failed to send message",
         },
       },
       { status: 400 }
@@ -338,31 +291,46 @@ export async function DELETE(
       return NextResponse.json(
         {
           success: false,
-          error: {
-            code: "THREAD_NOT_FOUND",
-            message: "Thread not found",
-          },
+          error: { code: "THREAD_NOT_FOUND", message: "Thread not found" },
         },
         { status: 404 }
       );
     }
 
-    const deleted = await prisma.directMessage.deleteMany({
-      where: deleteAll
-        ? { threadId: thread.id }
-        : { threadId: thread.id, id: { in: messageIds } },
-    });
+    const result = await prisma.$transaction(async (tx) => {
+      const deleted = await tx.directMessage.deleteMany({
+        where: deleteAll
+          ? { threadId: thread.id }
+          : { threadId: thread.id, id: { in: messageIds } },
+      });
 
-    await prisma.directThread.update({
-      where: { id: thread.id },
-      data: { updatedAt: new Date() },
+      const remainingCount = await tx.directMessage.count({
+        where: { threadId: thread.id },
+      });
+
+      if (remainingCount === 0) {
+        await tx.directThread.delete({
+          where: { id: thread.id },
+        });
+      } else {
+        await tx.directThread.update({
+          where: { id: thread.id },
+          data: { updatedAt: new Date() },
+        });
+      }
+
+      return {
+        deletedCount: deleted.count,
+        threadDeleted: remainingCount === 0,
+      };
     });
 
     return NextResponse.json({
       success: true,
       data: {
-        deletedCount: deleted.count,
+        deletedCount: result.deletedCount,
         deleteAll,
+        threadDeleted: result.threadDeleted,
       },
     });
   } catch (error) {
@@ -371,8 +339,7 @@ export async function DELETE(
         success: false,
         error: {
           code: "DELETE_MESSAGES_FAILED",
-          message:
-            error instanceof Error ? error.message : "Failed to delete messages",
+          message: error instanceof Error ? error.message : "Failed to delete messages",
         },
       },
       { status: 400 }

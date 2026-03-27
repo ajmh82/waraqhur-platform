@@ -118,6 +118,12 @@ export function MessageThreadView({
       }
 
       setSelectedIds([]);
+
+      if (apiPayload?.data?.threadDeleted) {
+        router.push("/messages");
+        return;
+      }
+
       router.refresh();
     } finally {
       setIsDeleting(false);
