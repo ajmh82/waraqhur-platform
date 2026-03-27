@@ -260,7 +260,7 @@ export async function DELETE(
     const body = await request.json().catch(() => ({} as Record<string, unknown>));
 
     const deleteAll = Boolean(body.deleteAll);
-    const rawIds = Array.isArray(body.messageIds) ? body.messageIds : [];
+    const rawIds: unknown[] = Array.isArray(body.messageIds) ? body.messageIds : [];
     const messageIds = rawIds
       .filter((v): v is string => typeof v === "string")
       .map((v) => v.trim())
