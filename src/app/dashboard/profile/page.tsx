@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { AppShell } from "@/components/layout/app-shell";
 import { ErrorState } from "@/components/ui/error-state";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { dashboardApiGet } from "@/lib/dashboard-api";
@@ -56,22 +55,19 @@ export default async function DashboardProfilePage() {
 
   if (!data || error) {
     return (
-      <AppShell>
-        <section className="dashboard-panel">
+      <section className="dashboard-panel">
           <ErrorState
             title={p.failedTitle}
             description={error ?? p.failedDescription}
           />
         </section>
-      </AppShell>
     );
   }
 
   const profile = data.user.profile;
 
   return (
-    <AppShell>
-      <section
+    <section
         className="dashboard-panel"
         style={{
           display: "grid",
@@ -114,6 +110,5 @@ export default async function DashboardProfilePage() {
           timezone={profile?.timezone ?? "Asia/Bahrain"}
         />
       </section>
-    </AppShell>
   );
 }

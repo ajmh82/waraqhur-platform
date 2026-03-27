@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { AppShell } from "@/components/layout/app-shell";
 import { dashboardCopy } from "@/lib/dashboard-copy";
 
 const pageCopy = {
@@ -79,8 +78,7 @@ export default async function DashboardPage() {
   const p = pageCopy[locale];
 
   return (
-    <AppShell>
-      <section className="dashboard-panel" style={{ display: "grid", gap: "18px" }}>
+    <section className="dashboard-panel" style={{ display: "grid", gap: "18px" }}>
         <div style={{ display: "grid", gap: "8px" }}>
           <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>{p.title}</h1>
           <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>{p.subtitle}</p>
@@ -106,6 +104,5 @@ export default async function DashboardPage() {
           ))}
         </nav>
       </section>
-    </AppShell>
   );
 }

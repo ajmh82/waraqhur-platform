@@ -1,4 +1,3 @@
-import { AppShell } from "@/components/layout/app-shell";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
 type ActivityItem = {
@@ -23,8 +22,7 @@ export default async function DashboardActivityPage() {
   }
 
   return (
-    <AppShell>
-      <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
+    <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
         <h1 style={{ margin: 0 }}>{isAr ? "النشاط" : "Activity"}</h1>
         <p style={{ margin: 0, color: "var(--muted)" }}>
           {isAr
@@ -53,15 +51,14 @@ export default async function DashboardActivityPage() {
                   • {new Date(x.at).toLocaleString()}
                 </span>
                 <span className="dashboard-list-item__body">
-                  {(x.country ?? (isAr ? "دولة غير معروفة" : "Unknown country")) +
+                  {(x.country ?? (isAr ? "غير متاح" : "Unavailable")) +
                     " • " +
-                    (x.client ?? (isAr ? "عميل غير معروف" : "Unknown client"))}
+                    (x.client ?? (isAr ? "غير متاح" : "Unavailable"))}
                 </span>
               </div>
             ))
           )}
         </div>
       </section>
-    </AppShell>
   );
 }

@@ -1,4 +1,3 @@
-import { AppShell } from "@/components/layout/app-shell";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
 type InviteRow = { id: string; email: string; status: string; createdAt: string };
@@ -7,7 +6,13 @@ type InviteData = { remaining: number; total: number; sent: InviteRow[] };
 export default async function DashboardInvitesPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ status?: string }>;
+  searchParams?: Promise<{
+    status?: string;
+    invitationId?: string;
+    inviteId?: string;
+    invite?: string;
+    token?: string;
+  }>;
 }) {
   const params = (await searchParams) ?? {};
   const isAr = true;
@@ -15,18 +20,26 @@ export default async function DashboardInvitesPage({
   let data: InviteData = { remaining: 5, total: 5, sent: [] };
   try {
     data = await dashboardApiGet<InviteData>("/api/invitations");
-  } catch {}
+  } catch {
+    data = { remaining: 5, total: 5, sent: [] };
+  }
 
   const statusText: Record<string, string> = {
     sent: "تم إرسال الدعوة بنجاح.",
     invalid_email: "البريد الإلكتروني غير صالح.",
     no_quota: "لا يوجد رصيد دعوات متاح.",
+    create_failed: "تعذر إنشاء الدعوة. تحقق من البريد أو حاول لاحقًا.",
     failed: "فشل إرسال الدعوة.",
   };
 
+  const inviteId =
+    params.invitationId ?? params.inviteId ?? params.token ?? params.invite ?? null;
+  const inviteLink = inviteId
+    ? `/accept-invitation?invitationId=${encodeURIComponent(inviteId)}`
+    : null;
+
   return (
-    <AppShell>
-      <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
+    <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
         <h1 style={{ margin: 0 }}>{isAr ? "الدعوات" : "Invites"}</h1>
         <p style={{ margin: 0, color: "var(--muted)" }}>
           {isAr
@@ -38,6 +51,20 @@ export default async function DashboardInvitesPage({
           <p style={{ margin: 0, color: params.status === "sent" ? "#86efac" : "var(--danger)" }}>
             {statusText[params.status]}
           </p>
+        ) : null}
+
+        {inviteLink ? (
+          <div className="dashboard-list-item" style={{ gap: 8 }}>
+            <span className="dashboard-list-item__title">
+              {isAr ? "رابط الدعوة للمشاركة" : "Shareable invite link"}
+            </span>
+            <input
+              className="settings-form__input"
+              readOnly
+              value={inviteLink}
+              onFocus={(e) => e.currentTarget.select()}
+            />
+          </div>
         ) : null}
 
         <div className="dashboard-list-item">
@@ -75,6 +102,5 @@ export default async function DashboardInvitesPage({
           )}
         </div>
       </section>
-    </AppShell>
   );
 }

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AppShell } from "@/components/layout/app-shell";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
 type SecurityData = {
@@ -18,8 +17,7 @@ export default async function DashboardSecurityPage() {
   }
 
   return (
-    <AppShell>
-      <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
+    <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
         <h1 style={{ margin: 0 }}>{isAr ? "الأمان" : "Security"}</h1>
         <p style={{ margin: 0, color: "var(--muted)" }}>
           {isAr ? "إعدادات أمان مفيدة لإدارة حسابك بشكل احترافي." : "Practical security controls for your account."}
@@ -66,6 +64,5 @@ export default async function DashboardSecurityPage() {
           </button>
         </form>
       </section>
-    </AppShell>
   );
 }
