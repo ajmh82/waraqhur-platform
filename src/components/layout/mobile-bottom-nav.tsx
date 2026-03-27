@@ -80,7 +80,7 @@ export function MobileBottomNav() {
         <Link
           key={item.key}
           href={item.href}
-          className={`mobile-bottom-nav__item ${isActive(item.route) ? "is-active" : ""} ${item.center ? "is-center" : ""}`}
+          className={`mobile-bottom-nav__item ${isActive(item.route) ? "is-active" : ""} ${("center" in item && item.center) ? "is-center" : ""}`}
         >
           <span className="mobile-bottom-nav__icon-wrap">
             <span className="mobile-bottom-nav__icon" aria-hidden="true">{item.icon}</span>
