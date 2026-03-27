@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { FollowUserButton } from "@/components/social/follow-user-button";
 
 interface ConnectionUser {
   id: string;
   username: string;
   displayName: string;
   avatarUrl: string | null;
+  isFollowing?: boolean;
 }
 
 interface UserConnectionsListProps {
@@ -104,6 +106,7 @@ export function UserConnectionsList({
                   }}
                 >
                   {user.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={user.avatarUrl}
                       alt={user.displayName}
@@ -143,13 +146,16 @@ export function UserConnectionsList({
                 </div>
               </div>
 
-              <Link
-                href={`/u/${user.username}`}
-                className="btn small"
-                style={{ flexShrink: 0 }}
-              >
-                {t.viewProfile}
-              </Link>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                <FollowUserButton
+                  userId={user.id}
+                  initialIsFollowing={Boolean(user.isFollowing)}
+                  locale={locale}
+                />
+                <Link href={`/u/${user.username}`} className="btn small" style={{ flexShrink: 0 }}>
+                  {t.viewProfile}
+                </Link>
+              </div>
             </article>
           ))}
         </div>
