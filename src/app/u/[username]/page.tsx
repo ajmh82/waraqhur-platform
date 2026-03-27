@@ -78,10 +78,10 @@ export default async function PublicUserPage({
             <span className="dashboard-list-item__body">{followingCount}</span>
           </Link>
 
-          <div className="dashboard-list-item">
+          <Link href={`/u/${encodeURIComponent(viewUsername)}/posts`} className="dashboard-list-item">
             <span className="dashboard-list-item__title">عدد التغريدات</span>
             <span className="dashboard-list-item__body">{postsCount}</span>
-          </div>
+          </Link>
 
           <div className="dashboard-list-item">
             <span className="dashboard-list-item__title">عدد الردود</span>
