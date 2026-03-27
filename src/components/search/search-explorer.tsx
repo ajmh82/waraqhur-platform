@@ -1,3 +1,4 @@
+import Image from "next/image";
 "use client";
 
 import Link from "next/link";
@@ -235,7 +236,7 @@ export function SearchExplorer({
                         }}
                       >
                         {user.avatarUrl ? (
-                          <img src={user.avatarUrl} alt={user.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <Image unoptimized src={user.avatarUrl} alt={user.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                         ) : (
                           user.displayName.charAt(0).toUpperCase()
                         )}

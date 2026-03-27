@@ -1,3 +1,4 @@
+import Image from "next/image";
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
@@ -206,7 +207,7 @@ export function ComposeTweetForm({ locale = "ar" }: ComposeTweetFormProps) {
       {previewUrl ? (
         <div style={{ overflow: "hidden", borderRadius: "18px", border: "1px solid rgba(255,255,255,0.08)", background: "#020617" }}>
           {previewType === "image" ? (
-            <img src={previewUrl} alt="Preview" style={{ display: "block", width: "100%", maxHeight: "360px", objectFit: "cover" }} />
+            <Image unoptimized src={previewUrl} alt="Preview" style={{ display: "block", width: "100%", maxHeight: "360px", objectFit: "cover" }} />
           ) : (
             <video src={previewUrl} controls style={{ display: "block", width: "100%", maxHeight: "360px", background: "#000" }} />
           )}

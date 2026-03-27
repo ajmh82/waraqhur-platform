@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { FollowUserButton } from "@/components/social/follow-user-button";
 import { StartDirectMessageButton } from "@/components/social/start-direct-message-button";

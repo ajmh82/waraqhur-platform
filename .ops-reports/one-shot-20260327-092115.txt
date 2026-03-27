@@ -1,0 +1,151 @@
+
+===== LINT =====
+
+> waraqhur-platform@0.1.0 lint
+> eslint
+
+
+/home/docker/apps/waraqhur-platform/middleware.ts
+  26:10  warning  'isPublicPath' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/docker/apps/waraqhur-platform/src/app/admin/categories/[categoryId]/page.tsx
+  123:5  warning  'archivedPostsCount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/docker/apps/waraqhur-platform/src/app/admin/categories/[categoryId]/posts/page.tsx
+  129:10  warning  'getSortLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/docker/apps/waraqhur-platform/src/app/admin/categories/[categoryId]/sources/page.tsx
+  137:10  warning  'getSortLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/docker/apps/waraqhur-platform/src/app/admin/comment-replies/page.tsx
+  10:11  warning  'ReplyRecord' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/docker/apps/waraqhur-platform/src/app/admin/roles/[roleId]/users/page.tsx
+  108:10  warning  'getSortLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/docker/apps/waraqhur-platform/src/app/admin/sources/[sourceId]/page.tsx
+  98:9  warning  'publicPosts' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  99:9  warning  'privatePosts' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/docker/apps/waraqhur-platform/src/app/admin/users/[userId]/activity/page.tsx
+  145:10  warning  'getSortLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/docker/apps/waraqhur-platform/src/app/admin/users/[userId]/sessions/page.tsx
+  123:10  warning  'getSortLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/docker/apps/waraqhur-platform/src/app/posts/[slug]/page.tsx
+  232:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  340:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/comments/threaded-comments.tsx
+  229:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/compose/compose-tweet-form.tsx
+  209:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/content/post-card.tsx
+  171:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  304:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  509:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/content/timeline-feed-client.tsx
+  159:6  warning  React Hook useEffect has a missing dependency: 'loadMore'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/docker/apps/waraqhur-platform/src/components/layout/account-menu.tsx
+   95:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  112:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/media/media-gallery.tsx
+  81:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/messages/message-thread-view.tsx
+  93:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/messages/messages-inbox.tsx
+  123:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/profile/public-profile-view.tsx
+  141:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/search/search-explorer.tsx
+  238:27  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/settings/settings-form.tsx
+  232:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/social/tweet-owner-controls.tsx
+  315:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/docker/apps/waraqhur-platform/src/components/social/user-connections-list.tsx
+  107:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 28 problems (0 errors, 28 warnings)
+
+
+===== BUILD PROD =====
+
+> waraqhur-platform@0.1.0 build:prod
+> NODE_ENV=production next build --webpack
+
+You are using Node.js 18.19.1. For Next.js, Node.js version ">=20.9.0" is required.
+
+===== RELEASE CHECK =====
+===== RELEASE CHECK START =====
+DATE: Fri Mar 27 09:21:25 UTC 2026
+
+BRANCH: codex/next-batch
+COMMIT: f320386d8ff5224d814059fa2e01ca558a0ad7e8
+
+== 1) QUALITY GATE ==
+== Quality Gate: start ==
+-- npm run lint
+
+> waraqhur-platform@0.1.0 lint
+> eslint
+
+Segmentation fault (core dumped)
+-- skip: script 'typecheck' not found
+-- npm run build:prod
+
+> waraqhur-platform@0.1.0 build:prod
+> NODE_ENV=production next build --webpack
+
+You are using Node.js 18.19.1. For Next.js, Node.js version ">=20.9.0" is required.
+
+== 2) RESTART SERVICE ==
+ Container waraqhur-app-dev Restarting 
+ Container waraqhur-app-dev Started 
+
+== 3) SMOKE ==
+== Smoke: http://127.0.0.1:3000 ==
+/api/health -> 401
+/timeline -> 401
+/media -> 401
+/search -> 401
+/messages -> 401
+/compose -> 401
+/dashboard -> 401
+== Smoke done ==
+
+===== RELEASE CHECK DONE =====
+Report: .ops-reports/release-check-20260327-092125.txt
+
+===== GIT STATUS =====
+ M scripts/ops/release-check.sh
+ M src/app/posts/[slug]/page.tsx
+ M src/components/settings/settings-form.tsx
+ M src/components/social/tweet-owner-controls.tsx
+?? .ops-reports/one-shot-20260327-092115.txt
+?? .ops-reports/release-check-20260327-092027.txt
+?? .ops-reports/release-check-20260327-092125.txt
+?? .ops-reports/smoke-20260327-092049.txt
+?? .ops-reports/smoke-20260327-092156.txt
+?? scripts/ops/one-shot.sh
+?? scripts/ops/pro-fast-loop.sh
+
+===== LAST COMMITS =====
+f320386 chore: baseline before next implementation batch
+70ddb83 Add social navigation messaging and dashboard experience
+2e330da Align post detail page with current product experience
+1d00a99 Improve dashboard notifications activity and invites pages
+515ac2f Improve dashboard structure and core account pages
