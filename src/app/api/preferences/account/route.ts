@@ -17,6 +17,7 @@ async function requireUserId() {
   const cookieStore = await cookies();
   const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionValue) return null;
+
   try {
     const current = await getCurrentUserFromSession(sessionValue);
     return current.user.id;
@@ -96,6 +97,18 @@ export async function POST(request: Request) {
 
   if (!validUsername(username)) {
     return NextResponse.redirect(new URL("/dashboard/account?status=username_format", request.url));
+  }
+
+  const duplicateUser = await prisma.user.findFirst({
+    where: {
+      id: { not: userId },
+      OR: [{ email }, { username }],
+    },
+    select: { id: true },
+  });
+
+  if (duplicateUser) {
+    return NextResponse.redirect(new URL("/dashboard/account?status=duplicate", request.url));
   }
 
   const currentUser = await prisma.user.findUnique({
