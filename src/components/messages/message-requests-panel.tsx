@@ -23,23 +23,39 @@ interface MessageRequestsPanelProps {
   locale?: "ar" | "en";
 }
 
-async function fetchRequestsBox(box: "incoming" | "outgoing"): Promise<RequestRow[]> {
-  const res = await fetch(`/api/messages/requests?box=${box}&status=PENDING`, {
-    credentials: "include",
-    cache: "no-store",
-  });
-
-  const payload = await res.json().catch(() => null);
-
-  if (!res.ok || !payload?.success) {
-    throw new Error(payload?.error?.message ?? "Failed to load chat requests.");
-  }
-
-  return Array.isArray(payload?.data?.requests) ? payload.data.requests : [];
-}
+const copy = {
+  ar: {
+    title: "طلبات المحادثة",
+    incoming: "الواردة",
+    outgoing: "الصادرة",
+    loading: "جارٍ تحميل الطلبات...",
+    loadFailed: "تعذر تحميل طلبات المحادثة.",
+    authRequired: "يجب تسجيل الدخول لعرض طلبات المحادثة.",
+    incomingEmpty: "لا توجد طلبات واردة حالياً.",
+    outgoingEmpty: "لا توجد طلبات صادرة حالياً.",
+    accept: "قبول",
+    reject: "رفض",
+    cancel: "إلغاء الطلب",
+    processFailed: "تعذر معالجة الطلب.",
+  },
+  en: {
+    title: "Chat Requests",
+    incoming: "Incoming",
+    outgoing: "Outgoing",
+    loading: "Loading requests...",
+    loadFailed: "Failed to load chat requests.",
+    authRequired: "You need to sign in to view chat requests.",
+    incomingEmpty: "No incoming requests.",
+    outgoingEmpty: "No outgoing requests.",
+    accept: "Accept",
+    reject: "Reject",
+    cancel: "Cancel Request",
+    processFailed: "Failed to process request.",
+  },
+} as const;
 
 export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProps) {
-  const isArabic = locale !== "en";
+  const t = copy[locale];
   const router = useRouter();
 
   const [incomingRows, setIncomingRows] = useState<RequestRow[]>([]);
@@ -48,47 +64,29 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
   const [loading, setLoading] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  async function fetchRequestsBox(box: "incoming" | "outgoing") {
+    const res = await fetch(`/api/messages/requests?box=${box}&status=PENDING`, {
+      credentials: "include",
+      cache: "no-store",
+    });
 
-    async function loadAll() {
-      setLoading(true);
-      setError(null);
+    const payload = await res.json().catch(() => null);
 
-      try {
-        const [incoming, outgoing] = await Promise.all([
-          fetchRequestsBox("incoming"),
-          fetchRequestsBox("outgoing"),
-        ]);
-
-        if (cancelled) return;
-        setIncomingRows(incoming);
-        setOutgoingRows(outgoing);
-      } catch (loadError) {
-        if (cancelled) return;
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : isArabic
-              ? "تعذر تحميل طلبات المحادثة."
-              : "Failed to load chat requests."
-        );
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    if (res.status === 401) {
+      return { unauthorized: true as const, rows: [] as RequestRow[] };
     }
 
-    void loadAll();
-    const id = setInterval(() => {
-      void loadAll();
-    }, 20000);
+    if (!res.ok || !payload?.success) {
+      throw new Error(payload?.error?.message ?? t.loadFailed);
+    }
 
-    return () => {
-      cancelled = true;
-      clearInterval(id);
+    return {
+      unauthorized: false as const,
+      rows: Array.isArray(payload?.data?.requests) ? (payload.data.requests as RequestRow[]) : [],
     };
-  }, [isArabic]);
+  }
 
   async function refreshAll() {
     try {
@@ -96,16 +94,17 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
         fetchRequestsBox("incoming"),
         fetchRequestsBox("outgoing"),
       ]);
-      setIncomingRows(incoming);
-      setOutgoingRows(outgoing);
+
+      if (incoming.unauthorized || outgoing.unauthorized) {
+        setIsUnauthorized(true);
+        setError(t.authRequired);
+        return;
+      }
+
+      setIncomingRows(incoming.rows);
+      setOutgoingRows(outgoing.rows);
     } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : isArabic
-            ? "تعذر تحديث الطلبات."
-            : "Failed to refresh requests."
-      );
+      setError(loadError instanceof Error ? loadError.message : t.loadFailed);
     }
   }
 
@@ -123,11 +122,14 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
 
       const payload = await res.json().catch(() => null);
 
+      if (res.status === 401) {
+        setIsUnauthorized(true);
+        setError(t.authRequired);
+        return;
+      }
+
       if (!res.ok || !payload?.success) {
-        setError(
-          payload?.error?.message ??
-            (isArabic ? "تعذر معالجة الطلب." : "Failed to process request.")
-        );
+        setError(payload?.error?.message ?? t.processFailed);
         return;
       }
 
@@ -142,6 +144,53 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
     }
   }
 
+  useEffect(() => {
+    if (isUnauthorized) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadAll() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [incoming, outgoing] = await Promise.all([
+          fetchRequestsBox("incoming"),
+          fetchRequestsBox("outgoing"),
+        ]);
+
+        if (cancelled) return;
+
+        if (incoming.unauthorized || outgoing.unauthorized) {
+          setIsUnauthorized(true);
+          setError(t.authRequired);
+          return;
+        }
+
+        setIncomingRows(incoming.rows);
+        setOutgoingRows(outgoing.rows);
+      } catch (loadError) {
+        if (cancelled) return;
+        setError(loadError instanceof Error ? loadError.message : t.loadFailed);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadAll();
+    const id = setInterval(() => {
+      void loadAll();
+    }, 20000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [isUnauthorized, t.authRequired, t.loadFailed]);
+
   const rows = useMemo(
     () => (activeTab === "incoming" ? incomingRows : outgoingRows),
     [activeTab, incomingRows, outgoingRows]
@@ -149,9 +198,7 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
 
   return (
     <section className="state-card" style={{ display: "grid", gap: 10 }}>
-      <h2 style={{ margin: 0, fontSize: "18px" }}>
-        {isArabic ? "طلبات المحادثة" : "Chat Requests"}
-      </h2>
+      <h2 style={{ margin: 0, fontSize: "18px" }}>{t.title}</h2>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button
@@ -159,34 +206,23 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
           className={`btn small ${activeTab === "incoming" ? "primary" : ""}`}
           onClick={() => setActiveTab("incoming")}
         >
-          {isArabic ? "الواردة" : "Incoming"} ({incomingRows.length})
+          {t.incoming} ({incomingRows.length})
         </button>
         <button
           type="button"
           className={`btn small ${activeTab === "outgoing" ? "primary" : ""}`}
           onClick={() => setActiveTab("outgoing")}
         >
-          {isArabic ? "الصادرة" : "Outgoing"} ({outgoingRows.length})
+          {t.outgoing} ({outgoingRows.length})
         </button>
       </div>
 
-      {loading ? (
-        <p style={{ margin: 0, color: "var(--muted)" }}>
-          {isArabic ? "جارٍ تحميل الطلبات..." : "Loading requests..."}
-        </p>
-      ) : null}
-
+      {loading ? <p style={{ margin: 0, color: "var(--muted)" }}>{t.loading}</p> : null}
       {error ? <p style={{ margin: 0, color: "var(--danger)" }}>{error}</p> : null}
 
       {rows.length === 0 ? (
         <p style={{ margin: 0, color: "var(--muted)" }}>
-          {activeTab === "incoming"
-            ? isArabic
-              ? "لا توجد طلبات واردة حالياً."
-              : "No incoming requests."
-            : isArabic
-              ? "لا توجد طلبات صادرة حالياً."
-              : "No outgoing requests."}
+          {activeTab === "incoming" ? t.incomingEmpty : t.outgoingEmpty}
         </p>
       ) : (
         <div style={{ display: "grid", gap: 8 }}>
@@ -197,9 +233,7 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
               <div key={r.id} className="dashboard-list-item" style={{ display: "grid", gap: 8 }}>
                 <div style={{ display: "grid", gap: 2 }}>
                   <strong>{peer.displayName}</strong>
-                  <span style={{ color: "var(--muted)", fontSize: "13px" }}>
-                    @{peer.username}
-                  </span>
+                  <span style={{ color: "var(--muted)", fontSize: "13px" }}>@{peer.username}</span>
                 </div>
 
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -211,7 +245,7 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
                         disabled={pendingId === r.id}
                         onClick={() => respond(r.id, "accept")}
                       >
-                        {isArabic ? "قبول" : "Accept"}
+                        {t.accept}
                       </button>
                       <button
                         type="button"
@@ -219,7 +253,7 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
                         disabled={pendingId === r.id}
                         onClick={() => respond(r.id, "reject")}
                       >
-                        {isArabic ? "رفض" : "Reject"}
+                        {t.reject}
                       </button>
                     </>
                   ) : (
@@ -229,7 +263,7 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
                       disabled={pendingId === r.id}
                       onClick={() => respond(r.id, "cancel")}
                     >
-                      {isArabic ? "إلغاء الطلب" : "Cancel Request"}
+                      {t.cancel}
                     </button>
                   )}
                 </div>
