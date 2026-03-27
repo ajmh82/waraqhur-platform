@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+
 interface SearchUser {
   id: string;
   username: string;
@@ -94,7 +95,7 @@ export function SearchExplorer() {
   }
 
   const visibleUsers = useMemo(() => (activeTab === "posts" ? [] : users), [activeTab, users]);
-  const visiblePosts = useMemo(() => (activeTab === "users" ? [] : posts), [activeTab, posts]);
+  const visiblePosts = useMemo(() => (activeTab === "users" ? [] : posts.filter((p): p is SearchPost & { slug: string } => Boolean(p.slug))), [activeTab, posts]);
 
   return (
     <section className="state-card" style={{ display: "grid", gap: 12 }}>
@@ -133,7 +134,7 @@ export function SearchExplorer() {
         <div style={{ display: "grid", gap: 8 }}>
           <strong>المنشورات</strong>
           {visiblePosts.map((p) => (
-            <Link key={p.id} href={p.slug ? `/posts/${p.slug}` : `/timeline`} className="search-item">
+            <Link key={p.id} href={`/posts/${p.slug}`} className="search-item">
               <div>
                 <div>{highlight(p.title || "منشور", q)}</div>
                 {p.excerpt ? <small style={{ opacity: .8 }}>{highlight(p.excerpt, q)}</small> : null}

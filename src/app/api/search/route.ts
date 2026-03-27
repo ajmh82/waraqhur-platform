@@ -48,6 +48,9 @@ export async function GET(request: Request) {
       prisma.post.findMany({
         where: {
           status: "PUBLISHED",
+          slug: {
+            not: null,
+          },
           OR: [
             {
               title: {
