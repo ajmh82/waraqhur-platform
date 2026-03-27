@@ -394,7 +394,7 @@ export function PostCard({
                   fontSize: "13px",
                 }}
               >
-                {t.edited} • {formatDateTimeInMakkah(post.updatedAt!, locale === "en" ? "en-US" : "ar-BH")}
+                {t.edited} • <span suppressHydrationWarning>{formatDateTimeInMakkah(post.updatedAt!, locale === "en" ? "en-US" : "ar-BH")}</span>
               </div>
             ) : null}
 
