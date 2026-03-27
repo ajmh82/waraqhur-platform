@@ -21,12 +21,14 @@ export function StartDirectMessageButton({
   const router = useRouter();
   const pathname = usePathname();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   async function handleClick() {
     setError(null);
+    setNotice(null);
 
-    const response = await fetch("/api/messages", {
+    const response = await fetch("/api/messages/requests", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -42,25 +44,52 @@ export function StartDirectMessageButton({
     }
 
     if (!response.ok || !payload?.success) {
-      setError(payload?.error?.message ?? (isArabic ? "تعذر بدء المحادثة." : "Failed to start conversation."));
+      const code = payload?.error?.code;
+      if (code === "DM_CLOSED") {
+        setError(
+          isArabic
+            ? "هذا المستخدم أغلق الرسائل الخاصة."
+            : "This user has disabled private messages."
+        );
+        return;
+      }
+      setError(
+        payload?.error?.message ??
+          (isArabic ? "تعذر إرسال طلب المحادثة." : "Failed to send chat request.")
+      );
       return;
     }
 
-    startTransition(() => {
-      router.replace(`/messages/${payload.data.thread.id}`);
-    });
+    const mode = payload?.data?.mode;
+    const threadId = payload?.data?.thread?.id;
+
+    if (mode === "thread_exists" && threadId) {
+      startTransition(() => {
+        router.replace(`/messages/${threadId}`);
+      });
+      return;
+    }
+
+    setNotice(
+      isArabic
+        ? "تم إرسال طلب المحادثة. بانتظار قبول الطرف الآخر."
+        : "Chat request sent. Waiting for recipient approval."
+    );
   }
 
   return (
     <div style={{ display: "grid", gap: "8px" }}>
-      <button
-        type="button"
-        className={className}
-        onClick={handleClick}
-        disabled={isPending}
-      >
-        {isPending ? (isArabic ? "جارٍ فتح المحادثة..." : "Opening conversation...") : resolvedLabel}
+      <button type="button" className={className} onClick={handleClick} disabled={isPending}>
+        {isPending
+          ? (isArabic ? "جارٍ الإرسال..." : "Sending...")
+          : resolvedLabel}
       </button>
+
+      {notice ? (
+        <p style={{ margin: 0, color: "#86efac", fontSize: "14px" }}>
+          {notice}
+        </p>
+      ) : null}
 
       {error ? (
         <p style={{ margin: 0, color: "var(--danger)", fontSize: "14px" }}>
