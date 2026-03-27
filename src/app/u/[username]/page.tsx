@@ -83,10 +83,10 @@ export default async function PublicUserPage({
             <span className="dashboard-list-item__body">{postsCount}</span>
           </Link>
 
-          <div className="dashboard-list-item">
+          <Link href={`/u/${encodeURIComponent(viewUsername)}/replies`} className="dashboard-list-item">
             <span className="dashboard-list-item__title">عدد الردود</span>
             <span className="dashboard-list-item__body">{repliesCount}</span>
-          </div>
+          </Link>
         </div>
       </section>
     </AppShell>
