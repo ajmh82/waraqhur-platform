@@ -84,6 +84,7 @@ export function MessageThreadView({
   const messageIds = sortedMessages.map((m) => m.id);
   const isAllSelected =
     messageIds.length > 0 && messageIds.every((id) => selectedIds.includes(id));
+  const isSelectionMode = selectedIds.length > 0;
 
   function toggleOne(id: string) {
     setSelectedIds((prev) =>
@@ -318,14 +319,16 @@ export function MessageThreadView({
                       )}
                     </span>
 
-                    <button
-                      type="button"
-                      className="btn small"
-                      disabled={isDeleting}
-                      onClick={() => deleteSingle(message.id)}
-                    >
-                      {isDeleting ? t.deleting : t.deleteOne}
-                    </button>
+                    {!isSelectionMode ? (
+                      <button
+                        type="button"
+                        className="btn small"
+                        disabled={isDeleting}
+                        onClick={() => deleteSingle(message.id)}
+                      >
+                        {isDeleting ? t.deleting : t.deleteOne}
+                      </button>
+                    ) : null}
                   </div>
                 </article>
               </div>
