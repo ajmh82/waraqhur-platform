@@ -98,6 +98,7 @@ export function TimelineFeedClient({
   const [isPending, startTransition] = useTransition();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingRef = useRef(false);
   const loadingGuardRef = useRef(false);
   const t = copy[locale];
 
