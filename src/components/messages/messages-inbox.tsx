@@ -35,35 +35,6 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
   const [error, setError] = useState<string | null>(null);
   const [deletingThreadId, setDeletingThreadId] = useState<string | null>(null);
 
-  async function loadThreads() {
-    try {
-      setError(null);
-
-      const response = await fetch("/api/messages", {
-        method: "GET",
-        credentials: "include",
-        cache: "no-store",
-      });
-
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok || !payload?.success) {
-        setError(
-          payload?.error?.message ??
-            (isArabic ? "تعذر تحميل المحادثات." : "Failed to load conversations.")
-        );
-        return;
-      }
-
-      const list = Array.isArray(payload?.data?.threads) ? (payload.data.threads as InboxThread[]) : [];
-      setThreads(list);
-    } catch {
-      setError(isArabic ? "تعذر تحميل المحادثات." : "Failed to load conversations.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function deleteThread(threadId: string) {
     if (deletingThreadId) return;
 
@@ -104,9 +75,54 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
   }
 
   useEffect(() => {
-    const id = setInterval(loadThreads, 20000);
-    return () => clearInterval(id);
-  }, []);
+    let cancelled = false;
+
+    async function fetchThreads() {
+      try {
+        setError(null);
+
+        const response = await fetch("/api/messages", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        const payload = await response.json().catch(() => null);
+
+        if (cancelled) return;
+
+        if (!response.ok || !payload?.success) {
+          setError(
+            payload?.error?.message ??
+              (isArabic ? "تعذر تحميل المحادثات." : "Failed to load conversations.")
+          );
+          return;
+        }
+
+        const list = Array.isArray(payload?.data?.threads)
+          ? (payload.data.threads as InboxThread[])
+          : [];
+        setThreads(list);
+      } catch {
+        if (cancelled) return;
+        setError(isArabic ? "تعذر تحميل المحادثات." : "Failed to load conversations.");
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void fetchThreads();
+    const id = setInterval(() => {
+      void fetchThreads();
+    }, 20000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [isArabic]);
 
   const sorted = useMemo(() => {
     return [...threads].sort((a, b) => {
