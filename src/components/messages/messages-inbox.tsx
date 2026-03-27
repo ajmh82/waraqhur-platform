@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import { formatDateTimeInMakkah } from "@/lib/date-time";
+import { useEffect, useMemo, useState } from "react";
 
 interface InboxThread {
   id: string;
@@ -18,196 +20,95 @@ interface InboxThread {
   } | null;
 }
 
-interface MessagesInboxProps {
-  locale?: "ar" | "en";
-  threads: InboxThread[];
-}
+export function MessagesInbox() {
+  const [threads, setThreads] = useState<InboxThread[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const copy = {
-  ar: {
-    title: "الرسائل الخاصة",
-    countSuffix: "محادثة",
-    empty: "لا توجد محادثات بعد. ابدأ محادثة من صفحة أي مستخدم.",
-    noMessages: "لا توجد رسائل بعد.",
-  },
-  en: {
-    title: "Messages",
-    countSuffix: "conversations",
-    empty: "No conversations yet. Start one from any user profile.",
-    noMessages: "No messages yet.",
-  },
-} as const;
+  async function loadThreads() {
+    try {
+      setError(null);
+      const response = await fetch("/api/messages", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
 
-export function MessagesInbox({
-  locale = "ar",
-  threads,
-}: MessagesInboxProps) {
-  const t = copy[locale];
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.success) {
+        setError(payload?.error?.message ?? "تعذر تحميل المحادثات.");
+        return;
+      }
+
+      const list = Array.isArray(payload?.data?.threads) ? payload.data.threads : [];
+      setThreads(list);
+    } catch {
+      setError("تعذر تحميل المحادثات.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadThreads();
+    const id = setInterval(loadThreads, 20000);
+    return () => clearInterval(id);
+  }, []);
+
+  const sorted = useMemo(() => {
+    return [...threads].sort((a, b) => {
+      const ua = Number(a.unreadCount || 0);
+      const ub = Number(b.unreadCount || 0);
+      if (ub !== ua) return ub - ua;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }, [threads]);
+
+  if (loading) {
+    return <div className="state-card">جارٍ تحميل المحادثات...</div>;
+  }
+
+  if (error) {
+    return <div className="state-card" style={{ color: "#f87171" }}>{error}</div>;
+  }
+
+  if (sorted.length === 0) {
+    return (
+      <div className="state-card" style={{ display: "grid", gap: 8 }}>
+        <strong>لا توجد محادثات بعد</strong>
+        <span style={{ opacity: 0.8 }}>ابدأ محادثة من ملف أي مستخدم عبر زر المراسلة الخاصة.</span>
+      </div>
+    );
+  }
 
   return (
-    <section
-      className="state-card"
-      style={{
-        margin: 0,
-        maxWidth: "100%",
-        padding: "20px",
-        display: "grid",
-        gap: "16px",
-      }}
-    >
-      <div style={{ display: "grid", gap: "4px" }}>
-        <h1 style={{ margin: 0, fontSize: "24px" }}>{t.title}</h1>
-        <p style={{ margin: 0, color: "var(--muted)" }}>
-          {threads.length} {t.countSuffix}
-        </p>
-      </div>
-
-      {threads.length === 0 ? (
-        <div
-          style={{
-            borderRadius: "18px",
-            padding: "18px",
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            color: "var(--muted)",
-          }}
+    <div className="state-card" style={{ display: "grid", gap: 10 }}>
+      {sorted.map((thread) => (
+        <Link
+          key={thread.id}
+          href={`/messages/${thread.id}`}
+          className="messages-inbox__item"
         >
-          {t.empty}
-        </div>
-      ) : (
-        <div style={{ display: "grid", gap: "12px" }}>
-          {threads.map((thread) => (
-            <Link
-              key={thread.id}
-              href={`/messages/${thread.id}`}
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
-              <article
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                  padding: "14px",
-                  borderRadius: "18px",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    minWidth: 0,
-                    flex: 1,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "52px",
-                      height: "52px",
-                      borderRadius: "999px",
-                      overflow: "hidden",
-                      flexShrink: 0,
-                      background: thread.otherUser.avatarUrl
-                        ? "transparent"
-                        : "linear-gradient(135deg, #0ea5e9, #2563eb)",
-                      color: "#fff",
-                      display: "grid",
-                      placeItems: "center",
-                      fontWeight: 900,
-                    }}
-                  >
-                    {thread.otherUser.avatarUrl ? (
-                      <img
-                        src={thread.otherUser.avatarUrl}
-                        alt={thread.otherUser.displayName}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      />
-                    ) : (
-                      thread.otherUser.displayName.charAt(0).toUpperCase()
-                    )}
-                  </div>
-
-                  <div style={{ minWidth: 0, display: "grid", gap: "4px", flex: 1 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "10px",
-                      }}
-                    >
-                      <strong
-                        style={{
-                          fontSize: "15px",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {thread.otherUser.displayName}
-                      </strong>
-
-                      <span style={{ color: "var(--muted)", fontSize: "12px", flexShrink: 0 }}>
-                        {formatDateTimeInMakkah(
-                          thread.updatedAt,
-                          locale === "en" ? "en-US" : "ar-BH"
-                        )}
-                      </span>
-                    </div>
-
-                    <span
-                      style={{
-                        color: "var(--muted)",
-                        fontSize: "13px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      @{thread.otherUser.username}
-                    </span>
-
-                    <span
-                      style={{
-                        color: "rgba(255,255,255,0.82)",
-                        fontSize: "13px",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {thread.lastMessage?.body ?? t.noMessages}
-                    </span>
-                  </div>
-                </div>
-
-                {thread.unreadCount > 0 ? (
-                  <div
-                    style={{
-                      minWidth: "28px",
-                      height: "28px",
-                      padding: "0 8px",
-                      borderRadius: "999px",
-                      background: "rgba(14,165,233,0.18)",
-                      color: "#bae6fd",
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: "12px",
-                      fontWeight: 900,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {thread.unreadCount}
-                  </div>
-                ) : null}
-              </article>
-            </Link>
-          ))}
-        </div>
-      )}
-    </section>
+          <div className="messages-inbox__main">
+            <div className="messages-inbox__name-row">
+              <strong>{thread.otherUser.displayName}</strong>
+              {thread.unreadCount > 0 ? (
+                <span className="messages-inbox__badge">
+                  {thread.unreadCount > 99 ? "99+" : thread.unreadCount}
+                </span>
+              ) : null}
+            </div>
+            <span className="messages-inbox__handle">@{thread.otherUser.username}</span>
+            <p className="messages-inbox__last">
+              {thread.lastMessage?.body?.trim() || "لا توجد رسالة بعد"}
+            </p>
+          </div>
+          <time className="messages-inbox__time">
+            {new Date(thread.updatedAt).toLocaleString()}
+          </time>
+        </Link>
+      ))}
+    </div>
   );
 }

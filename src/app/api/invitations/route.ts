@@ -1,193 +1,131 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
+import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
-import { createInvitationSchema } from "@/services/invitation-schemas";
-import { apiError } from "@/lib/api-response";
-import { buildRateLimitKey, checkRateLimit } from "@/lib/rate-limit";
 
-const INVITE_CREATE_RATE_LIMIT = {
-  limit: 10,
-  windowMs: 60_000,
-};
-import { createInvitation, listInvitations } from "@/services/invitation-service";
-import { userHasPermission } from "@/services/authorization-service";
-import { createAuditLog } from "@/services/audit-log-service";
+const DEFAULT_INVITES = 5;
 
-export async function GET() {
+async function getCurrentUser() {
   const cookieStore = await cookies();
   const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-  if (!sessionValue) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      },
-      { status: 401 }
-    );
-  }
-
+  if (!sessionValue) return null;
   try {
     const current = await getCurrentUserFromSession(sessionValue);
-    const canReadInvites = await userHasPermission(current.user.id, "invites.read");
-
-    if (!canReadInvites) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "FORBIDDEN",
-            message: "You do not have permission to view invitations",
-          },
-        },
-        { status: 403 }
-      );
-    }
-
-    const invitations = await listInvitations();
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        invitations,
-      },
-    });
+    return current.user;
   } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INVALID_SESSION",
-          message: "Invalid or expired session",
-        },
-      },
-      { status: 401 }
-    );
+    return null;
   }
 }
 
-export async function POST(request: Request) {
-  const forwardedFor =
-    request.headers.get("x-forwarded-for") ??
-    request.headers.get("x-real-ip") ??
-    "unknown";
-  const cookieStore = await cookies();
-  const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+async function ensureQuota(userId: string) {
+  try {
+    const rows = await prisma.$queryRawUnsafe<Array<{ quota: number | string }>>(
+      'SELECT "inviteQuota" as quota FROM "User" WHERE "id" = $1',
+      userId
+    );
+    const q = Number(rows?.[0]?.quota);
+    if (Number.isFinite(q) && q > 0) return q;
+  } catch {}
 
-  if (!sessionValue) {
+  try {
+    await prisma.$executeRawUnsafe(
+      'UPDATE "User" SET "inviteQuota" = $1 WHERE "id" = $2 AND ("inviteQuota" IS NULL OR "inviteQuota" < 1)',
+      DEFAULT_INVITES,
+      userId
+    );
+    return DEFAULT_INVITES;
+  } catch {
+    return DEFAULT_INVITES;
+  }
+}
+
+async function countUsed(userId: string) {
+  try {
+    const rows = await prisma.$queryRawUnsafe<Array<{ c: number | string }>>(
+      'SELECT COUNT(*)::int as c FROM "Invitation" WHERE "inviterUserId" = $1',
+      userId
+    );
+    return Number(rows?.[0]?.c ?? 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) {
     return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      },
+      { success: false, error: { code: "UNAUTHENTICATED", message: "Authentication required" } },
       { status: 401 }
     );
   }
 
+  const total = await ensureQuota(user.id);
+  const used = await countUsed(user.id);
+  const remaining = Math.max(0, total - used);
+
+  const sent = await prisma.invitation.findMany({
+    where: { inviterUserId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    select: {
+      id: true,
+      email: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      total,
+      remaining,
+      sent: sent.map((x) => ({
+        id: x.id,
+        email: x.email,
+        status: x.status,
+        createdAt: x.createdAt.toISOString(),
+      })),
+    },
+  });
+}
+
+export async function POST(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: { code: "UNAUTHENTICATED", message: "Authentication required" } },
+      { status: 401 }
+    );
+  }
+
+  const form = await request.formData();
+  const email = String(form.get("email") ?? "").trim().toLowerCase();
+
+  if (!email || !email.includes("@")) {
+    return NextResponse.redirect(new URL("/dashboard/invites?status=invalid_email", request.url));
+  }
+
+  const total = await ensureQuota(user.id);
+  const used = await countUsed(user.id);
+  const remaining = Math.max(0, total - used);
+
+  if (remaining < 1) {
+    return NextResponse.redirect(new URL("/dashboard/invites?status=no_quota", request.url));
+  }
+
   try {
-    const current = await getCurrentUserFromSession(sessionValue);
-
-    const rateLimit = checkRateLimit({
-      key: buildRateLimitKey(["invite-create", current.user.id, forwardedFor]),
-      limit: INVITE_CREATE_RATE_LIMIT.limit,
-      windowMs: INVITE_CREATE_RATE_LIMIT.windowMs,
-    });
-
-    if (!rateLimit.allowed) {
-      return apiError(
-        "RATE_LIMITED",
-        "Too many invitation creation attempts. Please try again later.",
-        429,
-        {
-          resetAt: new Date(rateLimit.resetAt).toISOString(),
-        }
-      );
-    }
-
-    const canCreateInvites = await userHasPermission(
-      current.user.id,
-      "invites.create"
-    );
-
-    if (!canCreateInvites) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "FORBIDDEN",
-            message: "You do not have permission to create invitations",
-          },
-        },
-        { status: 403 }
-      );
-    }
-
-    const body = await request.json();
-    const input = createInvitationSchema.parse(body);
-
-    const invitation = await createInvitation({
-      issuerUserId: current.user.id,
-      email: input.email,
-      roleKey: input.roleKey,
-      expiresInDays: input.expiresInDays,
-    });
-
-
-    await createAuditLog({
-      actorUserId: current.user.id,
-      actorType: "USER",
-      action: "INVITATION_CREATED",
-      targetType: "INVITE",
-      targetId: invitation.id,
-      metadata: {
-        email: invitation.email,
-        status: invitation.status,
-        role: invitation.role,
+    await prisma.invitation.create({
+      data: {
+        email,
+        inviterUserId: user.id,
+        roleId: null,
       },
     });
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          invitation,
-        },
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid invitation payload",
-            details: error.flatten(),
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INVITATION_CREATE_FAILED",
-          message:
-            error instanceof Error ? error.message : "Invitation creation failed",
-        },
-      },
-      { status: 400 }
-    );
+    return NextResponse.redirect(new URL("/dashboard/invites?status=sent", request.url));
+  } catch {
+    return NextResponse.redirect(new URL("/dashboard/invites?status=failed", request.url));
   }
 }

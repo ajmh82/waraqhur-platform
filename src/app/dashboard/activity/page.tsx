@@ -1,61 +1,65 @@
-import Link from "next/link";
-import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
-import { dashboardCopy } from "@/lib/dashboard-copy";
+import { dashboardApiGet } from "@/lib/dashboard-api";
 
-const pageCopy = {
-  ar: {
-    eyebrow: "النشاط",
-    description: "وصول سريع لأهم أجزاء نشاطك داخل المنصة.",
-    cards: [
-      { href: "/timeline", title: "التايملاين", body: "تابع أحدث التغريدات والتفاعل." },
-      { href: "/messages", title: "الرسائل", body: "افتح محادثاتك الخاصة." },
-      { href: "/dashboard/notifications", title: "الإشعارات", body: "راجع آخر التنبيهات." },
-    ],
-    open: "فتح",
-  },
-  en: {
-    eyebrow: "Activity",
-    description: "Quick access to your key activity areas on the platform.",
-    cards: [
-      { href: "/timeline", title: "Timeline", body: "Follow latest posts and interactions." },
-      { href: "/messages", title: "Messages", body: "Open your private conversations." },
-      { href: "/dashboard/notifications", title: "Notifications", body: "Review recent alerts." },
-    ],
-    open: "Open",
-  },
-} as const;
+type ActivityItem = {
+  id: string;
+  at: string;
+  country: string | null;
+  client: string | null;
+  source: "current" | "audit";
+};
+
+type ActivityData = { items: ActivityItem[] };
 
 export default async function DashboardActivityPage() {
-  const cookieStore = await cookies();
-  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
-  const t = dashboardCopy[locale];
-  const p = pageCopy[locale];
+  const isAr = true;
+  let items: ActivityItem[] = [];
+
+  try {
+    const data = await dashboardApiGet<ActivityData>("/api/dashboard/activity");
+    items = Array.isArray(data.items) ? data.items : [];
+  } catch {
+    items = [];
+  }
 
   return (
     <AppShell>
-      <section className="dashboard-panel" style={{ display: "grid", gap: "18px" }}>
-        <div style={{ display: "grid", gap: "6px" }}>
-          <p style={{ margin: 0, color: "#7dd3fc", fontSize: "12px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            {p.eyebrow}
-          </p>
-          <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>{t.activity}</h1>
-          <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>{p.description}</p>
-        </div>
+      <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
+        <h1 style={{ margin: 0 }}>{isAr ? "النشاط" : "Activity"}</h1>
+        <p style={{ margin: 0, color: "var(--muted)" }}>
+          {isAr
+            ? "آخر تسجيلات الدخول خلال 7 أيام (الدولة والعميل حسب البيانات المتاحة)."
+            : "Last sign-ins for 7 days (country/client when available)."}
+        </p>
 
-        <div style={{ display: "grid", gap: "14px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-          {p.cards.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="dashboard-card"
-              style={{ textDecoration: "none", color: "inherit", padding: "18px", display: "grid", gap: "8px" }}
-            >
-              <strong style={{ fontSize: "16px" }}>{item.title}</strong>
-              <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.7 }}>{item.body}</p>
-              <span style={{ color: "#7dd3fc", fontSize: "13px", fontWeight: 700 }}>{p.open}</span>
-            </Link>
-          ))}
+        <div className="dashboard-list-nav">
+          {items.length === 0 ? (
+            <div className="dashboard-list-item">
+              <span className="dashboard-list-item__body">
+                {isAr ? "لا توجد بيانات نشاط متاحة حالياً." : "No activity data available yet."}
+              </span>
+            </div>
+          ) : (
+            items.map((x, idx) => (
+              <div key={x.id} className="dashboard-list-item">
+                <span className="dashboard-list-item__title">
+                  {idx === 0
+                    ? isAr
+                      ? "آخر دخول"
+                      : "Last sign-in"
+                    : isAr
+                    ? "دخول سابق"
+                    : "Previous sign-in"}{" "}
+                  • {new Date(x.at).toLocaleString()}
+                </span>
+                <span className="dashboard-list-item__body">
+                  {(x.country ?? (isAr ? "دولة غير معروفة" : "Unknown country")) +
+                    " • " +
+                    (x.client ?? (isAr ? "عميل غير معروف" : "Unknown client"))}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </section>
     </AppShell>

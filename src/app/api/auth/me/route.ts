@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
@@ -12,6 +12,49 @@ const updateCurrentUserProfileSchema = z.object({
   locale: z.enum(["ar", "en"]).optional().default("ar"),
   timezone: z.string().trim().max(100).nullable().optional(),
 });
+
+async function recordSessionTouch(userId: string, sessionId: string) {
+  try {
+    const h = await headers();
+    const userAgent = h.get("user-agent") ?? null;
+    const country =
+      h.get("x-vercel-ip-country") ??
+      h.get("cf-ipcountry") ??
+      h.get("x-country-code") ??
+      null;
+    const forwardedFor = h.get("x-forwarded-for") ?? null;
+
+    const metadata = JSON.stringify({
+      sessionId,
+      client: userAgent,
+      country,
+      ip: forwardedFor,
+      source: "auth_me",
+    });
+
+    try {
+      await prisma.$executeRawUnsafe(
+        'INSERT INTO "AuditLog" ("id","actorUserId","action","metadata","createdAt") VALUES ($1,$2,$3,$4,$5)',
+        `st_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        userId,
+        "SESSION_TOUCH",
+        metadata,
+        new Date()
+      );
+    } catch {
+      await prisma.$executeRawUnsafe(
+        "INSERT INTO AuditLog (id, actorUserId, action, metadata, createdAt) VALUES (?, ?, ?, ?, ?)",
+        `st_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        userId,
+        "SESSION_TOUCH",
+        metadata,
+        new Date().toISOString()
+      );
+    }
+  } catch {
+    // non-blocking
+  }
+}
 
 async function requireSessionUser() {
   const cookieStore = await cookies();
@@ -63,14 +106,15 @@ export async function GET() {
     return auth.response;
   }
 
+  await recordSessionTouch(auth.current.user.id, auth.current.session.id);
+
   const profile = await prisma.profile.findUnique({
     where: {
       userId: auth.current.user.id,
     },
   });
 
-  return NextResponse.json({
-    success: true,
+  const payload = {
     user: {
       id: auth.current.user.id,
       email: auth.current.user.email,
@@ -91,6 +135,13 @@ export async function GET() {
       expiresAt: auth.current.session.expiresAt,
       lastUsedAt: auth.current.session.lastUsedAt ?? null,
     },
+  };
+
+  return NextResponse.json({
+    success: true,
+    data: payload,
+    user: payload.user,
+    session: payload.session,
   });
 }
 

@@ -45,7 +45,7 @@ async function collectDescendantCommentIds(rootId: string): Promise<string[]> {
   while (queue.length > 0) {
     const parentId = queue.shift()!;
     const children = await prisma.comment.findMany({
-      where: { parentCommentId: parentId },
+      where: { parentId: parentId },
       select: { id: true },
     });
 

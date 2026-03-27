@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { ErrorState } from "@/components/ui/error-state";
 import { SettingsForm } from "@/components/settings/settings-form";
-import { apiGet } from "@/lib/web-api";
+import { dashboardApiGet } from "@/lib/dashboard-api";
 import { dashboardCopy } from "@/lib/dashboard-copy";
 
 interface ProfilePageData {
@@ -46,7 +46,7 @@ export default async function DashboardProfilePage() {
   let error: string | null = null;
 
   try {
-    data = await apiGet<ProfilePageData>("/api/auth/me");
+    data = await dashboardApiGet<ProfilePageData>("/api/auth/me");
   } catch (requestError) {
     error =
       requestError instanceof Error

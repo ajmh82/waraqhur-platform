@@ -1,187 +1,93 @@
-import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
-import { ErrorState } from "@/components/ui/error-state";
-import { apiGet } from "@/lib/web-api";
-import { dashboardCopy } from "@/lib/dashboard-copy";
+import { dashboardApiGet } from "@/lib/dashboard-api";
 
-interface AccountPageData {
+type AccountData = {
   user: {
     id: string;
     email: string;
     username: string;
-    status: string;
-    createdAt?: string;
-    profile: {
-      displayName: string;
-      bio: string | null;
-      avatarUrl: string | null;
-      locale: string | null;
-      timezone: string | null;
-    } | null;
+    profile?: { displayName?: string | null } | null;
   };
-  session?: {
-    id: string;
-    expiresAt: string;
-    lastUsedAt: string | null;
-  };
-}
+};
 
-const pageCopy = {
-  ar: {
-    eyebrow: "الحساب",
-    description: "هذه الصفحة تعرض بيانات الحساب الأساسية المرتبطة بتسجيل الدخول والملف الشخصي.",
-    failedTitle: "تعذر تحميل الحساب",
-    failedDescription: "تعذر تحميل بيانات الحساب.",
-    email: "البريد الإلكتروني",
-    username: "اسم المستخدم",
-    status: "الحالة",
-    sessionId: "معرّف الجلسة",
-    sessionExpires: "انتهاء الجلسة",
-    sessionLastUsed: "آخر استخدام",
-    notAvailable: "غير متوفر",
-  },
-  en: {
-    eyebrow: "Account",
-    description: "This page shows the core account information related to sign-in and your profile.",
-    failedTitle: "Failed to load account",
-    failedDescription: "Failed to load account data.",
-    email: "Email",
-    username: "Username",
-    status: "Status",
-    sessionId: "Session ID",
-    sessionExpires: "Session Expires",
-    sessionLastUsed: "Last Used",
-    notAvailable: "Not available",
-  },
-} as const;
-
-function FieldCard({
-  label,
-  value,
+export default async function DashboardAccountPage({
+  searchParams,
 }: {
-  label: string;
-  value: string;
+  searchParams?: Promise<{ status?: string }>;
 }) {
-  return (
-    <article
-      className="dashboard-card"
-      style={{
-        padding: "18px",
-        display: "grid",
-        gap: "6px",
-      }}
-    >
-      <span
-        style={{
-          color: "var(--muted)",
-          fontSize: "13px",
-        }}
-      >
-        {label}
-      </span>
-      <strong
-        style={{
-          fontSize: "15px",
-          wordBreak: "break-word",
-        }}
-      >
-        {value}
-      </strong>
-    </article>
-  );
-}
+  const params = (await searchParams) ?? {};
+  const isAr = true;
 
-export default async function DashboardAccountPage() {
-  const cookieStore = await cookies();
-  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
-  const t = dashboardCopy[locale];
-  const p = pageCopy[locale];
-
-  let data: AccountPageData | null = null;
-  let error: string | null = null;
-
+  let data: AccountData | null = null;
   try {
-    data = await apiGet<AccountPageData>("/api/auth/me");
-  } catch (requestError) {
-    error =
-      requestError instanceof Error
-        ? requestError.message
-        : p.failedDescription;
+    data = await dashboardApiGet<AccountData>("/api/auth/me");
+  } catch {
+    data = null;
   }
 
-  if (!data || error) {
+  const statusText: Record<string, string> = {
+    saved: "تم حفظ التغييرات بنجاح.",
+    invalid: "البيانات غير مكتملة.",
+    username_format: "اسم المستخدم يجب أن يكون 3-24 حرفًا (a-z, 0-9, _).",
+    username_limit: "يمكن تغيير اسم المستخدم مرتين فقط خلال 365 يوم.",
+    duplicate: "البريد أو اسم المستخدم مستخدم مسبقًا.",
+    failed: "حدث خطأ أثناء الحفظ.",
+    not_found: "تعذر العثور على المستخدم.",
+  };
+
+  if (!data) {
     return (
       <AppShell>
         <section className="dashboard-panel">
-          <ErrorState
-            title={p.failedTitle}
-            description={error ?? p.failedDescription}
-          />
+          <h1 style={{ marginTop: 0 }}>{isAr ? "الحساب" : "Account"}</h1>
+          <p style={{ color: "var(--danger)" }}>{isAr ? "تعذر تحميل بيانات الحساب." : "Failed to load account."}</p>
         </section>
       </AppShell>
     );
   }
 
+  const displayName = data.user.profile?.displayName ?? data.user.username;
+  const status = params.status ? statusText[params.status] : "";
+
   return (
     <AppShell>
-      <section
-        className="dashboard-panel"
-        style={{
-          display: "grid",
-          gap: "18px",
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gap: "6px",
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: "#7dd3fc",
-              fontSize: "12px",
-              fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-            }}
-          >
-            {p.eyebrow}
+      <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
+        <h1 style={{ margin: 0 }}>{isAr ? "الحساب" : "Account"}</h1>
+        <p style={{ margin: 0, color: "var(--muted)" }}>
+          {isAr
+            ? "يمكنك تعديل البريد الإلكتروني واسم المستخدم والاسم المستعار."
+            : "You can update email, username, and nickname."}
+        </p>
+
+        {status ? (
+          <p style={{ margin: 0, color: status === statusText.saved ? "#86efac" : "var(--danger)" }}>
+            {status}
           </p>
+        ) : null}
 
-          <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>
-            {t.account}
-          </h1>
+        <form className="settings-form" action="/api/preferences/account" method="post" style={{ display: "grid", gap: 10 }}>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>{isAr ? "البريد الإلكتروني" : "Email"}</span>
+            <input className="settings-form__input" type="email" name="email" defaultValue={data.user.email} required />
+          </label>
 
-          <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>
-            {p.description}
-          </p>
-        </div>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>{isAr ? "اسم المستخدم" : "Username"}</span>
+            <input className="settings-form__input" type="text" name="username" defaultValue={data.user.username} required />
+            <small style={{ color: "var(--muted)" }}>
+              {isAr ? "مسموح مرتين خلال 365 يوم." : "Allowed twice per 365 days."}
+            </small>
+          </label>
 
-        <div
-          style={{
-            display: "grid",
-            gap: "14px",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          }}
-        >
-          <FieldCard label={p.email} value={data.user.email} />
-          <FieldCard label={p.username} value={data.user.username} />
-          <FieldCard label={p.status} value={data.user.status} />
-          <FieldCard
-            label={p.sessionId}
-            value={data.session?.id ?? p.notAvailable}
-          />
-          <FieldCard
-            label={p.sessionExpires}
-            value={data.session?.expiresAt ?? p.notAvailable}
-          />
-          <FieldCard
-            label={p.sessionLastUsed}
-            value={data.session?.lastUsedAt ?? p.notAvailable}
-          />
-        </div>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>{isAr ? "الاسم المستعار" : "Nickname"}</span>
+            <input className="settings-form__input" type="text" name="displayName" defaultValue={displayName} required />
+          </label>
+
+          <button className="settings-form__submit" type="submit">
+            {isAr ? "حفظ التغييرات" : "Save changes"}
+          </button>
+        </form>
       </section>
     </AppShell>
   );

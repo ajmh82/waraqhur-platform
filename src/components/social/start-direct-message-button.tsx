@@ -1,39 +1,23 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 interface StartDirectMessageButtonProps {
   targetUserId: string;
   label?: string;
   className?: string;
-  locale?: "ar" | "en";
 }
-
-const copy = {
-  ar: {
-    defaultLabel: "مراسلة خاصة",
-    opening: "جارٍ فتح المحادثة...",
-    failed: "تعذر بدء المحادثة.",
-  },
-  en: {
-    defaultLabel: "Direct Message",
-    opening: "Opening conversation...",
-    failed: "Failed to start conversation.",
-  },
-} as const;
 
 export function StartDirectMessageButton({
   targetUserId,
-  label,
+  label = "مراسلة خاصة",
   className = "btn",
-  locale = "ar",
 }: StartDirectMessageButtonProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const t = copy[locale];
-  const finalLabel = label ?? t.defaultLabel;
 
   async function handleClick() {
     setError(null);
@@ -41,18 +25,20 @@ export function StartDirectMessageButton({
     const response = await fetch("/api/messages", {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        targetUserId,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetUserId }),
     });
 
     const payload = await response.json().catch(() => null);
 
+    if (response.status === 401) {
+      const next = encodeURIComponent(pathname || "/timeline");
+      router.push(`/login?next=${next}`);
+      return;
+    }
+
     if (!response.ok || !payload?.success) {
-      setError(payload?.error?.message ?? t.failed);
+      setError(payload?.error?.message ?? "تعذر بدء المحادثة.");
       return;
     }
 
@@ -69,7 +55,7 @@ export function StartDirectMessageButton({
         onClick={handleClick}
         disabled={isPending}
       >
-        {isPending ? t.opening : finalLabel}
+        {isPending ? "جارٍ فتح المحادثة..." : label}
       </button>
 
       {error ? (

@@ -18,7 +18,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} dir={dir}>
-      <body>{children}</body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

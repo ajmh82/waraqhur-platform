@@ -267,7 +267,7 @@ export function PostCard({
             ) : null}
 
             {mainText ? (
-              <p
+              <p dir="auto"
                 className="tweet-card__excerpt"
                 style={{
                   whiteSpace: "pre-wrap",
@@ -277,7 +277,7 @@ export function PostCard({
                 {renderTextWithHashtags(mainText)}
               </p>
             ) : (
-              <p
+              <p dir="auto"
                 className="tweet-card__excerpt"
                 style={{ color: "rgba(255,255,255,0.52)" }}
               >

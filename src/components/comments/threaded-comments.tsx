@@ -122,7 +122,7 @@ function ReplyForm({
       />
 
       {error ? (
-        <p style={{ margin: 0, color: "var(--danger)", fontSize: "14px" }}>
+        <p dir="auto" style={{ margin: 0, color: "var(--danger)", fontSize: "14px" }}>
           {error}
         </p>
       ) : null}
@@ -249,7 +249,7 @@ function CommentItem({
         </div>
       </div>
 
-      <p
+      <p dir="auto"
         style={{
           margin: 0,
           whiteSpace: "pre-wrap",

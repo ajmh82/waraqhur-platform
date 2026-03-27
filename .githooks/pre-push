@@ -1,10 +1,6 @@
 #!/usr/bin/env sh
 set -eu
 
-echo "== pre-push: quality gate in app-dev container =="
-docker compose -f docker-compose.dev.yml exec -T app-dev sh -lc '
-  cd /app
-  npm run lint
-  npm run build:prod
-'
+echo "== pre-push: quality bundle =="
+./scripts/ops/quality-bundle.sh
 echo "== pre-push: passed =="
