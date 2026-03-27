@@ -38,6 +38,9 @@ const copy = {
     deleting: "جارٍ الحذف...",
     deleteFailed: "تعذر حذف الرسائل.",
     selectedCount: "محدد",
+    confirmDeleteOne: "هل أنت متأكد من حذف هذه الرسالة؟",
+    confirmDeleteSelected: "هل أنت متأكد من حذف الرسائل المحددة؟",
+    confirmDeleteAll: "هل أنت متأكد من حذف كل الرسائل في المحادثة؟",
   },
   en: {
     empty: "No messages yet. Send the first message now.",
@@ -49,6 +52,9 @@ const copy = {
     deleting: "Deleting...",
     deleteFailed: "Failed to delete messages.",
     selectedCount: "selected",
+    confirmDeleteOne: "Are you sure you want to delete this message?",
+    confirmDeleteSelected: "Are you sure you want to delete selected messages?",
+    confirmDeleteAll: "Are you sure you want to delete all messages in this thread?",
   },
 } as const;
 
@@ -119,10 +125,19 @@ export function MessageThreadView({
 
   async function deleteMessages(deleteAll: boolean) {
     if (!deleteAll && selectedIds.length === 0) return;
+
+    const confirmed = deleteAll
+      ? window.confirm(t.confirmDeleteAll)
+      : window.confirm(t.confirmDeleteSelected);
+
+    if (!confirmed) return;
+
     await runDelete(deleteAll ? { deleteAll: true } : { messageIds: selectedIds });
   }
 
   async function deleteSingle(messageId: string) {
+    const confirmed = window.confirm(t.confirmDeleteOne);
+    if (!confirmed) return;
     await runDelete({ messageIds: [messageId] });
   }
 
