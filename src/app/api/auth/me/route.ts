@@ -24,33 +24,19 @@ async function recordSessionTouch(userId: string, sessionId: string) {
       null;
     const forwardedFor = h.get("x-forwarded-for") ?? null;
 
-    const metadata = JSON.stringify({
-      sessionId,
-      client: userAgent,
-      country,
-      ip: forwardedFor,
-      source: "auth_me",
+    await prisma.auditLog.create({
+      data: {
+        actorUserId: userId,
+        action: "SESSION_TOUCH",
+        metadata: {
+          sessionId,
+          client: userAgent,
+          country,
+          ip: forwardedFor,
+          source: "auth_me",
+        },
+      },
     });
-
-    try {
-      await prisma.$executeRawUnsafe(
-        'INSERT INTO "AuditLog" ("id","actorUserId","action","metadata","createdAt") VALUES ($1,$2,$3,$4,$5)',
-        `st_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        userId,
-        "SESSION_TOUCH",
-        metadata,
-        new Date()
-      );
-    } catch {
-      await prisma.$executeRawUnsafe(
-        "INSERT INTO AuditLog (id, actorUserId, action, metadata, createdAt) VALUES (?, ?, ?, ?, ?)",
-        `st_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        userId,
-        "SESSION_TOUCH",
-        metadata,
-        new Date().toISOString()
-      );
-    }
   } catch {
     // non-blocking
   }

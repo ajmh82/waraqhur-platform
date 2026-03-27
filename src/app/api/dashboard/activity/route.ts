@@ -107,7 +107,7 @@ export async function GET() {
   const currentAt = current.session.lastUsedAt ?? current.session.expiresAt;
   items.unshift({
     id: `current-${current.session.id}`,
-    at: (currentAt instanceof Date ? currentAt : new Date(currentAt)).toISOString(),
+    at: new Date(String(currentAt ?? "")).toISOString(),
     country: null,
     client: null,
     source: "current" as const,
