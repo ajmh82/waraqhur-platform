@@ -191,7 +191,7 @@ function CommentItem({
   const t = copy[locale];
 
   return (
-    <article
+    <article id={`comment-${comment.id}`}
       style={{
         marginInlineStart: `${Math.min(depth * 24, 72)}px`,
         border: "1px solid rgba(255,255,255,0.08)",

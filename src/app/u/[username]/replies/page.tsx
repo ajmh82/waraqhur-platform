@@ -63,7 +63,7 @@ export default async function UserRepliesPage({
         ) : (
           <div className="dashboard-list-nav">
             {replies.map((reply) => {
-              const postHref = reply.post?.slug ? `/posts/${reply.post.slug}` : "/timeline";
+              const postHref = reply.post?.slug ? `/posts/${reply.post.slug}#comment-${reply.id}` : "/timeline";
               return (
                 <Link key={reply.id} href={postHref} className="dashboard-list-item">
                   <span className="dashboard-list-item__title">
