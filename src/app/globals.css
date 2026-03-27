@@ -1284,3 +1284,71 @@ button[data-follow-button="true"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+
+/* Final UI polish: sidebar + dashboard clarity */
+.account-menu__panel--clean {
+  width: min(94vw, 360px);
+  padding: 16px;
+  border-radius: 16px;
+}
+
+.account-menu__name {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.account-menu__username {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.account-menu__list-nav {
+  gap: 8px;
+}
+
+.account-menu__list-nav > button {
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: start;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.global-top-nav {
+  top: 64px;
+  padding-top: 10px;
+  padding-bottom: 2px;
+}
+
+.global-top-nav__btn {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+}
+
+.dashboard-panel {
+  padding-top: 8px;
+}
+
+.dashboard-list-nav {
+  gap: 8px;
+}
+
+.dashboard-list-item {
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.dashboard-list-item__title {
+  font-size: 16px;
+}
+
+.dashboard-list-item__body {
+  font-size: 13px;
+  line-height: 1.65;
+}
