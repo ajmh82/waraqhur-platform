@@ -55,6 +55,21 @@ export async function GET(
         },
         followers: true,
         following: true,
+        authoredComments: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 50,
+          include: {
+            post: {
+              select: {
+                id: true,
+                slug: true,
+                title: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -130,6 +145,18 @@ export async function GET(
                   id: post.source.id,
                   name: post.source.name,
                   slug: post.source.slug,
+                }
+              : null,
+          })),
+          replies: user.authoredComments.map((comment) => ({
+            id: comment.id,
+            content: comment.content,
+            createdAt: comment.createdAt.toISOString(),
+            post: comment.post
+              ? {
+                  id: comment.post.id,
+                  slug: comment.post.slug,
+                  title: comment.post.title,
                 }
               : null,
           })),
