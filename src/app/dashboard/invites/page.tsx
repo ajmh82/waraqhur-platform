@@ -3,6 +3,11 @@ import { dashboardApiGet } from "@/lib/dashboard-api";
 type InviteRow = { id: string; email: string; status: string; createdAt: string };
 type InviteData = { remaining: number; total: number; sent: InviteRow[] };
 
+function toSafeNumber(value: unknown, fallback: number) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
 export default async function DashboardInvitesPage({
   searchParams,
 }: {
@@ -19,7 +24,37 @@ export default async function DashboardInvitesPage({
 
   let data: InviteData = { remaining: 5, total: 5, sent: [] };
   try {
-    data = await dashboardApiGet<InviteData>("/api/invitations");
+    const raw = await dashboardApiGet<{
+      remaining?: number;
+      total?: number;
+      sent?: Array<{ id: string; email?: string; status?: string; createdAt?: string }>;
+      quota?: { remaining?: number; total?: number };
+      invitations?: Array<{ id: string; inviteeEmail?: string; email?: string; status?: string; createdAt?: string }>;
+    }>("/api/invitations");
+
+    const quota = raw?.quota ?? {};
+    const invitations = Array.isArray(raw?.invitations) ? raw.invitations : [];
+    const sentLegacy = Array.isArray(raw?.sent) ? raw.sent : [];
+
+    const normalizedFromInvites: InviteRow[] = invitations.map((x) => ({
+      id: String(x.id ?? ""),
+      email: String(x.inviteeEmail ?? x.email ?? ""),
+      status: String(x.status ?? "pending"),
+      createdAt: String(x.createdAt ?? new Date().toISOString()),
+    })).filter((x) => x.id && x.email);
+
+    const normalizedLegacy: InviteRow[] = sentLegacy.map((x) => ({
+      id: String(x.id ?? ""),
+      email: String(x.email ?? ""),
+      status: String(x.status ?? "pending"),
+      createdAt: String(x.createdAt ?? new Date().toISOString()),
+    })).filter((x) => x.id && x.email);
+
+    data = {
+      remaining: toSafeNumber(raw?.remaining ?? quota.remaining, 5),
+      total: toSafeNumber(raw?.total ?? quota.total, 5),
+      sent: normalizedFromInvites.length > 0 ? normalizedFromInvites : normalizedLegacy,
+    };
   } catch {
     data = { remaining: 5, total: 5, sent: [] };
   }
