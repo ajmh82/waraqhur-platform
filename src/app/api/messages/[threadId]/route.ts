@@ -171,6 +171,7 @@ export async function GET(
             body: message.body,
             createdAt: message.createdAt.toISOString(),
             readAt: message.readAt?.toISOString() ?? null,
+            senderUserId: message.senderUserId,
             isMine: message.senderUserId === userId,
             sender: {
               id: message.sender.id,
@@ -289,7 +290,6 @@ export async function POST(
     );
   }
 }
-
 
 export async function DELETE(
   request: Request,

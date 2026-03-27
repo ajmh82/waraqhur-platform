@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { MessagesInbox } from "@/components/messages/messages-inbox";
-import { MessageRequestsPanel } from "@/components/messages/message-requests-panel";
+import { MessageRequestComposer } from "@/components/messages/message-request-composer";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiGet } from "@/lib/web-api";
 import { cookies } from "next/headers";
@@ -59,8 +59,8 @@ export default async function MessagesPage() {
 
   return (
     <AppShell>
-      <section className="page-section" style={{ display: "grid", gap: "12px" }}>
-        <MessageRequestsPanel locale={locale} />
+      <section className="page-section" style={{ display: "grid", gap: 12 }}>
+        <MessageRequestComposer locale={locale} />
         <MessagesInbox locale={locale} threads={data.threads ?? []} />
       </section>
     </AppShell>

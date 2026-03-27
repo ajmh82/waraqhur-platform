@@ -34,6 +34,7 @@ const copy = {
     clearSelection: "إلغاء التحديد",
     deleteSelected: "حذف المحدد",
     deleteAll: "حذف كل الرسائل",
+    deleteOne: "حذف",
     deleting: "جارٍ الحذف...",
     deleteFailed: "تعذر حذف الرسائل.",
     selectedCount: "محدد",
@@ -44,6 +45,7 @@ const copy = {
     clearSelection: "Clear selection",
     deleteSelected: "Delete selected",
     deleteAll: "Delete all",
+    deleteOne: "Delete",
     deleting: "Deleting...",
     deleteFailed: "Failed to delete messages.",
     selectedCount: "selected",
@@ -87,7 +89,7 @@ export function MessageThreadView({
     setSelectedIds(isAllSelected ? [] : messageIds);
   }
 
-  async function deleteMessages(deleteAll: boolean) {
+  async function runDelete(payload: { deleteAll?: boolean; messageIds?: string[] }) {
     if (isDeleting) return;
 
     setIsDeleting(true);
@@ -98,15 +100,13 @@ export function MessageThreadView({
         method: "DELETE",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          deleteAll ? { deleteAll: true } : { messageIds: selectedIds }
-        ),
+        body: JSON.stringify(payload),
       });
 
-      const payload = await response.json().catch(() => null);
+      const apiPayload = await response.json().catch(() => null);
 
-      if (!response.ok || !payload?.success) {
-        setError(payload?.error?.message ?? t.deleteFailed);
+      if (!response.ok || !apiPayload?.success) {
+        setError(apiPayload?.error?.message ?? t.deleteFailed);
         return;
       }
 
@@ -115,6 +115,15 @@ export function MessageThreadView({
     } finally {
       setIsDeleting(false);
     }
+  }
+
+  async function deleteMessages(deleteAll: boolean) {
+    if (!deleteAll && selectedIds.length === 0) return;
+    await runDelete(deleteAll ? { deleteAll: true } : { messageIds: selectedIds });
+  }
+
+  async function deleteSingle(messageId: string) {
+    await runDelete({ messageIds: [messageId] });
   }
 
   return (
@@ -263,7 +272,7 @@ export function MessageThreadView({
                   style={{
                     maxWidth: "min(78%, 520px)",
                     display: "grid",
-                    gap: "6px",
+                    gap: "8px",
                     padding: "12px 14px",
                     borderRadius: "18px",
                     background: isOwnMessage
@@ -279,12 +288,30 @@ export function MessageThreadView({
                     {message.body}
                   </p>
 
-                  <span style={{ fontSize: "12px", color: "var(--muted)" }}>
-                    {formatDateTimeInMakkah(
-                      message.createdAt,
-                      locale === "en" ? "en-US" : "ar-BH"
-                    )}
-                  </span>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "10px",
+                    }}
+                  >
+                    <span style={{ fontSize: "12px", color: "var(--muted)" }}>
+                      {formatDateTimeInMakkah(
+                        message.createdAt,
+                        locale === "en" ? "en-US" : "ar-BH"
+                      )}
+                    </span>
+
+                    <button
+                      type="button"
+                      className="btn small"
+                      disabled={isDeleting}
+                      onClick={() => deleteSingle(message.id)}
+                    >
+                      {isDeleting ? t.deleting : t.deleteOne}
+                    </button>
+                  </div>
                 </article>
               </div>
             );
