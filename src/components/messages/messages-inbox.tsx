@@ -29,6 +29,7 @@ const copy = {
   ar: {
     loading: "جارٍ تحميل المحادثات...",
     loadFailed: "تعذر تحميل المحادثات.",
+    authRequired: "يجب تسجيل الدخول لعرض المحادثات.",
     emptyTitle: "لا توجد محادثات بعد",
     emptyBody: "ابدأ محادثة جديدة من صندوق (محادثة جديدة) بالأعلى.",
     noMessage: "لا توجد رسالة بعد",
@@ -48,6 +49,7 @@ const copy = {
   en: {
     loading: "Loading conversations...",
     loadFailed: "Failed to load conversations.",
+    authRequired: "You need to sign in to view conversations.",
     emptyTitle: "No conversations yet",
     emptyBody: "Start a new chat from the New Chat box above.",
     noMessage: "No messages yet",
@@ -67,7 +69,6 @@ const copy = {
 } as const;
 
 export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: MessagesInboxProps) {
-  const isArabic = locale !== "en";
   const t = copy[locale];
 
   const [threads, setThreads] = useState<InboxThread[]>(
@@ -75,6 +76,7 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
   );
   const [loading, setLoading] = useState(Array.isArray(initialThreads) ? false : true);
   const [error, setError] = useState<string | null>(null);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
 
   const [selectedThreadIds, setSelectedThreadIds] = useState<string[]>([]);
   const [deletingThreadId, setDeletingThreadId] = useState<string | null>(null);
@@ -84,6 +86,11 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
   const isSelectionMode = selectedThreadIds.length > 0;
 
   useEffect(() => {
+    if (isUnauthorized) {
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function fetchThreads() {
@@ -100,6 +107,12 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
 
         if (cancelled) return;
 
+        if (response.status === 401) {
+          setIsUnauthorized(true);
+          setError(t.authRequired);
+          return;
+        }
+
         if (!response.ok || !payload?.success) {
           setError(payload?.error?.message ?? t.loadFailed);
           return;
@@ -113,13 +126,12 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
         if (cancelled) return;
         setError(t.loadFailed);
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
     void fetchThreads();
+
     const id = setInterval(() => {
       void fetchThreads();
     }, 20000);
@@ -128,7 +140,7 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
       cancelled = true;
       clearInterval(id);
     };
-  }, [t.loadFailed]);
+  }, [isUnauthorized, t.authRequired, t.loadFailed]);
 
   const sorted = useMemo(() => {
     return [...threads].sort((a, b) => {
@@ -165,6 +177,12 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
 
     const payload = await response.json().catch(() => null);
 
+    if (response.status === 401) {
+      setIsUnauthorized(true);
+      setError(t.authRequired);
+      return false;
+    }
+
     if (!response.ok || !payload?.success) {
       return false;
     }
@@ -185,11 +203,13 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
 
     try {
       const ok = await requestDeleteThread(threadId);
-      if (!ok) {
+      if (!ok && !isUnauthorized) {
         setError(t.deleteFailed);
       }
     } catch {
-      setError(t.deleteFailed);
+      if (!isUnauthorized) {
+        setError(t.deleteFailed);
+      }
     } finally {
       setDeletingThreadId(null);
     }
@@ -211,13 +231,16 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
         setDeletingThreadId(threadId);
         try {
           const ok = await requestDeleteThread(threadId);
-          if (!ok) failedCount += 1;
+          if (!ok) {
+            failedCount += 1;
+            if (isUnauthorized) break;
+          }
         } catch {
           failedCount += 1;
         }
       }
 
-      if (failedCount > 0) {
+      if (!isUnauthorized && failedCount > 0) {
         setError(`${t.bulkDeletePartialFailed} ${failedCount}.`);
       }
     } finally {
@@ -313,8 +336,8 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
           <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
             <time className="messages-inbox__time">
               {new Date(thread.updatedAt).toLocaleString(
-                isArabic ? "ar-BH" : "en-US",
-                { hour12: !isArabic }
+                locale === "ar" ? "ar-BH" : "en-US",
+                { hour12: locale !== "ar" }
               )}
             </time>
             {!isSelectionMode ? (
