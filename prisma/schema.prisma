@@ -119,6 +119,7 @@ model User {
   updatedPosts           Post[]              @relation("PostUpdater")
   comments               Comment[]           @relation("CommentAuthor")
   likes                  Like[]
+  commentLikes           CommentLike[]
   bookmarks              Bookmark[]
   directThreadsAsA       DirectThread[]      @relation("DirectThreadParticipantA")
   directThreadsAsB       DirectThread[]      @relation("DirectThreadParticipantB")
@@ -417,12 +418,26 @@ model Comment {
   author                 User?               @relation("CommentAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
   parent                 Comment?            @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies                Comment[]           @relation("CommentReplies")
+  likes                  CommentLike[]
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
   @@index([postId, status])
   @@index([authorUserId])
   @@index([parentId])
+}
+
+model CommentLike {
+  userId                 String
+  commentId              String
+  createdAt              DateTime            @default(now())
+
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment                Comment             @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, commentId])
+  @@index([commentId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model DirectThread {

@@ -96,7 +96,7 @@ export async function POST(
 
     const bookmarksCount = await prisma.bookmark.count({
       where: {
-        userId,
+        postId,
       },
     });
 
@@ -104,6 +104,7 @@ export async function POST(
       success: true,
       data: {
         bookmarked: true,
+        isBookmarked: true,
         bookmarksCount,
       },
     });
@@ -144,7 +145,7 @@ export async function DELETE(
 
     const bookmarksCount = await prisma.bookmark.count({
       where: {
-        userId,
+        postId,
       },
     });
 
@@ -152,6 +153,7 @@ export async function DELETE(
       success: true,
       data: {
         bookmarked: false,
+        isBookmarked: false,
         bookmarksCount,
       },
     });

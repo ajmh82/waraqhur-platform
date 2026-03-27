@@ -1,117 +1,63 @@
 import Link from "next/link";
-import { SectionHeading } from "@/components/content/section-heading";
-import { SettingsForm } from "@/components/settings/settings-form";
-import { ErrorState } from "@/components/ui/error-state";
-import { dashboardApiGet } from "@/lib/dashboard-api";
+import { cookies } from "next/headers";
+import { AppShell } from "@/components/layout/app-shell";
+import { dashboardCopy } from "@/lib/dashboard-copy";
 
-interface CurrentUserResponse {
-  user: {
-    id: string;
-    email: string;
-    username: string;
-    status: string;
-    profile: {
-      displayName: string;
-      bio: string | null;
-      avatarUrl: string | null;
-      locale: string | null;
-      timezone: string | null;
-    } | null;
-  };
-  session: {
-    id: string;
-    expiresAt: string;
-    lastUsedAt: string | null;
-  };
-}
-
-async function loadData() {
-  try {
-    return {
-      data: await dashboardApiGet<CurrentUserResponse>("/api/auth/me"),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      data: null,
-      error: error instanceof Error ? error.message : "تعذر تحميل الإعدادات.",
-    };
-  }
-}
+const pageCopy = {
+  ar: {
+    eyebrow: "الإعدادات",
+    description: "إدارة إعدادات حسابك ولغتك وتفضيلاتك.",
+    cards: [
+      { href: "/dashboard/profile", title: "الملف الشخصي", body: "تعديل الاسم، الصورة، والنبذة." },
+      { href: "/dashboard/account", title: "الحساب", body: "عرض تفاصيل الحساب والجلسة." },
+      { href: "/dashboard/security", title: "الأمان", body: "مراجعة حالة الأمان الحالية." },
+    ],
+    open: "فتح",
+  },
+  en: {
+    eyebrow: "Settings",
+    description: "Manage your account settings, language, and preferences.",
+    cards: [
+      { href: "/dashboard/profile", title: "Profile", body: "Edit display name, avatar, and bio." },
+      { href: "/dashboard/account", title: "Account", body: "View account and session details." },
+      { href: "/dashboard/security", title: "Security", body: "Review current security state." },
+    ],
+    open: "Open",
+  },
+} as const;
 
 export default async function DashboardSettingsPage() {
-  const { data, error } = await loadData();
-
-  if (error || !data) {
-    return (
-      <ErrorState
-        title="تعذر تحميل الإعدادات"
-        description={error ?? "تعذر تحميل الإعدادات."}
-      />
-    );
-  }
-
-  const profile = data.user.profile;
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
+  const t = dashboardCopy[locale];
+  const p = pageCopy[locale];
 
   return (
-    <section className="dashboard-panel">
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginBottom: "18px",
-        }}
-      >
-        <Link href={`/u/${data.user.username}`} className="btn small">
-          الملف العام
-        </Link>
-        <Link href="/messages" className="btn small">
-          الرسائل
-        </Link>
-        <Link href="/search" className="btn small">
-          البحث
-        </Link>
-      </div>
+    <AppShell>
+      <section className="dashboard-panel" style={{ display: "grid", gap: "18px" }}>
+        <div style={{ display: "grid", gap: "6px" }}>
+          <p style={{ margin: 0, color: "#7dd3fc", fontSize: "12px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {p.eyebrow}
+          </p>
+          <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>{t.settings}</h1>
+          <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>{p.description}</p>
+        </div>
 
-      <SectionHeading
-        eyebrow="Settings"
-        title="الإعدادات"
-        description="غيّر اللغة والمنطقة الزمنية وبعض بياناتك الأساسية من مكان واحد."
-      />
-
-      <div
-        className="state-card"
-        style={{
-          maxWidth: "100%",
-          margin: "0 0 18px",
-          padding: "16px",
-          display: "grid",
-          gap: "8px",
-        }}
-      >
-        <strong>ملخص الحساب</strong>
-        <p style={{ margin: 0 }}>
-          اسم المستخدم: @{data.user.username}
-        </p>
-        <p style={{ margin: 0 }}>
-          الاسم المعروض: {profile?.displayName ?? data.user.username}
-        </p>
-        <p style={{ margin: 0 }}>
-          اللغة الحالية: {profile?.locale?.startsWith("en") ? "English" : "العربية"}
-        </p>
-        <p style={{ margin: 0 }}>
-          المنطقة الزمنية الحالية: {profile?.timezone ?? "Asia/Riyadh"}
-        </p>
-      </div>
-
-      <SettingsForm
-        displayName={profile?.displayName ?? data.user.username}
-        bio={profile?.bio ?? null}
-        avatarUrl={profile?.avatarUrl ?? null}
-        locale={profile?.locale ?? "ar"}
-        timezone={profile?.timezone ?? "Asia/Riyadh"}
-      />
-    </section>
+        <div style={{ display: "grid", gap: "14px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+          {p.cards.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="dashboard-card"
+              style={{ textDecoration: "none", color: "inherit", padding: "18px", display: "grid", gap: "8px" }}
+            >
+              <strong style={{ fontSize: "16px" }}>{item.title}</strong>
+              <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.7 }}>{item.body}</p>
+              <span style={{ color: "#7dd3fc", fontSize: "13px", fontWeight: 700 }}>{p.open}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </AppShell>
   );
 }

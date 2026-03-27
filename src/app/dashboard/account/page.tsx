@@ -1,14 +1,16 @@
-import Link from "next/link";
-import { SectionHeading } from "@/components/content/section-heading";
+import { cookies } from "next/headers";
+import { AppShell } from "@/components/layout/app-shell";
 import { ErrorState } from "@/components/ui/error-state";
-import { dashboardApiGet } from "@/lib/dashboard-api";
+import { apiGet } from "@/lib/web-api";
+import { dashboardCopy } from "@/lib/dashboard-copy";
 
-interface CurrentUserResponse {
+interface AccountPageData {
   user: {
     id: string;
     email: string;
     username: string;
     status: string;
+    createdAt?: string;
     profile: {
       displayName: string;
       bio: string | null;
@@ -17,138 +19,170 @@ interface CurrentUserResponse {
       timezone: string | null;
     } | null;
   };
-  session: {
+  session?: {
     id: string;
     expiresAt: string;
     lastUsedAt: string | null;
   };
 }
 
-async function loadData() {
-  try {
-    return {
-      data: await dashboardApiGet<CurrentUserResponse>("/api/auth/me"),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      data: null,
-      error:
-        error instanceof Error ? error.message : "تعذر تحميل بيانات الحساب.",
-    };
-  }
+const pageCopy = {
+  ar: {
+    eyebrow: "الحساب",
+    description: "هذه الصفحة تعرض بيانات الحساب الأساسية المرتبطة بتسجيل الدخول والملف الشخصي.",
+    failedTitle: "تعذر تحميل الحساب",
+    failedDescription: "تعذر تحميل بيانات الحساب.",
+    email: "البريد الإلكتروني",
+    username: "اسم المستخدم",
+    status: "الحالة",
+    sessionId: "معرّف الجلسة",
+    sessionExpires: "انتهاء الجلسة",
+    sessionLastUsed: "آخر استخدام",
+    notAvailable: "غير متوفر",
+  },
+  en: {
+    eyebrow: "Account",
+    description: "This page shows the core account information related to sign-in and your profile.",
+    failedTitle: "Failed to load account",
+    failedDescription: "Failed to load account data.",
+    email: "Email",
+    username: "Username",
+    status: "Status",
+    sessionId: "Session ID",
+    sessionExpires: "Session Expires",
+    sessionLastUsed: "Last Used",
+    notAvailable: "Not available",
+  },
+} as const;
+
+function FieldCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <article
+      className="dashboard-card"
+      style={{
+        padding: "18px",
+        display: "grid",
+        gap: "6px",
+      }}
+    >
+      <span
+        style={{
+          color: "var(--muted)",
+          fontSize: "13px",
+        }}
+      >
+        {label}
+      </span>
+      <strong
+        style={{
+          fontSize: "15px",
+          wordBreak: "break-word",
+        }}
+      >
+        {value}
+      </strong>
+    </article>
+  );
 }
 
 export default async function DashboardAccountPage() {
-  const { data, error } = await loadData();
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
+  const t = dashboardCopy[locale];
+  const p = pageCopy[locale];
 
-  if (error || !data) {
+  let data: AccountPageData | null = null;
+  let error: string | null = null;
+
+  try {
+    data = await apiGet<AccountPageData>("/api/auth/me");
+  } catch (requestError) {
+    error =
+      requestError instanceof Error
+        ? requestError.message
+        : p.failedDescription;
+  }
+
+  if (!data || error) {
     return (
-      <ErrorState
-        title="تعذر تحميل الحساب"
-        description={error ?? "تعذر تحميل بيانات الحساب."}
-      />
+      <AppShell>
+        <section className="dashboard-panel">
+          <ErrorState
+            title={p.failedTitle}
+            description={error ?? p.failedDescription}
+          />
+        </section>
+      </AppShell>
     );
   }
 
-  const profile = data.user.profile;
-
   return (
-    <section className="dashboard-panel">
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginBottom: "18px",
-        }}
-      >
-        <Link href="/dashboard/profile" className="btn small">
-          الملف الشخصي
-        </Link>
-        <Link href="/dashboard/settings" className="btn small">
-          الإعدادات
-        </Link>
-        <Link href="/dashboard/security" className="btn small">
-          الأمان
-        </Link>
-        <Link href="/search" className="btn small">
-          البحث
-        </Link>
-      </div>
-
-      <SectionHeading
-        eyebrow="Account"
-        title="الحساب"
-        description="هذه الصفحة تعرض بيانات الحساب الأساسية المرتبطة بتسجيل الدخول والملف الشخصي."
-      />
-
-      <div
+    <AppShell>
+      <section
+        className="dashboard-panel"
         style={{
           display: "grid",
-          gap: "16px",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: "18px",
         }}
       >
-        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-          <strong>اسم المستخدم</strong>
-          <p style={{ margin: "8px 0 0" }}>@{data.user.username}</p>
-        </div>
+        <div
+          style={{
+            display: "grid",
+            gap: "6px",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              color: "#7dd3fc",
+              fontSize: "12px",
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
+          >
+            {p.eyebrow}
+          </p>
 
-        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-          <strong>البريد الإلكتروني</strong>
-          <p style={{ margin: "8px 0 0" }}>{data.user.email}</p>
-        </div>
+          <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>
+            {t.account}
+          </h1>
 
-        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-          <strong>الحالة</strong>
-          <p style={{ margin: "8px 0 0" }}>{data.user.status}</p>
-        </div>
-
-        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-          <strong>الاسم المعروض</strong>
-          <p style={{ margin: "8px 0 0" }}>
-            {profile?.displayName ?? data.user.username}
+          <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>
+            {p.description}
           </p>
         </div>
 
-        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-          <strong>اللغة</strong>
-          <p style={{ margin: "8px 0 0" }}>
-            {profile?.locale?.startsWith("en") ? "English" : "العربية"}
-          </p>
+        <div
+          style={{
+            display: "grid",
+            gap: "14px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          }}
+        >
+          <FieldCard label={p.email} value={data.user.email} />
+          <FieldCard label={p.username} value={data.user.username} />
+          <FieldCard label={p.status} value={data.user.status} />
+          <FieldCard
+            label={p.sessionId}
+            value={data.session?.id ?? p.notAvailable}
+          />
+          <FieldCard
+            label={p.sessionExpires}
+            value={data.session?.expiresAt ?? p.notAvailable}
+          />
+          <FieldCard
+            label={p.sessionLastUsed}
+            value={data.session?.lastUsedAt ?? p.notAvailable}
+          />
         </div>
-
-        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-          <strong>المنطقة الزمنية</strong>
-          <p style={{ margin: "8px 0 0" }}>
-            {profile?.timezone ?? "Asia/Riyadh"}
-          </p>
-        </div>
-      </div>
-
-      <div
-        className="state-card"
-        style={{
-          maxWidth: "100%",
-          margin: "18px 0 0",
-          display: "grid",
-          gap: "10px",
-        }}
-      >
-        <strong>خطوات سريعة</strong>
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <Link href="/dashboard/settings" className="btn small">
-            تعديل الإعدادات
-          </Link>
-          <Link href={`/u/${data.user.username}`} className="btn small">
-            فتح الملف العام
-          </Link>
-          <Link href="/messages" className="btn small">
-            فتح الرسائل
-          </Link>
-        </div>
-      </div>
-    </section>
+      </section>
+    </AppShell>
   );
 }

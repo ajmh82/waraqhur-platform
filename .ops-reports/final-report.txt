@@ -1,0 +1,119 @@
+DATE: Fri Mar 27 08:28:28 UTC 2026
+BRANCH: main
+COMMIT: 70ddb83828a09178007a6ccb7d824c9084ae166f
+
+=== GIT STATUS ===
+ M docker-compose.dev.yml
+ M prisma/schema.prisma
+ M src/app/api/auth/me/route.ts
+ M src/app/api/comments/route.ts
+ M src/app/api/posts/[postId]/bookmark/route.ts
+ M src/app/api/posts/[postId]/repost/route.ts
+ M src/app/api/search/route.ts
+ M src/app/api/users/[userId]/follow/route.ts
+ M src/app/dashboard/account/page.tsx
+ M src/app/dashboard/activity/page.tsx
+ M src/app/dashboard/invites/page.tsx
+ M src/app/dashboard/notifications/page.tsx
+ M src/app/dashboard/page.tsx
+ M src/app/dashboard/profile/page.tsx
+ M src/app/dashboard/security/page.tsx
+ M src/app/dashboard/settings/page.tsx
+ M src/app/globals.css
+ M src/app/layout.tsx
+ M src/app/media/page.tsx
+ M src/app/messages/[threadId]/page.tsx
+ M src/app/messages/page.tsx
+ M src/app/page.tsx
+ M src/app/posts/[slug]/page.tsx
+ M src/app/search/page.tsx
+ M src/app/timeline/page.tsx
+ M src/app/u/[username]/followers/page.tsx
+ M src/app/u/[username]/following/page.tsx
+ M src/app/u/[username]/page.tsx
+ M src/components/content/post-card.tsx
+ M src/components/content/timeline-feed-client.tsx
+ M src/components/content/timeline-list.tsx
+ M src/components/content/timeline-sort-tabs.tsx
+ M src/components/layout/app-header.tsx
+ M src/components/layout/app-shell.tsx
+ M src/components/layout/mobile-bottom-nav.tsx
+ M src/components/messages/message-thread-form.tsx
+ M src/components/settings/settings-form.tsx
+ M src/components/social/start-direct-message-button.tsx
+ M src/lib/date-time.ts
+?? .ops-reports/
+?? cookies.txt
+?? docker-compose.dev.yml.bak
+?? public/uploads/
+?? src/app/api/comments/[commentId]/like/
+?? src/app/api/comments/[commentId]/owner/
+?? src/app/api/posts/[postId]/owner/
+?? src/app/api/posts/[postId]/thread/
+?? src/app/api/timeline/
+?? src/app/api/tweets/
+?? src/app/api/uploads/
+?? src/app/compose/
+?? src/app/tag/
+?? src/components/comments/
+?? src/components/compose/
+?? src/components/layout/account-menu.tsx
+?? src/components/media/
+?? src/components/messages/message-thread-view.tsx
+?? src/components/messages/messages-inbox.tsx
+?? src/components/profile/
+?? src/components/search/
+?? src/components/social/comment-owner-controls.tsx
+?? src/components/social/follow-user-button.tsx
+?? src/components/social/like-comment-button.tsx
+?? src/components/social/tweet-action-bar.tsx
+?? src/components/social/tweet-owner-controls.tsx
+?? src/components/social/user-connections-list.tsx
+?? src/lib/dashboard-copy.ts
+
+=== LAST 30 LOG LINES ===
+waraqhur-app-dev  |  GET /api/timeline?page=1&limit=48&sort=latest 200 in 14ms (next.js: 1405µs, application-code: 13ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 4ms (next.js: 1506µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /media 200 in 77ms (next.js: 3ms, application-code: 75ms)
+waraqhur-app-dev  |  GET /api/timeline?page=1&limit=48&sort=latest 200 in 15ms (next.js: 1804µs, application-code: 13ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 5ms (next.js: 1994µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /media 200 in 69ms (next.js: 1353µs, application-code: 67ms)
+waraqhur-app-dev  |  GET /api/timeline?page=1&limit=48&sort=latest 200 in 10ms (next.js: 1352µs, application-code: 9ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 5ms (next.js: 1089µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /media 200 in 57ms (next.js: 1420µs, application-code: 56ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 4ms (next.js: 1250µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /search 200 in 39ms (next.js: 1754µs, application-code: 38ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 4ms (next.js: 1023µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /search 200 in 33ms (next.js: 1853µs, application-code: 32ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 4ms (next.js: 1254µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /search 200 in 35ms (next.js: 1256µs, application-code: 34ms)
+waraqhur-app-dev  |  GET /api/messages 401 in 4ms (next.js: 999µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 4ms (next.js: 1091µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /messages 200 in 42ms (next.js: 1157µs, application-code: 40ms)
+waraqhur-app-dev  |  GET /api/messages 401 in 4ms (next.js: 933µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 4ms (next.js: 993µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /messages 200 in 35ms (next.js: 1219µs, application-code: 34ms)
+waraqhur-app-dev  |  GET /api/messages 401 in 4ms (next.js: 1107µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 4ms (next.js: 1065µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /messages 200 in 50ms (next.js: 1231µs, application-code: 48ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 4ms (next.js: 1090µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /dashboard 200 in 43ms (next.js: 3ms, application-code: 40ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 6ms (next.js: 1091µs, application-code: 5ms)
+waraqhur-app-dev  |  GET /dashboard 200 in 44ms (next.js: 1165µs, application-code: 43ms)
+waraqhur-app-dev  |  GET /api/auth/me 401 in 4ms (next.js: 1017µs, application-code: 3ms)
+waraqhur-app-dev  |  GET /dashboard 200 in 41ms (next.js: 1295µs, application-code: 39ms)
+
+=== REPORT FILES ===
+total 96K
+drwxrwxr-x  2 docker docker 4.0K Mar 27 08:28 .
+drwxrwxr-x 14 docker docker 4.0K Mar 27 08:26 ..
+-rw-rw-r--  1 docker docker 3.0K Mar 27 08:27 api-smoke-core.txt
+-rw-rw-r--  1 docker docker    5 Mar 27 08:26 current-branch.txt
+-rw-rw-r--  1 docker docker   41 Mar 27 08:26 current-commit.txt
+-rw-rw-r--  1 docker docker 5.3K Mar 27 08:28 final-report.txt
+-rw-rw-r--  1 docker docker   88 Mar 27 08:28 i18n-audit.txt
+-rw-rw-r--  1 docker docker 9.0K Mar 27 08:27 logs-after-restart.txt
+-rw-rw-r--  1 docker docker 2.9K Mar 27 08:27 page-smoke.txt
+-rw-rw-r--  1 docker docker  786 Mar 27 08:28 perf-quick-check.txt
+-rw-rw-r--  1 docker docker  38K Mar 27 08:28 runtime-warnings-full.txt
+-rw-rw-r--  1 docker docker 2.4K Mar 27 08:26 status-before.txt

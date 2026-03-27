@@ -1,0 +1,67 @@
+ M docker-compose.dev.yml
+ M prisma/schema.prisma
+ M src/app/api/auth/me/route.ts
+ M src/app/api/comments/route.ts
+ M src/app/api/posts/[postId]/bookmark/route.ts
+ M src/app/api/posts/[postId]/repost/route.ts
+ M src/app/api/search/route.ts
+ M src/app/api/users/[userId]/follow/route.ts
+ M src/app/dashboard/account/page.tsx
+ M src/app/dashboard/activity/page.tsx
+ M src/app/dashboard/invites/page.tsx
+ M src/app/dashboard/notifications/page.tsx
+ M src/app/dashboard/page.tsx
+ M src/app/dashboard/profile/page.tsx
+ M src/app/dashboard/security/page.tsx
+ M src/app/dashboard/settings/page.tsx
+ M src/app/globals.css
+ M src/app/layout.tsx
+ M src/app/media/page.tsx
+ M src/app/messages/[threadId]/page.tsx
+ M src/app/messages/page.tsx
+ M src/app/page.tsx
+ M src/app/posts/[slug]/page.tsx
+ M src/app/search/page.tsx
+ M src/app/timeline/page.tsx
+ M src/app/u/[username]/followers/page.tsx
+ M src/app/u/[username]/following/page.tsx
+ M src/app/u/[username]/page.tsx
+ M src/components/content/post-card.tsx
+ M src/components/content/timeline-feed-client.tsx
+ M src/components/content/timeline-list.tsx
+ M src/components/content/timeline-sort-tabs.tsx
+ M src/components/layout/app-header.tsx
+ M src/components/layout/app-shell.tsx
+ M src/components/layout/mobile-bottom-nav.tsx
+ M src/components/messages/message-thread-form.tsx
+ M src/components/settings/settings-form.tsx
+ M src/components/social/start-direct-message-button.tsx
+ M src/lib/date-time.ts
+?? .ops-reports/
+?? cookies.txt
+?? docker-compose.dev.yml.bak
+?? public/uploads/
+?? src/app/api/comments/[commentId]/like/
+?? src/app/api/comments/[commentId]/owner/
+?? src/app/api/posts/[postId]/owner/
+?? src/app/api/posts/[postId]/thread/
+?? src/app/api/timeline/
+?? src/app/api/tweets/
+?? src/app/api/uploads/
+?? src/app/compose/
+?? src/app/tag/
+?? src/components/comments/
+?? src/components/compose/
+?? src/components/layout/account-menu.tsx
+?? src/components/media/
+?? src/components/messages/message-thread-view.tsx
+?? src/components/messages/messages-inbox.tsx
+?? src/components/profile/
+?? src/components/search/
+?? src/components/social/comment-owner-controls.tsx
+?? src/components/social/follow-user-button.tsx
+?? src/components/social/like-comment-button.tsx
+?? src/components/social/tweet-action-bar.tsx
+?? src/components/social/tweet-owner-controls.tsx
+?? src/components/social/user-connections-list.tsx
+?? src/lib/dashboard-copy.ts

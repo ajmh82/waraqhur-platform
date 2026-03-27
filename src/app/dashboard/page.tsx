@@ -1,199 +1,175 @@
 import Link from "next/link";
-import { SectionHeading } from "@/components/content/section-heading";
-import { ErrorState } from "@/components/ui/error-state";
-import { dashboardApiGet } from "@/lib/dashboard-api";
+import { cookies } from "next/headers";
+import { AppShell } from "@/components/layout/app-shell";
+import { dashboardCopy } from "@/lib/dashboard-copy";
 
-interface CurrentUserResponse {
-  user: {
-    id: string;
-    email: string;
-    username: string;
-    status: string;
-    profile: {
-      displayName: string;
-      bio: string | null;
-      avatarUrl: string | null;
-      locale: string | null;
-      timezone: string | null;
-    } | null;
-  };
-  session: {
-    id: string;
-    expiresAt: string;
-    lastUsedAt: string | null;
-  };
-}
+const pageCopy = {
+  ar: {
+    overview: "نظرة عامة",
+    description:
+      "هذه هي نقطة الدخول المركزية إلى حسابك، علاقاتك، رسائلك، وإعداداتك داخل المنصة.",
+    quickLinks: [
+      {
+        href: "/dashboard/profile",
+        title: "الملف الشخصي",
+        body: "إدارة الاسم والصورة والنبذة.",
+      },
+      {
+        href: "/dashboard/account",
+        title: "الحساب",
+        body: "راجع بيانات الحساب الأساسية.",
+      },
+      {
+        href: "/dashboard/security",
+        title: "الأمان",
+        body: "حدّث إعدادات الأمان والجلسات.",
+      },
+      {
+        href: "/dashboard/notifications",
+        title: "الإشعارات",
+        body: "راجع تنبيهاتك الأخيرة.",
+      },
+      {
+        href: "/dashboard/activity",
+        title: "النشاط",
+        body: "تابع أحدث نشاطاتك داخل المنصة.",
+      },
+      {
+        href: "/dashboard/settings",
+        title: "الإعدادات",
+        body: "غيّر اللغة والمنطقة الزمنية وتفضيلاتك.",
+      },
+      {
+        href: "/dashboard/invites",
+        title: "الدعوات",
+        body: "راجع الدعوات المرتبطة بحسابك.",
+      },
+    ],
+  },
+  en: {
+    overview: "Overview",
+    description:
+      "This is the central entry point to your account, connections, messages, and settings inside the platform.",
+    quickLinks: [
+      {
+        href: "/dashboard/profile",
+        title: "Profile",
+        body: "Manage your name, avatar, and bio.",
+      },
+      {
+        href: "/dashboard/account",
+        title: "Account",
+        body: "Review your core account details.",
+      },
+      {
+        href: "/dashboard/security",
+        title: "Security",
+        body: "Update security settings and sessions.",
+      },
+      {
+        href: "/dashboard/notifications",
+        title: "Notifications",
+        body: "Review your latest alerts.",
+      },
+      {
+        href: "/dashboard/activity",
+        title: "Activity",
+        body: "Track your latest actions on the platform.",
+      },
+      {
+        href: "/dashboard/settings",
+        title: "Settings",
+        body: "Change language, time zone, and preferences.",
+      },
+      {
+        href: "/dashboard/invites",
+        title: "Invites",
+        body: "Review invites associated with your account.",
+      },
+    ],
+  },
+} as const;
 
-async function loadData() {
-  try {
-    return {
-      data: await dashboardApiGet<CurrentUserResponse>("/api/auth/me"),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      data: null,
-      error:
-        error instanceof Error ? error.message : "تعذر تحميل لوحة المستخدم.",
-    };
-  }
-}
-
-function getInitial(value: string) {
-  return value.trim().charAt(0).toUpperCase() || "?";
-}
-
-export default async function DashboardHomePage() {
-  const { data, error } = await loadData();
-
-  if (error || !data) {
-    return (
-      <ErrorState
-        title="تعذر تحميل لوحة المستخدم"
-        description={error ?? "تعذر تحميل لوحة المستخدم."}
-      />
-    );
-  }
-
-  const profile = data.user.profile;
-  const displayName = profile?.displayName ?? data.user.username;
+export default async function DashboardPage() {
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
+  const t = dashboardCopy[locale];
+  const p = pageCopy[locale];
 
   return (
-    <section className="dashboard-panel">
-      <SectionHeading
-        eyebrow="Dashboard"
-        title="لوحة المستخدم"
-        description="هذه هي نقطة الدخول المركزية إلى حسابك، علاقاتك، رسائلك، وإعداداتك داخل المنصة."
-      />
-
-      <div
-        className="state-card"
+    <AppShell>
+      <section
+        className="dashboard-panel"
         style={{
-          maxWidth: "100%",
-          margin: "0 0 18px",
           display: "grid",
-          gap: "16px",
+          gap: "18px",
         }}
       >
         <div
           style={{
-            display: "flex",
-            gap: "14px",
-            alignItems: "center",
-            flexWrap: "wrap",
+            display: "grid",
+            gap: "6px",
           }}
         >
-          <div
-            className="tweet-card__avatar"
-            style={{ width: "64px", height: "64px", fontSize: "24px" }}
+          <p
+            style={{
+              margin: 0,
+              color: "#7dd3fc",
+              fontSize: "12px",
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
           >
-            {profile?.avatarUrl ? (
-              <img
-                src={profile.avatarUrl}
-                alt={data.user.username}
-                className="account-menu__avatar-image"
-              />
-            ) : (
-              getInitial(displayName)
-            )}
-          </div>
+            {p.overview}
+          </p>
 
-          <div style={{ display: "grid", gap: "6px" }}>
-            <strong style={{ fontSize: "20px" }}>{displayName}</strong>
-            <span style={{ color: "var(--muted)" }}>@{data.user.username}</span>
-          </div>
+          <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>
+            {t.dashboard}
+          </h1>
+
+          <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>
+            {p.description}
+          </p>
         </div>
 
         <div
           style={{
             display: "grid",
-            gap: "12px",
+            gap: "14px",
             gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
           }}
         >
-          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-            <strong>الحالة</strong>
-            <p style={{ margin: "8px 0 0" }}>{data.user.status}</p>
-          </div>
-
-          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-            <strong>اللغة</strong>
-            <p style={{ margin: "8px 0 0" }}>
-              {profile?.locale?.startsWith("en") ? "English" : "العربية"}
-            </p>
-          </div>
-
-          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-            <strong>المنطقة الزمنية</strong>
-            <p style={{ margin: "8px 0 0" }}>
-              {profile?.timezone ?? "Asia/Riyadh"}
-            </p>
-          </div>
-
-          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-            <strong>البريد الإلكتروني</strong>
-            <p style={{ margin: "8px 0 0" }}>{data.user.email}</p>
-          </div>
+          {p.quickLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="dashboard-card"
+              style={{
+                textDecoration: "none",
+                color: "inherit",
+                padding: "18px",
+                display: "grid",
+                gap: "8px",
+              }}
+            >
+              <strong style={{ fontSize: "16px" }}>{item.title}</strong>
+              <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.7 }}>
+                {item.body}
+              </p>
+              <span
+                style={{
+                  color: "#7dd3fc",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                }}
+              >
+                {t.open}
+              </span>
+            </Link>
+          ))}
         </div>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gap: "16px",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        }}
-      >
-        <Link href="/dashboard/profile" className="dashboard-home-card">
-          <strong>الملف الشخصي</strong>
-          <p>راجع الاسم والصورة والنبذة ومعلوماتك العامة.</p>
-        </Link>
-
-        <Link href="/dashboard/account" className="dashboard-home-card">
-          <strong>الحساب</strong>
-          <p>راجع بيانات الحساب الأساسية المرتبطة بتسجيل الدخول.</p>
-        </Link>
-
-        <Link href="/dashboard/settings" className="dashboard-home-card">
-          <strong>الإعدادات</strong>
-          <p>غيّر اللغة والمنطقة الزمنية والصورة والنبذة من مكان واحد.</p>
-        </Link>
-
-        <Link href="/dashboard/security" className="dashboard-home-card">
-          <strong>الأمان</strong>
-          <p>راجع الجلسات النشطة وآخر تسجيل دخول وحالة الأمان.</p>
-        </Link>
-
-        <Link href="/dashboard/activity" className="dashboard-home-card">
-          <strong>النشاط</strong>
-          <p>تابع أحدث منشوراتك وتعليقاتك في ملخص واحد.</p>
-        </Link>
-
-        <Link href="/dashboard/notifications" className="dashboard-home-card">
-          <strong>الإشعارات</strong>
-          <p>اعرض التنبيهات والتنبيهات غير المقروءة المرتبطة بحسابك.</p>
-        </Link>
-
-        <Link href="/dashboard/invites" className="dashboard-home-card">
-          <strong>الدعوات</strong>
-          <p>راجع الدعوات النشطة وحالاتها الحالية.</p>
-        </Link>
-
-        <Link href="/messages" className="dashboard-home-card">
-          <strong>الرسائل</strong>
-          <p>انتقل مباشرة إلى المحادثات الخاصة والرسائل غير المقروءة.</p>
-        </Link>
-
-        <Link href="/search" className="dashboard-home-card">
-          <strong>البحث</strong>
-          <p>ابحث عن الحسابات والمنشورات وانتقل إليها بسرعة.</p>
-        </Link>
-
-        <Link href={`/u/${data.user.username}`} className="dashboard-home-card">
-          <strong>الملف العام</strong>
-          <p>افتح صفحتك العامة كما يراها الآخرون داخل المنصة.</p>
-        </Link>
-      </div>
-    </section>
+      </section>
+    </AppShell>
   );
 }

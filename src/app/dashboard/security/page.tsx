@@ -1,168 +1,87 @@
-import Link from "next/link";
-import { SectionHeading } from "@/components/content/section-heading";
+import { cookies } from "next/headers";
+import { AppShell } from "@/components/layout/app-shell";
 import { ErrorState } from "@/components/ui/error-state";
-import { dashboardApiGet } from "@/lib/dashboard-api";
-import { formatDateTimeInMakkah } from "@/lib/date-time";
+import { apiGet } from "@/lib/web-api";
+import { dashboardCopy } from "@/lib/dashboard-copy";
 
-interface SecurityResponse {
-  user: {
+interface SecurityPageData {
+  session?: {
     id: string;
-    email: string;
-    username: string;
-    status: string;
-    lastLoginAt: string | null;
-    emailVerifiedAt: string | null;
-  };
-  sessions: Array<{
-    id: string;
-    createdAt: string;
     expiresAt: string;
     lastUsedAt: string | null;
-    revokedAt: string | null;
-    ipAddress: string | null;
-    userAgent: string | null;
-  }>;
+  };
 }
 
-async function loadData() {
-  try {
-    return {
-      data: await dashboardApiGet<SecurityResponse>("/api/dashboard/security"),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      data: null,
-      error:
-        error instanceof Error ? error.message : "تعذر تحميل صفحة الأمان.",
-    };
-  }
-}
+const pageCopy = {
+  ar: {
+    eyebrow: "الأمان",
+    description: "مراجعة بيانات الجلسة الحالية لحماية الحساب.",
+    failedTitle: "تعذر تحميل صفحة الأمان",
+    failedDescription: "تعذر تحميل بيانات الأمان.",
+    currentSession: "الجلسة الحالية",
+    sessionId: "معرّف الجلسة",
+    expiresAt: "انتهاء الجلسة",
+    lastUsedAt: "آخر استخدام",
+    na: "غير متوفر",
+  },
+  en: {
+    eyebrow: "Security",
+    description: "Review current session data to keep your account secure.",
+    failedTitle: "Failed to load security page",
+    failedDescription: "Failed to load security data.",
+    currentSession: "Current Session",
+    sessionId: "Session ID",
+    expiresAt: "Session Expires",
+    lastUsedAt: "Last Used",
+    na: "Not available",
+  },
+} as const;
 
 export default async function DashboardSecurityPage() {
-  const { data, error } = await loadData();
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
+  const t = dashboardCopy[locale];
+  const p = pageCopy[locale];
 
-  if (error || !data) {
+  let data: SecurityPageData | null = null;
+  let error: string | null = null;
+
+  try {
+    data = await apiGet<SecurityPageData>("/api/auth/me");
+  } catch (requestError) {
+    error = requestError instanceof Error ? requestError.message : p.failedDescription;
+  }
+
+  if (!data || error) {
     return (
-      <ErrorState
-        title="تعذر تحميل الأمان"
-        description={error ?? "تعذر تحميل صفحة الأمان."}
-      />
+      <AppShell>
+        <section className="dashboard-panel">
+          <ErrorState title={p.failedTitle} description={error ?? p.failedDescription} />
+        </section>
+      </AppShell>
     );
   }
 
-  const activeSessions = data.sessions.filter((session) => !session.revokedAt);
+  const session = data.session ?? null;
 
   return (
-    <section className="dashboard-panel">
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginBottom: "18px",
-        }}
-      >
-        <Link href="/dashboard/settings" className="btn small">
-          الإعدادات
-        </Link>
-        <Link href="/dashboard/account" className="btn small">
-          الحساب
-        </Link>
-        <Link href="/messages" className="btn small">
-          الرسائل
-        </Link>
-        <Link href={`/u/${data.user.username}`} className="btn small">
-          الملف العام
-        </Link>
-      </div>
-
-      <SectionHeading
-        eyebrow="Security"
-        title="الأمان"
-        description="راجع حالة تسجيل الدخول والتحقق والجلسات النشطة المرتبطة بحسابك."
-      />
-
-      <div
-        style={{
-          display: "grid",
-          gap: "16px",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          marginBottom: "18px",
-        }}
-      >
-        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-          <strong>البريد الإلكتروني</strong>
-          <p style={{ margin: "8px 0 0" }}>{data.user.email}</p>
-        </div>
-
-        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-          <strong>توثيق البريد</strong>
-          <p style={{ margin: "8px 0 0" }}>
-            {data.user.emailVerifiedAt ? "موثق" : "غير موثق"}
+    <AppShell>
+      <section className="dashboard-panel" style={{ display: "grid", gap: "18px" }}>
+        <div style={{ display: "grid", gap: "6px" }}>
+          <p style={{ margin: 0, color: "#7dd3fc", fontSize: "12px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {p.eyebrow}
           </p>
+          <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>{t.security}</h1>
+          <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>{p.description}</p>
         </div>
 
-        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-          <strong>آخر تسجيل دخول</strong>
-          <p style={{ margin: "8px 0 0" }}>
-            {data.user.lastLoginAt
-              ? formatDateTimeInMakkah(data.user.lastLoginAt, "ar-BH")
-              : "غير متوفر"}
-          </p>
-        </div>
-
-        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-          <strong>الجلسات النشطة</strong>
-          <p style={{ margin: "8px 0 0" }}>{activeSessions.length}</p>
-        </div>
-      </div>
-
-      <div
-        className="state-card"
-        style={{
-          maxWidth: "100%",
-          margin: "0 0 18px",
-          display: "grid",
-          gap: "8px",
-        }}
-      >
-        <strong>ملخص الأمان</strong>
-        <p style={{ margin: 0 }}>
-          لديك {activeSessions.length} جلسة نشطة من أصل {data.sessions.length} جلسة
-          محفوظة في النظام.
-        </p>
-      </div>
-
-      <div className="dashboard-list">
-        {data.sessions.map((session) => (
-          <article key={session.id} className="dashboard-card">
-            <strong>{session.userAgent ?? "جلسة بدون User Agent"}</strong>
-
-            <div
-              style={{
-                marginTop: "10px",
-                display: "grid",
-                gap: "6px",
-                color: "var(--muted)",
-                fontSize: "14px",
-              }}
-            >
-              <span>IP: {session.ipAddress ?? "غير معروف"}</span>
-              <span>
-                آخر استخدام:{" "}
-                {session.lastUsedAt
-                  ? formatDateTimeInMakkah(session.lastUsedAt, "ar-BH")
-                  : "غير متوفر"}
-              </span>
-              <span>
-                انتهاء الجلسة: {formatDateTimeInMakkah(session.expiresAt, "ar-BH")}
-              </span>
-              <span>{session.revokedAt ? "تم إلغاء الجلسة" : "جلسة نشطة"}</span>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
+        <article className="dashboard-card" style={{ padding: "18px", display: "grid", gap: "10px" }}>
+          <h2 style={{ margin: 0, fontSize: "20px" }}>{p.currentSession}</h2>
+          <div><strong>{p.sessionId}:</strong> {session?.id ?? p.na}</div>
+          <div><strong>{p.expiresAt}:</strong> {session?.expiresAt ?? p.na}</div>
+          <div><strong>{p.lastUsedAt}:</strong> {session?.lastUsedAt ?? p.na}</div>
+        </article>
+      </section>
+    </AppShell>
   );
 }

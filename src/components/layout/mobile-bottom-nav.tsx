@@ -1,69 +1,76 @@
+"use client";
+
 import Link from "next/link";
-import { normalizeUiLocale, uiCopy } from "@/lib/ui-copy";
-import { apiGet } from "@/lib/web-api";
+import { usePathname } from "next/navigation";
 
-interface CurrentUserData {
-  user: {
-    id: string;
-    email: string;
-    username: string;
-    status: string;
-    profile: {
-      displayName: string;
-      avatarUrl?: string | null;
-      locale?: string | null;
-    } | null;
-  };
-  session: {
-    id: string;
-    expiresAt: string;
-    lastUsedAt: string | null;
-  };
+interface MobileBottomNavProps {
+  locale?: "ar" | "en";
 }
 
-async function getOptionalCurrentUser() {
-  try {
-    return await apiGet<CurrentUserData>("/api/auth/me");
-  } catch {
-    return null;
-  }
-}
+const navCopy = {
+  ar: {
+    home: "الرئيسية",
+    media: "الوسائط",
+    compose: "كتابة",
+    messages: "الرسائل",
+    search: "البحث",
+  },
+  en: {
+    home: "Home",
+    media: "Media",
+    compose: "Compose",
+    messages: "Messages",
+    search: "Search",
+  },
+} as const;
 
-export async function MobileBottomNav() {
-  const currentUser = await getOptionalCurrentUser();
-  const composeHref = currentUser ? "/admin/posts/new" : "/login";
-  const locale = normalizeUiLocale(currentUser?.user.profile?.locale);
-  const copy = uiCopy[locale];
+export function MobileBottomNav({ locale = "ar" }: MobileBottomNavProps) {
+  const pathname = usePathname();
+  const copy = navCopy[locale];
+
+  const navItems = [
+    { href: "/timeline", label: copy.home, icon: "⌂", side: "normal" as const },
+    { href: "/media", label: copy.media, icon: "▣", side: "normal" as const },
+    { href: "/compose", label: copy.compose, icon: "+", side: "center" as const },
+    { href: "/messages", label: copy.messages, icon: "✉", side: "normal" as const },
+    { href: "/search", label: copy.search, icon: "⌕", side: "normal" as const },
+  ];
 
   return (
-    <nav className="mobile-bottom-nav" aria-label={copy.bottomNavLabel}>
-      <Link href="/" className="mobile-bottom-nav__item">
-        <span className="mobile-bottom-nav__icon">⌂</span>
-        <span>{copy.home}</span>
-      </Link>
+    <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+      {navItems.map((item) => {
+        const isActive =
+          pathname === item.href ||
+          (item.href !== "/timeline" &&
+            item.href !== "/compose" &&
+            pathname.startsWith(item.href));
 
-      <Link href="/media" className="mobile-bottom-nav__item">
-        <span className="mobile-bottom-nav__icon">▣</span>
-        <span>{copy.media}</span>
-      </Link>
+        if (item.side === "center") {
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="mobile-bottom-nav__compose"
+              aria-label={item.label}
+            >
+              <span className="mobile-bottom-nav__compose-icon">{item.icon}</span>
+            </Link>
+          );
+        }
 
-      <Link
-        href={composeHref}
-        className="mobile-bottom-nav__item mobile-bottom-nav__item--compose"
-        aria-label={copy.compose}
-      >
-        <span className="mobile-bottom-nav__icon">＋</span>
-      </Link>
-
-      <Link href="/messages" className="mobile-bottom-nav__item">
-        <span className="mobile-bottom-nav__icon">✉</span>
-        <span>{copy.messages}</span>
-      </Link>
-
-      <Link href="/search" className="mobile-bottom-nav__item">
-        <span className="mobile-bottom-nav__icon">⌕</span>
-        <span>{copy.search}</span>
-      </Link>
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`mobile-bottom-nav__item ${
+              isActive ? "mobile-bottom-nav__item--active" : ""
+            }`}
+          >
+            <span className="mobile-bottom-nav__icon">{item.icon}</span>
+            <span className="mobile-bottom-nav__label">{item.label}</span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }

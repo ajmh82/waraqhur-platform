@@ -47,6 +47,17 @@ async function requireSessionUser() {
   }
 }
 
+async function getRepostsCount(postId: string) {
+  return prisma.post.count({
+    where: {
+      repostOfPostId: postId,
+      status: {
+        not: "DELETED",
+      },
+    },
+  });
+}
+
 export async function POST(
   _request: Request,
   context: { params: Promise<{ postId: string }> }
@@ -90,39 +101,33 @@ export async function POST(
       },
     });
 
-    if (existingRepost) {
-      return NextResponse.json({
-        success: true,
+    if (!existingRepost) {
+      await prisma.post.create({
         data: {
-          repost: existingRepost,
-          alreadyExists: true,
+          title: originalPost.title,
+          slug: null,
+          content: null,
+          excerpt: originalPost.excerpt,
+          coverImageUrl: originalPost.coverImageUrl,
+          categoryId: originalPost.categoryId,
+          sourceId: originalPost.sourceId,
+          repostOfPostId: originalPost.id,
+          visibility: "PUBLIC",
+          status: "PUBLISHED",
+          authorUserId: currentUserId,
+          updatedByUserId: currentUserId,
+          publishedAt: new Date(),
         },
       });
     }
 
-    const repost = await prisma.post.create({
-      data: {
-        title: originalPost.title,
-        slug: null,
-        content: null,
-        excerpt: originalPost.excerpt,
-        coverImageUrl: originalPost.coverImageUrl,
-        categoryId: originalPost.categoryId,
-        sourceId: originalPost.sourceId,
-        repostOfPostId: originalPost.id,
-        visibility: "PUBLIC",
-        status: "PUBLISHED",
-        authorUserId: currentUserId,
-        updatedByUserId: currentUserId,
-        publishedAt: new Date(),
-      },
-    });
+    const repostsCount = await getRepostsCount(postId);
 
     return NextResponse.json({
       success: true,
       data: {
-        repost,
-        alreadyExists: false,
+        reposted: true,
+        repostsCount,
       },
     });
   } catch (error) {
@@ -167,10 +172,13 @@ export async function DELETE(
       },
     });
 
+    const repostsCount = await getRepostsCount(postId);
+
     return NextResponse.json({
       success: true,
       data: {
         reposted: false,
+        repostsCount,
       },
     });
   } catch (error) {

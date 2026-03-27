@@ -124,6 +124,7 @@ export async function POST(
       success: true,
       data: {
         following: true,
+        isFollowing: true,
         followersCount,
         followingCount,
       },
@@ -180,6 +181,7 @@ export async function DELETE(
       success: true,
       data: {
         following: false,
+        isFollowing: false,
         followersCount,
         followingCount,
       },

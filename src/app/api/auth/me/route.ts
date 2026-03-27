@@ -1,9 +1,17 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
-import { updateProfileSchema } from "@/services/auth-schemas";
-import { getCurrentUserFromSession, updateCurrentUserProfile } from "@/services/auth-service";
+import { getCurrentUserFromSession } from "@/services/auth-service";
+import { prisma } from "@/lib/prisma";
+
+const updateCurrentUserProfileSchema = z.object({
+  displayName: z.string().trim().min(2).max(80),
+  bio: z.string().trim().max(280).nullable().optional(),
+  avatarUrl: z.string().trim().url().nullable().optional(),
+  locale: z.enum(["ar", "en"]).optional().default("ar"),
+  timezone: z.string().trim().max(100).nullable().optional(),
+});
 
 async function requireSessionUser() {
   const cookieStore = await cookies();
@@ -29,7 +37,6 @@ async function requireSessionUser() {
     const current = await getCurrentUserFromSession(sessionValue);
     return {
       ok: true as const,
-      sessionValue,
       current,
     };
   } catch {
@@ -56,9 +63,34 @@ export async function GET() {
     return auth.response;
   }
 
+  const profile = await prisma.profile.findUnique({
+    where: {
+      userId: auth.current.user.id,
+    },
+  });
+
   return NextResponse.json({
     success: true,
-    data: auth.current,
+    user: {
+      id: auth.current.user.id,
+      email: auth.current.user.email,
+      username: auth.current.user.username,
+      status: auth.current.user.status,
+      profile: profile
+        ? {
+            displayName: profile.displayName,
+            bio: profile.bio,
+            avatarUrl: profile.avatarUrl,
+            locale: profile.locale,
+            timezone: profile.timezone,
+          }
+        : null,
+    },
+    session: {
+      id: auth.current.session.id,
+      expiresAt: auth.current.session.expiresAt,
+      lastUsedAt: auth.current.session.lastUsedAt ?? null,
+    },
   });
 }
 
@@ -71,15 +103,50 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const input = updateProfileSchema.parse(body);
-    const user = await updateCurrentUserProfile(auth.current.user.id, input);
+    const input = updateCurrentUserProfileSchema.parse(body);
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        user,
+    const profile = await prisma.profile.upsert({
+      where: {
+        userId: auth.current.user.id,
+      },
+      update: {
+        displayName: input.displayName,
+        bio: input.bio ?? null,
+        avatarUrl: input.avatarUrl ?? null,
+        locale: input.locale ?? "ar",
+        timezone: input.timezone ?? null,
+      },
+      create: {
+        userId: auth.current.user.id,
+        displayName: input.displayName,
+        bio: input.bio ?? null,
+        avatarUrl: input.avatarUrl ?? null,
+        locale: input.locale ?? "ar",
+        timezone: input.timezone ?? null,
       },
     });
+
+    const response = NextResponse.json({
+      success: true,
+      data: {
+        profile: {
+          displayName: profile.displayName,
+          bio: profile.bio,
+          avatarUrl: profile.avatarUrl,
+          locale: profile.locale,
+          timezone: profile.timezone,
+        },
+      },
+    });
+
+    response.cookies.set("locale", profile.locale ?? "ar", {
+      httpOnly: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 180,
+    });
+
+    return response;
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(
@@ -87,7 +154,7 @@ export async function PATCH(request: Request) {
           success: false,
           error: {
             code: "VALIDATION_ERROR",
-            message: "Invalid profile payload",
+            message: "Invalid profile update payload",
             details: error.flatten(),
           },
         },
@@ -100,7 +167,10 @@ export async function PATCH(request: Request) {
         success: false,
         error: {
           code: "PROFILE_UPDATE_FAILED",
-          message: error instanceof Error ? error.message : "Profile update failed",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to update profile",
         },
       },
       { status: 400 }

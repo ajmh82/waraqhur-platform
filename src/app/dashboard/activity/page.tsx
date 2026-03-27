@@ -1,225 +1,63 @@
 import Link from "next/link";
-import { SectionHeading } from "@/components/content/section-heading";
-import { ErrorState } from "@/components/ui/error-state";
-import { EmptyState } from "@/components/ui/empty-state";
-import { dashboardApiGet } from "@/lib/dashboard-api";
-import { formatDateTimeInMakkah } from "@/lib/date-time";
+import { cookies } from "next/headers";
+import { AppShell } from "@/components/layout/app-shell";
+import { dashboardCopy } from "@/lib/dashboard-copy";
 
-interface ActivityResponse {
-  user: {
-    id: string;
-    username: string;
-    profile: {
-      displayName: string;
-      avatarUrl: string | null;
-    } | null;
-  };
-  posts: Array<{
-    id: string;
-    title: string;
-    slug: string | null;
-    createdAt: string;
-    commentsCount: number;
-    likesCount?: number;
-  }>;
-  comments: Array<{
-    id: string;
-    content: string;
-    createdAt: string;
-    post: {
-      id: string;
-      title: string;
-      slug: string | null;
-    } | null;
-  }>;
-}
-
-async function loadData() {
-  try {
-    return {
-      data: await dashboardApiGet<ActivityResponse>("/api/dashboard/activity"),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      data: null,
-      error:
-        error instanceof Error ? error.message : "تعذر تحميل صفحة النشاط.",
-    };
-  }
-}
-
-function truncate(value: string, maxLength: number) {
-  if (value.length <= maxLength) {
-    return value;
-  }
-
-  return `${value.slice(0, maxLength).trimEnd()}...`;
-}
+const pageCopy = {
+  ar: {
+    eyebrow: "النشاط",
+    description: "وصول سريع لأهم أجزاء نشاطك داخل المنصة.",
+    cards: [
+      { href: "/timeline", title: "التايملاين", body: "تابع أحدث التغريدات والتفاعل." },
+      { href: "/messages", title: "الرسائل", body: "افتح محادثاتك الخاصة." },
+      { href: "/dashboard/notifications", title: "الإشعارات", body: "راجع آخر التنبيهات." },
+    ],
+    open: "فتح",
+  },
+  en: {
+    eyebrow: "Activity",
+    description: "Quick access to your key activity areas on the platform.",
+    cards: [
+      { href: "/timeline", title: "Timeline", body: "Follow latest posts and interactions." },
+      { href: "/messages", title: "Messages", body: "Open your private conversations." },
+      { href: "/dashboard/notifications", title: "Notifications", body: "Review recent alerts." },
+    ],
+    open: "Open",
+  },
+} as const;
 
 export default async function DashboardActivityPage() {
-  const { data, error } = await loadData();
-
-  if (error || !data) {
-    return (
-      <ErrorState
-        title="تعذر تحميل النشاط"
-        description={error ?? "تعذر تحميل صفحة النشاط."}
-      />
-    );
-  }
-
-  const totalItems = data.posts.length + data.comments.length;
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
+  const t = dashboardCopy[locale];
+  const p = pageCopy[locale];
 
   return (
-    <section className="dashboard-panel">
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginBottom: "18px",
-        }}
-      >
-        <Link href={`/u/${data.user.username}`} className="btn small">
-          الملف العام
-        </Link>
-        <Link href="/messages" className="btn small">
-          الرسائل
-        </Link>
-        <Link href="/search" className="btn small">
-          البحث
-        </Link>
-        <Link href="/dashboard/settings" className="btn small">
-          الإعدادات
-        </Link>
-      </div>
+    <AppShell>
+      <section className="dashboard-panel" style={{ display: "grid", gap: "18px" }}>
+        <div style={{ display: "grid", gap: "6px" }}>
+          <p style={{ margin: 0, color: "#7dd3fc", fontSize: "12px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {p.eyebrow}
+          </p>
+          <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>{t.activity}</h1>
+          <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>{p.description}</p>
+        </div>
 
-      <SectionHeading
-        eyebrow="Activity"
-        title="النشاط"
-        description="هنا تجد ملخصًا لأحدث ما قمت به داخل المنصة من منشورات وتعليقات."
-      />
-
-      <div
-        className="state-card"
-        style={{
-          maxWidth: "100%",
-          margin: "0 0 18px",
-          display: "grid",
-          gap: "8px",
-        }}
-      >
-        <strong>ملخص النشاط</strong>
-        <p style={{ margin: 0 }}>
-          لديك {data.posts.length} منشورًا و{data.comments.length} تعليقًا ظاهرًا
-          في هذا الملخص، بإجمالي {totalItems} عنصرًا.
-        </p>
-      </div>
-
-      <div style={{ display: "grid", gap: "20px" }}>
-        <section>
-          <div className="section-heading">
-            <p className="section-heading__eyebrow">Posts</p>
-            <h2>المنشورات</h2>
-          </div>
-
-          {data.posts.length === 0 ? (
-            <EmptyState
-              title="لا توجد منشورات بعد"
-              description="عندما تبدأ بالنشر سيظهر أحدث نشاطك هنا."
-            />
-          ) : (
-            <div className="dashboard-list">
-              {data.posts.map((post) => (
-                <article key={post.id} className="dashboard-card">
-                  <strong>{post.title}</strong>
-
-                  <div
-                    style={{
-                      marginTop: "10px",
-                      display: "flex",
-                      gap: "14px",
-                      flexWrap: "wrap",
-                      color: "var(--muted)",
-                      fontSize: "14px",
-                    }}
-                  >
-                    <span>{formatDateTimeInMakkah(post.createdAt, "ar-BH")}</span>
-                    <span>{post.commentsCount} تعليق</span>
-                    <span>{post.likesCount ?? 0} إعجاب</span>
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: "14px",
-                      display: "flex",
-                      gap: "10px",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <Link
-                      href={post.slug ? `/posts/${post.slug}` : "#"}
-                      className="btn small"
-                    >
-                      فتح المنشور
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section>
-          <div className="section-heading">
-            <p className="section-heading__eyebrow">Comments</p>
-            <h2>التعليقات</h2>
-          </div>
-
-          {data.comments.length === 0 ? (
-            <EmptyState
-              title="لا توجد تعليقات بعد"
-              description="عندما تبدأ بالتعليق سيظهر أحدث نشاطك هنا."
-            />
-          ) : (
-            <div className="dashboard-list">
-              {data.comments.map((comment) => (
-                <article key={comment.id} className="dashboard-card">
-                  <strong>
-                    {comment.post?.title ?? "تعليق بدون منشور مرتبط"}
-                  </strong>
-
-                  <p style={{ marginTop: "10px" }}>
-                    {truncate(comment.content, 180)}
-                  </p>
-
-                  <div
-                    style={{
-                      marginTop: "10px",
-                      color: "var(--muted)",
-                      fontSize: "14px",
-                    }}
-                  >
-                    {formatDateTimeInMakkah(comment.createdAt, "ar-BH")}
-                  </div>
-
-                  {comment.post?.slug ? (
-                    <div style={{ marginTop: "14px" }}>
-                      <Link
-                        href={`/posts/${comment.post.slug}`}
-                        className="btn small"
-                      >
-                        فتح المنشور
-                      </Link>
-                    </div>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-    </section>
+        <div style={{ display: "grid", gap: "14px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+          {p.cards.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="dashboard-card"
+              style={{ textDecoration: "none", color: "inherit", padding: "18px", display: "grid", gap: "8px" }}
+            >
+              <strong style={{ fontSize: "16px" }}>{item.title}</strong>
+              <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.7 }}>{item.body}</p>
+              <span style={{ color: "#7dd3fc", fontSize: "13px", fontWeight: 700 }}>{p.open}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </AppShell>
   );
 }

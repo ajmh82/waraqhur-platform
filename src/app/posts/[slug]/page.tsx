@@ -1,221 +1,146 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { CategoryBadge } from "@/components/content/category-badge";
-import { SourceBadge } from "@/components/content/source-badge";
-import { AppHeader } from "@/components/layout/app-header";
-import { LikePostButton } from "@/components/social/like-post-button";
-import { BookmarkPostButton } from "@/components/social/bookmark-post-button";
-import { CommentForm } from "@/components/social/comment-form";
-import { ReplyToggleButton } from "@/components/social/reply-toggle-button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { ErrorState } from "@/components/ui/error-state";
-import { apiGet } from "@/lib/web-api";
+import { AppShell } from "@/components/layout/app-shell";
+import { ThreadedComments } from "@/components/comments/threaded-comments";
+import { FollowUserButton } from "@/components/social/follow-user-button";
+import { StartDirectMessageButton } from "@/components/social/start-direct-message-button";
+import { TweetActionBar } from "@/components/social/tweet-action-bar";
+import { TweetOwnerControls } from "@/components/social/tweet-owner-controls";
 import { formatDateTimeInMakkah, formatRelativeTime } from "@/lib/date-time";
+import { apiGet } from "@/lib/web-api";
 
-interface PostRecord {
-  id: string;
-  title: string;
-  slug: string | null;
-  excerpt: string | null;
-  content?: string | null;
-  metadata?: {
-    ingestion?: {
-      provider?: string;
-      fetchedAt?: string;
-      originalUrl?: string | null;
+interface PostPageData {
+  post: {
+    id: string;
+    title: string;
+    slug: string | null;
+    excerpt: string | null;
+    content?: string | null;
+    coverImageUrl?: string | null;
+    createdAt: string;
+    updatedAt?: string;
+    commentsCount: number;
+    likesCount?: number;
+    repostsCount?: number;
+    bookmarksCount?: number;
+    viewsCount?: number;
+    category: { id: string; name: string; slug: string } | null;
+    source: { id: string; name: string; slug: string } | null;
+    author: {
+      id: string;
+      email: string;
+      username: string;
+      displayName?: string;
+      avatarUrl?: string | null;
+      isFollowing?: boolean;
+      isOwnProfile?: boolean;
+    } | null;
+    repostOfPost?: {
+      id: string;
+      title: string;
+      slug: string | null;
+      author: { id: string; username: string } | null;
+    } | null;
+    quotedPost?: {
+      id: string;
+      title: string;
+      slug: string | null;
+      author: { id: string; username: string } | null;
+    } | null;
+    metadata?: {
+      ingestion?: {
+        provider?: string;
+        fetchedAt?: string;
+        originalUrl?: string | null;
+      };
+      social?: {
+        postKind?: string;
+        hashtags?: string[];
+        mediaType?: "image" | "video" | null;
+        mediaUrl?: string | null;
+      };
+    } | null;
+  };
+  comments: Array<{
+    id: string;
+    postId: string;
+    parentId: string | null;
+    content: string;
+    createdAt: string;
+    likesCount: number;
+    isLikedByCurrentUser: boolean;
+    author: {
+      id: string;
+      username: string;
+      email: string;
+      displayName: string;
+      avatarUrl: string | null;
+    } | null;
+    replies: Array<any>;
+  }>;
+  currentUser: {
+    user: {
+      id: string;
+      username: string;
     };
   } | null;
-  createdAt: string;
-  commentsCount: number;
-  likesCount?: number;
-  category: { id: string; name: string; slug: string } | null;
-  source: { id: string; name: string; slug: string } | null;
-  author: { id: string; email: string; username: string } | null;
 }
 
-interface PostsData {
-  posts: PostRecord[];
-}
+const copy = {
+  ar: {
+    unknownAuthor: "كاتب غير معروف",
+    noText: "لا يوجد نص ظاهر لهذا المنشور.",
+    directMessage: "مراسلة خاصة",
+    editProfile: "تعديل الملف",
+    settings: "الإعدادات",
+    source: "المصدر",
+    comments: "الردود",
+    commentsCount: "رد",
+    edited: "تم التعديل",
+    repost: "إعادة نشر",
+    close: "إغلاق",
+    download: "تنزيل",
+  },
+  en: {
+    unknownAuthor: "Unknown author",
+    noText: "There is no visible text for this post.",
+    directMessage: "Direct Message",
+    editProfile: "Edit Profile",
+    settings: "Settings",
+    source: "Source",
+    comments: "Replies",
+    commentsCount: "replies",
+    edited: "Edited",
+    repost: "Repost",
+    close: "Close",
+    download: "Download",
+  },
+} as const;
 
-interface FlatComment {
-  id: string;
-  postId: string;
-  parentId: string | null;
-  content: string;
-  createdAt: string;
-  status: string;
-  author: { id: string; email: string; username: string } | null;
-  repliesCount: number;
-}
+function renderTextWithHashtags(text: string) {
+  const parts = text.split(/(#[A-Za-z0-9_\u0600-\u06FF]+)/g);
 
-interface CommentNode extends FlatComment {
-  replies: CommentNode[];
-}
+  return parts.map((part, index) => {
+    if (/^#[A-Za-z0-9_\u0600-\u06FF]+$/.test(part)) {
+      const tag = part.slice(1).toLowerCase();
 
-interface CommentsData {
-  comments: FlatComment[];
-}
-
-interface SourceListData {
-  sources: Array<{ id: string; slug: string }>;
-}
-
-interface SourcePostsData {
-  posts: PostRecord[];
-}
-
-interface PostPageResult {
-  post: PostRecord | null;
-  comments: CommentNode[];
-  error: string | null;
-}
-
-function buildCommentTree(flat: FlatComment[]): CommentNode[] {
-  const map = new Map<string, CommentNode>();
-  const roots: CommentNode[] = [];
-
-  for (const comment of flat) {
-    map.set(comment.id, { ...comment, replies: [] });
-  }
-
-  for (const node of map.values()) {
-    if (node.parentId && map.has(node.parentId)) {
-      map.get(node.parentId)!.replies.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-
-  roots.sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  );
-
-  for (const node of map.values()) {
-    node.replies.sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-  }
-
-  return roots;
-}
-
-async function loadPostBySlug(slug: string) {
-  const timelineData = await apiGet<PostsData>("/api/posts");
-  const directMatch = timelineData.posts.find((item) => item.slug === slug);
-
-  if (directMatch) {
-    return directMatch;
-  }
-
-  const sourcesData = await apiGet<SourceListData>("/api/sources");
-
-  for (const source of sourcesData.sources) {
-    try {
-      const sourceData = await apiGet<SourcePostsData>(`/sources/${source.slug}`);
-      const sourceMatch = sourceData.posts.find((item) => item.slug === slug);
-
-      if (sourceMatch) {
-        return sourceMatch;
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  return null;
-}
-
-async function loadPostPageData(slug: string): Promise<PostPageResult> {
-  try {
-    const post = await loadPostBySlug(slug);
-
-    if (!post) {
-      return { post: null, comments: [], error: null };
-    }
-
-    const commentsData = await apiGet<CommentsData>(
-      `/api/comments?postId=${post.id}`
-    );
-
-    return {
-      post,
-      comments: buildCommentTree(commentsData.comments),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      post: null,
-      comments: [],
-      error:
-        error instanceof Error ? error.message : "تعذر تحميل بيانات المنشور.",
-    };
-  }
-}
-
-function countComments(nodes: CommentNode[]): number {
-  return nodes.reduce((sum, node) => sum + 1 + countComments(node.replies), 0);
-}
-
-function CommentThread({
-  comments,
-  postId,
-  depth = 0,
-}: {
-  comments: CommentNode[];
-  postId: string;
-  depth?: number;
-}) {
-  return (
-    <div className="comment-thread">
-      {comments.map((comment) => (
-        <article
-          key={comment.id}
-          className={`comment-item ${depth > 0 ? "comment-item--nested" : ""}`}
-          style={
-            depth > 0
-              ? { marginRight: `${Math.min(depth * 20, 60)}px` }
-              : undefined
-          }
+      return (
+        <Link
+          key={`${part}-${index}`}
+          href={`/tag/${encodeURIComponent(tag)}`}
+          style={{
+            color: "#7dd3fc",
+            fontWeight: 700,
+          }}
         >
-          <div className="comment-item__avatar">
-            {(comment.author?.username ?? "؟").charAt(0).toUpperCase()}
-          </div>
+          {part}
+        </Link>
+      );
+    }
 
-          <div className="comment-item__body">
-            <div className="comment-item__header">
-              <strong className="comment-item__author">
-                {comment.author ? (
-                  <Link href={`/u/${comment.author.username}`}>
-                    {comment.author.username}
-                  </Link>
-                ) : (
-                  "مستخدم غير معروف"
-                )}
-              </strong>
-
-              <span className="comment-item__time">
-                {formatRelativeTime(comment.createdAt)}
-              </span>
-            </div>
-
-            <p className="comment-item__text">{comment.content}</p>
-
-            <ReplyToggleButton postId={postId} commentId={comment.id} />
-          </div>
-
-          {comment.replies.length > 0 ? (
-            <div className="comment-item__replies">
-              <CommentThread
-                comments={comment.replies}
-                postId={postId}
-                depth={depth + 1}
-              />
-            </div>
-          ) : null}
-        </article>
-      ))}
-    </div>
-  );
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
 }
 
 export default async function PostPage({
@@ -224,265 +149,331 @@ export default async function PostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const { post, comments, error } = await loadPostPageData(slug);
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
+  const t = copy[locale];
 
-  if (error) {
-    return (
-      <main className="page-stack">
-        <div className="page-container">
-          <AppHeader />
-          <ErrorState title="تعذر تحميل المنشور" description={error} />
-        </div>
-      </main>
-    );
-  }
+  let data: PostPageData | null = null;
 
-  if (!post) {
+  try {
+    data = await apiGet<PostPageData>(`/api/posts/${encodeURIComponent(slug)}`);
+  } catch {
     notFound();
   }
 
+  const { post, comments, currentUser } = data;
+  const href = post.slug ? `/posts/${post.slug}` : "/timeline";
   const originalUrl = post.metadata?.ingestion?.originalUrl ?? null;
   const provider = post.metadata?.ingestion?.provider ?? null;
-  const fetchedAt = post.metadata?.ingestion?.fetchedAt ?? null;
-  const totalComments = countComments(comments);
+  const social = post.metadata?.social ?? null;
+  const mediaType = social?.mediaType ?? (post.coverImageUrl ? "image" : null);
+  const mediaUrl = social?.mediaUrl ?? post.coverImageUrl ?? null;
+  const mainText =
+    post.content?.trim() ||
+    post.excerpt?.trim() ||
+    post.title?.trim() ||
+    "";
+  const username = post.author?.username ?? "unknown";
+  const displayName = post.author?.displayName ?? username;
+  const wasEdited = Boolean(post.updatedAt) && post.updatedAt !== post.createdAt;
 
   return (
-    <main className="page-stack">
-      <div className="page-container">
-        <AppHeader />
+    <AppShell>
+      <section
+        className="page-section"
+        style={{ display: "grid", gap: "16px" }}
+      >
+        <article
+          className="state-card"
+          style={{
+            margin: 0,
+            maxWidth: "100%",
+            padding: "20px",
+            display: "grid",
+            gap: "18px",
+          }}
+        >
+          {post.repostOfPost ? (
+            <div style={{ color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>
+              🔁 {t.repost}
+              {post.repostOfPost.author
+                ? ` ${locale === "en" ? "from" : "من"} @${post.repostOfPost.author.username}`
+                : ""}
+            </div>
+          ) : null}
 
-        <section className="page-section">
           <div
-            className="state-card"
             style={{
-              display: "grid",
-              gap: "18px",
-              padding: "22px",
-              maxWidth: "100%",
-              margin: 0,
+              display: "flex",
+              gap: "14px",
+              alignItems: "flex-start",
+              flexWrap: "wrap",
             }}
           >
             <div
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: "16px",
-                flexWrap: "wrap",
-                alignItems: "center",
+                width: "58px",
+                height: "58px",
+                borderRadius: "999px",
+                overflow: "hidden",
+                flexShrink: 0,
+                background: post.author?.avatarUrl
+                  ? "transparent"
+                  : "linear-gradient(135deg, #0ea5e9, #2563eb)",
+                color: "#fff",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 900,
+                fontSize: "20px",
               }}
             >
-              <Link href="/timeline" className="btn small">
-                العودة إلى الموجز
-              </Link>
+              {post.author?.avatarUrl ? (
+                <img
+                  src={post.author.avatarUrl}
+                  alt={displayName}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                username.charAt(0).toUpperCase()
+              )}
+            </div>
 
+            <div style={{ display: "grid", gap: "12px", flex: 1, minWidth: 0 }}>
               <div
                 style={{
                   display: "flex",
-                  gap: "10px",
+                  gap: "12px",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
                   flexWrap: "wrap",
-                  alignItems: "center",
-                  color: "var(--muted)",
-                  fontSize: "14px",
                 }}
               >
-                <span>{formatDateTimeInMakkah(post.createdAt, "ar-BH")}</span>
-                <span>•</span>
-                <span>{formatRelativeTime(post.createdAt)}</span>
+                <div style={{ display: "grid", gap: "4px" }}>
+                  <strong style={{ fontSize: "20px" }}>
+                    {post.author ? (
+                      <Link href={`/u/${post.author.username}`}>
+                        {displayName}
+                      </Link>
+                    ) : (
+                      t.unknownAuthor
+                    )}
+                  </strong>
+
+                  <span style={{ color: "var(--muted)", fontSize: "14px" }}>
+                    @{username}
+                  </span>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      color: "var(--muted)",
+                      fontSize: "13px",
+                    }}
+                  >
+                    <span>{formatRelativeTime(post.createdAt)}</span>
+                    {provider ? <span>• {provider}</span> : null}
+                    <span>• 👁 {post.viewsCount ?? 0}</span>
+                  </div>
+                </div>
+
+                {post.author && !post.author.isOwnProfile ? (
+                  <FollowUserButton
+                    userId={post.author.id}
+                    initialIsFollowing={Boolean(post.author.isFollowing)}
+                    locale={locale}
+                  />
+                ) : null}
               </div>
-            </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: "14px",
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <div className="tweet-card__avatar tweet-card__avatar--lg">
-                {(post.author?.username ?? "؟").charAt(0).toUpperCase()}
-              </div>
+              {!post.author?.isOwnProfile && post.author ? (
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <StartDirectMessageButton
+                    targetUserId={post.author.id}
+                    label={t.directMessage}
+                    className="btn small"
+                    locale={locale}
+                  />
+                </div>
+              ) : null}
 
-              <div style={{ display: "grid", gap: "6px" }}>
-                <strong style={{ fontSize: "18px" }}>
-                  {post.author ? (
-                    <Link href={`/u/${post.author.username}`}>
-                      {post.author.username}
-                    </Link>
-                  ) : (
-                    "كاتب غير معروف"
-                  )}
-                </strong>
+              {post.author?.isOwnProfile ? (
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <Link href="/dashboard/profile" className="btn small">
+                    {t.editProfile}
+                  </Link>
+                  <Link href="/dashboard/settings" className="btn small">
+                    {t.settings}
+                  </Link>
+                </div>
+              ) : null}
 
+              {mainText ? (
                 <div
                   style={{
-                    display: "flex",
-                    gap: "10px",
-                    flexWrap: "wrap",
-                    color: "var(--muted)",
-                    fontSize: "14px",
-                  }}
-                >
-                  {provider ? <span>المزوّد: {provider}</span> : null}
-                  {post.source ? <span>المصدر: {post.source.name}</span> : null}
-                </div>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                gap: "10px",
-                flexWrap: "wrap",
-              }}
-            >
-              {post.source ? (
-                <SourceBadge name={post.source.name} slug={post.source.slug} />
-              ) : null}
-
-              {post.category ? (
-                <CategoryBadge
-                  name={post.category.name}
-                  slug={post.category.slug}
-                />
-              ) : null}
-            </div>
-
-            <div style={{ display: "grid", gap: "14px" }}>
-              <h1 style={{ margin: 0, lineHeight: 1.4 }}>{post.title}</h1>
-
-              {post.excerpt ? (
-                <p
-                  style={{
-                    margin: 0,
-                    color: "var(--muted)",
                     lineHeight: 1.9,
+                    whiteSpace: "pre-wrap",
                     fontSize: "16px",
                   }}
                 >
-                  {post.excerpt}
-                </p>
+                  {renderTextWithHashtags(mainText)}
+                </div>
+              ) : (
+                <p style={{ margin: 0, color: "var(--muted)" }}>{t.noText}</p>
+              )}
+
+              {mediaUrl && mediaType === "image" ? (
+                <div
+                  style={{
+                    overflow: "hidden",
+                    borderRadius: "22px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <img
+                    src={mediaUrl}
+                    alt={post.title || "Post image"}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      maxHeight: "560px",
+                      objectFit: "cover",
+                    }}
+                  />
+                </div>
               ) : null}
-            </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: "12px",
-              }}
-            >
-              <div className="state-card" style={{ padding: "14px", margin: 0, maxWidth: "100%" }}>
-                <strong>الإعجابات</strong>
-                <p style={{ margin: "8px 0 0", fontSize: "28px" }}>
-                  {post.likesCount ?? 0}
-                </p>
-              </div>
+              {mediaUrl && mediaType === "video" ? (
+                <div
+                  style={{
+                    overflow: "hidden",
+                    borderRadius: "22px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "#000",
+                  }}
+                >
+                  <video
+                    src={mediaUrl}
+                    controls
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      maxHeight: "560px",
+                      background: "#000",
+                    }}
+                  />
+                </div>
+              ) : null}
 
-              <div className="state-card" style={{ padding: "14px", margin: 0, maxWidth: "100%" }}>
-                <strong>التعليقات</strong>
-                <p style={{ margin: "8px 0 0", fontSize: "28px" }}>
-                  {totalComments}
-                </p>
-              </div>
+              {social?.hashtags?.length ? (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "8px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {social.hashtags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={`/tag/${encodeURIComponent(tag)}`}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        minHeight: "34px",
+                        padding: "0 12px",
+                        borderRadius: "999px",
+                        background: "rgba(125, 211, 252, 0.12)",
+                        color: "#bae6fd",
+                        textDecoration: "none",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        border: "1px solid rgba(125, 211, 252, 0.14)",
+                      }}
+                    >
+                      #{tag}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
 
-              <div className="state-card" style={{ padding: "14px", margin: 0, maxWidth: "100%" }}>
-                <strong>حالة المحتوى</strong>
-                <p style={{ margin: "8px 0 0", fontSize: "16px" }}>
-                  {post.content ? "نص كامل متاح" : "ملخص فقط"}
-                </p>
-              </div>
-            </div>
+              {post.author?.isOwnProfile ? (
+                <TweetOwnerControls
+                  postId={post.id}
+                  initialContent={mainText}
+                  initialMediaUrl={mediaUrl}
+                  initialMediaType={mediaType}
+                  locale={locale}
+                />
+              ) : null}
 
-            <div
-              style={{
-                display: "flex",
-                gap: "10px",
-                flexWrap: "wrap",
-                alignItems: "center",
-              }}
-            >
-              <LikePostButton
+              {wasEdited ? (
+                <div style={{ color: "var(--muted)", fontSize: "13px" }}>
+                  {t.edited} •{" "}
+                  {formatDateTimeInMakkah(
+                    post.updatedAt!,
+                    locale === "en" ? "en-US" : "ar-BH"
+                  )}
+                </div>
+              ) : null}
+
+              <TweetActionBar
                 postId={post.id}
+                href={href}
+                commentsCount={post.commentsCount}
                 initialLikesCount={post.likesCount ?? 0}
+                initialRepostsCount={post.repostsCount ?? 0}
+                initialBookmarksCount={post.bookmarksCount ?? 0}
+                locale={locale}
               />
 
-              <BookmarkPostButton postId={post.id} />
-
               {originalUrl ? (
-                <a
-                  href={originalUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-action"
-                >
-                  المصدر الأصلي
-                </a>
+                <div>
+                  <a
+                    href={originalUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn small"
+                  >
+                    🔗 {t.source}
+                  </a>
+                </div>
               ) : null}
             </div>
-
-            <div
-              className="state-card"
-              style={{
-                padding: "18px",
-                lineHeight: 2,
-                whiteSpace: "pre-wrap",
-                maxWidth: "100%",
-                margin: 0,
-              }}
-            >
-              {post.content ?? "لا يوجد محتوى كامل لهذا المنشور حتى الآن."}
-            </div>
-
-            {(originalUrl || fetchedAt) && (
-              <div
-                style={{
-                  display: "flex",
-                  gap: "14px",
-                  flexWrap: "wrap",
-                  color: "var(--muted)",
-                  fontSize: "14px",
-                }}
-              >
-                {originalUrl ? (
-                  <span>الرابط الأصلي متاح لقراءة المصدر الكامل.</span>
-                ) : null}
-
-                {fetchedAt ? (
-                  <span>
-                    آخر جلب: {formatDateTimeInMakkah(fetchedAt, "ar-BH")}
-                  </span>
-                ) : null}
-              </div>
-            )}
           </div>
-        </section>
+        </article>
 
-        <section className="page-section">
-          <div className="section-heading">
-            <p className="section-heading__eyebrow">شارك رأيك</p>
-            <h2>أضف تعليقاً</h2>
+        <section
+          className="state-card"
+          style={{
+            margin: 0,
+            maxWidth: "100%",
+            padding: "20px",
+            display: "grid",
+            gap: "16px",
+          }}
+        >
+          <div style={{ display: "grid", gap: "4px" }}>
+            <h2 style={{ margin: 0, fontSize: "22px" }}>{t.comments}</h2>
+            <p style={{ margin: 0, color: "var(--muted)" }}>
+              {comments.length} {t.commentsCount}
+            </p>
           </div>
 
-          <CommentForm postId={post.id} />
+          <ThreadedComments
+            postId={post.id}
+            initialComments={comments}
+            currentUserId={currentUser?.user?.id ?? null}
+            locale={locale}
+          />
         </section>
-
-        <section className="page-section">
-          <div className="section-heading">
-            <p className="section-heading__eyebrow">النقاش</p>
-            <h2>التعليقات ({totalComments})</h2>
-          </div>
-
-          {comments.length === 0 ? (
-            <EmptyState
-              title="لا توجد تعليقات بعد"
-              description="كن أول من يعلّق على هذا المنشور."
-            />
-          ) : (
-            <CommentThread comments={comments} postId={post.id} />
-          )}
-        </section>
-      </div>
-    </main>
+      </section>
+    </AppShell>
   );
 }

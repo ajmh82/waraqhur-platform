@@ -1,22 +1,32 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { TimelineList } from "@/components/content/timeline-list";
-import { EmptyState } from "@/components/ui/empty-state";
 
-type SortMode = "latest" | "smart";
-
-type PostItem = {
+interface TimelineFeedPost {
   id: string;
   title: string;
   slug: string | null;
   excerpt: string | null;
+  content?: string | null;
+  coverImageUrl?: string | null;
   createdAt: string;
   commentsCount: number;
   likesCount?: number;
+  repostsCount?: number;
+  bookmarksCount?: number;
+  viewsCount?: number;
   category: { id: string; name: string; slug: string } | null;
   source: { id: string; name: string; slug: string } | null;
-  author: { id: string; email: string; username: string } | null;
+  author: {
+    id: string;
+    email: string;
+    username: string;
+    displayName?: string;
+    avatarUrl?: string | null;
+    isFollowing?: boolean;
+    isOwnProfile?: boolean;
+  } | null;
   repostOfPost?: {
     id: string;
     title: string;
@@ -33,185 +43,154 @@ type PostItem = {
     ingestion?: {
       originalUrl?: string | null;
     };
+    social?: {
+      postKind?: string;
+      hashtags?: string[];
+      mediaType?: "image" | "video" | null;
+      mediaUrl?: string | null;
+    };
   } | null;
-};
+}
 
-type Props = {
-  initialPosts: PostItem[];
+interface TimelineFeedClientProps {
+  initialPosts: TimelineFeedPost[];
   initialHasMore: boolean;
-  sortMode: SortMode;
+  sortMode: "latest" | "smart";
   pageSize?: number;
-};
+  locale?: "ar" | "en";
+}
+
+interface TimelineApiResponse {
+  posts: TimelineFeedPost[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  };
+}
+
+const copy = {
+  ar: {
+    empty: "لا توجد منشورات لعرضها الآن.",
+    loading: "جارٍ تحميل المزيد...",
+    end: "وصلت إلى آخر التايملاين.",
+    loadMore: "تحميل المزيد",
+  },
+  en: {
+    empty: "No posts to show right now.",
+    loading: "Loading more...",
+    end: "You reached the end of the timeline.",
+    loadMore: "Load more",
+  },
+} as const;
 
 export function TimelineFeedClient({
   initialPosts,
   initialHasMore,
   sortMode,
-  pageSize = 10,
-}: Props) {
-  const [posts, setPosts] = useState<PostItem[]>(initialPosts);
+  pageSize = 5,
+  locale = "ar",
+}: TimelineFeedClientProps) {
+  const [posts, setPosts] = useState(initialPosts);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(initialHasMore);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingGuardRef = useRef(false);
+  const t = copy[locale];
 
   useEffect(() => {
     setPosts(initialPosts);
     setPage(1);
     setHasMore(initialHasMore);
-    setLoadingMore(false);
-    setLoadError(null);
-  }, [initialPosts, initialHasMore, sortMode, pageSize]);
+    loadingGuardRef.current = false;
+    setIsLoadingMore(false);
+  }, [initialPosts, initialHasMore, sortMode]);
 
-  const postIds = useMemo(() => new Set(posts.map((post) => post.id)), [posts]);
+  const loadMore = async () => {
+    if (loadingGuardRef.current || isPending || !hasMore) return;
 
-  async function loadMorePosts(nextPage: number) {
-    const response = await fetch(
-      `/api/posts?sort=${sortMode}&page=${nextPage}&limit=${pageSize}`,
-      {
-        credentials: "include",
-        cache: "no-store",
+    loadingGuardRef.current = true;
+    setIsLoadingMore(true);
+    const nextPage = page + 1;
+
+    startTransition(async () => {
+      try {
+        const response = await fetch(
+          `/api/timeline?page=${nextPage}&limit=${pageSize}&sort=${sortMode}`,
+          { credentials: "include", cache: "no-store" }
+        );
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.success) return;
+
+        const data = payload.data as TimelineApiResponse;
+
+        setPosts((current) => {
+          const seen = new Set(current.map((item) => item.id));
+          const incoming = data.posts.filter((item) => !seen.has(item.id));
+          return [...current, ...incoming];
+        });
+
+        setPage(nextPage);
+        setHasMore(Boolean(data.pagination?.hasMore));
+      } finally {
+        loadingGuardRef.current = false;
+        setIsLoadingMore(false);
       }
-    );
-
-    const payload = await response.json();
-
-    if (!response.ok || !payload?.success) {
-      throw new Error(payload?.error?.message || "Failed to load more posts");
-    }
-
-    const incoming: PostItem[] = payload.data?.posts ?? [];
-    const filtered = incoming.filter((post) => !postIds.has(post.id));
-
-    setPosts((prev) => [...prev, ...filtered]);
-    setPage(nextPage);
-    setHasMore(Boolean(payload.data?.pagination?.hasMore));
-  }
+    });
+  };
 
   useEffect(() => {
-    if (!hasMore || loadingMore) return;
-
-    const node = sentinelRef.current;
-    if (!node) return;
+    const element = sentinelRef.current;
+    if (!element) return;
 
     const observer = new IntersectionObserver(
-      async (entries) => {
-        const first = entries[0];
-        if (!first?.isIntersecting) return;
-
-        observer.disconnect();
-        setLoadingMore(true);
-        setLoadError(null);
-
-        try {
-          await loadMorePosts(page + 1);
-        } catch (error) {
-          setLoadError(
-            error instanceof Error
-              ? error.message
-              : "تعذر تحميل المزيد من المنشورات."
-          );
-        } finally {
-          setLoadingMore(false);
-        }
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
       },
-      {
-        rootMargin: "800px 0px",
-        threshold: 0.01,
-      }
+      { rootMargin: "260px 0px" }
     );
 
-    observer.observe(node);
-
+    observer.observe(element);
     return () => observer.disconnect();
-  }, [hasMore, loadingMore, page, postIds, sortMode, pageSize]);
+  }, [page, hasMore, sortMode, isPending]);
 
-  if (posts.length === 0) {
-    return (
-      <EmptyState
-        title="لا توجد منشورات"
-        description="لا توجد منشورات متاحة في هذا النوع من الترتيب حاليًا."
-      />
-    );
-  }
+  const empty = useMemo(() => posts.length === 0, [posts.length]);
 
   return (
-    <div style={{ display: "grid", gap: "14px" }}>
-      <TimelineList posts={posts} />
+    <div style={{ display: "grid", gap: "16px" }}>
+      {empty ? (
+        <div className="state-card" style={{ margin: 0, maxWidth: "100%" }}>
+          {t.empty}
+        </div>
+      ) : (
+        <TimelineList posts={posts} locale={locale} />
+      )}
 
-      {loadError ? (
-        <div
-          style={{
-            padding: "14px 16px",
-            borderRadius: "14px",
-            border: "1px solid rgba(239,68,68,0.22)",
-            background: "rgba(239,68,68,0.08)",
-            color: "#fecaca",
-            fontSize: "14px",
-            fontWeight: 600,
-            display: "grid",
-            gap: "10px",
-          }}
-        >
-          <span>{loadError}</span>
+      <div ref={sentinelRef} style={{ height: "1px" }} />
 
-          {hasMore ? (
-            <button
-              type="button"
-              className="btn-action"
-              onClick={async () => {
-                setLoadingMore(true);
-                setLoadError(null);
-
-                try {
-                  await loadMorePosts(page + 1);
-                } catch (error) {
-                  setLoadError(
-                    error instanceof Error
-                      ? error.message
-                      : "تعذر تحميل المزيد من المنشورات."
-                  );
-                } finally {
-                  setLoadingMore(false);
-                }
-              }}
-            >
-              إعادة المحاولة
-            </button>
-          ) : null}
+      {isLoadingMore ? (
+        <div style={{ textAlign: "center", color: "var(--muted)", fontSize: "14px", padding: "6px 0 8px" }}>
+          {t.loading}
         </div>
       ) : null}
 
-      {hasMore ? (
-        <div
-          ref={sentinelRef}
-          style={{
-            minHeight: "44px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "rgba(255,255,255,0.72)",
-            fontSize: "14px",
-            borderRadius: "14px",
-          }}
-        >
-          {loadingMore ? "جاري تحميل المزيد..." : "اسحب لأسفل وسيتم تحميل المزيد تلقائيًا"}
+      {!isLoadingMore && hasMore ? (
+        <div style={{ display: "flex", justifyContent: "center", paddingBottom: "8px" }}>
+          <button type="button" className="btn small" onClick={loadMore} disabled={isPending}>
+            {t.loadMore}
+          </button>
         </div>
-      ) : (
-        <div
-          style={{
-            minHeight: "44px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "rgba(255,255,255,0.58)",
-            fontSize: "14px",
-          }}
-        >
-          وصلت إلى نهاية الموجز
+      ) : null}
+
+      {!hasMore && posts.length > 0 ? (
+        <div style={{ textAlign: "center", color: "var(--muted)", fontSize: "14px", paddingBottom: "12px" }}>
+          {t.end}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

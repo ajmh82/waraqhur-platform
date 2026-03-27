@@ -1,9 +1,11 @@
-import Link from "next/link";
-import { SectionHeading } from "@/components/content/section-heading";
+import { cookies } from "next/headers";
+import { AppShell } from "@/components/layout/app-shell";
 import { ErrorState } from "@/components/ui/error-state";
-import { dashboardApiGet } from "@/lib/dashboard-api";
+import { SettingsForm } from "@/components/settings/settings-form";
+import { apiGet } from "@/lib/web-api";
+import { dashboardCopy } from "@/lib/dashboard-copy";
 
-interface CurrentUserResponse {
+interface ProfilePageData {
   user: {
     id: string;
     email: string;
@@ -17,151 +19,101 @@ interface CurrentUserResponse {
       timezone: string | null;
     } | null;
   };
-  session: {
-    id: string;
-    expiresAt: string;
-    lastUsedAt: string | null;
-  };
 }
 
-async function loadData() {
-  try {
-    return {
-      data: await dashboardApiGet<CurrentUserResponse>("/api/auth/me"),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      data: null,
-      error:
-        error instanceof Error ? error.message : "تعذر تحميل الملف الشخصي.",
-    };
-  }
-}
-
-function getInitial(value: string) {
-  return value.trim().charAt(0).toUpperCase() || "?";
-}
+const pageCopy = {
+  ar: {
+    eyebrow: "الملف الشخصي",
+    description: "حدّث الاسم المعروض والصورة والنبذة والمعلومات الأساسية الخاصة بك.",
+    failedTitle: "تعذر تحميل الملف الشخصي",
+    failedDescription: "تعذر تحميل بيانات الملف الشخصي.",
+  },
+  en: {
+    eyebrow: "Profile",
+    description: "Update your display name, avatar, bio, and core personal information.",
+    failedTitle: "Failed to load profile",
+    failedDescription: "Failed to load profile data.",
+  },
+} as const;
 
 export default async function DashboardProfilePage() {
-  const { data, error } = await loadData();
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
+  const t = dashboardCopy[locale];
+  const p = pageCopy[locale];
 
-  if (error || !data) {
+  let data: ProfilePageData | null = null;
+  let error: string | null = null;
+
+  try {
+    data = await apiGet<ProfilePageData>("/api/auth/me");
+  } catch (requestError) {
+    error =
+      requestError instanceof Error
+        ? requestError.message
+        : p.failedDescription;
+  }
+
+  if (!data || error) {
     return (
-      <ErrorState
-        title="تعذر تحميل الملف الشخصي"
-        description={error ?? "تعذر تحميل الملف الشخصي."}
-      />
+      <AppShell>
+        <section className="dashboard-panel">
+          <ErrorState
+            title={p.failedTitle}
+            description={error ?? p.failedDescription}
+          />
+        </section>
+      </AppShell>
     );
   }
 
   const profile = data.user.profile;
-  const displayName = profile?.displayName ?? data.user.username;
 
   return (
-    <section className="dashboard-panel">
-      <div
+    <AppShell>
+      <section
+        className="dashboard-panel"
         style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginBottom: "18px",
-        }}
-      >
-        <Link href="/dashboard/settings" className="btn small">
-          الإعدادات
-        </Link>
-        <Link href={`/u/${data.user.username}`} className="btn small">
-          الملف العام
-        </Link>
-        <Link href="/messages" className="btn small">
-          الرسائل
-        </Link>
-      </div>
-
-      <SectionHeading
-        eyebrow="Profile"
-        title="الملف الشخصي"
-        description="هنا تجد ملخصًا واضحًا لبياناتك العامة التي تظهر داخل المنصة."
-      />
-
-      <div
-        className="state-card"
-        style={{
-          maxWidth: "100%",
-          margin: "0 0 18px",
           display: "grid",
-          gap: "16px",
+          gap: "18px",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            gap: "14px",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <div
-            className="tweet-card__avatar"
-            style={{ width: "64px", height: "64px", fontSize: "24px" }}
-          >
-            {profile?.avatarUrl ? (
-              <img
-                src={profile.avatarUrl}
-                alt={data.user.username}
-                className="account-menu__avatar-image"
-              />
-            ) : (
-              getInitial(displayName)
-            )}
-          </div>
-
-          <div style={{ display: "grid", gap: "6px" }}>
-            <strong style={{ fontSize: "20px" }}>{displayName}</strong>
-            <span style={{ color: "var(--muted)" }}>@{data.user.username}</span>
-          </div>
-        </div>
-
         <div
           style={{
             display: "grid",
-            gap: "12px",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "6px",
           }}
         >
-          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-            <strong>البريد الإلكتروني</strong>
-            <p style={{ margin: "8px 0 0" }}>{data.user.email}</p>
-          </div>
+          <p
+            style={{
+              margin: 0,
+              color: "#7dd3fc",
+              fontSize: "12px",
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
+          >
+            {p.eyebrow}
+          </p>
 
-          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-            <strong>الحالة</strong>
-            <p style={{ margin: "8px 0 0" }}>{data.user.status}</p>
-          </div>
+          <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>
+            {t.profile}
+          </h1>
 
-          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-            <strong>اللغة</strong>
-            <p style={{ margin: "8px 0 0" }}>
-              {profile?.locale?.startsWith("en") ? "English" : "العربية"}
-            </p>
-          </div>
-
-          <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-            <strong>المنطقة الزمنية</strong>
-            <p style={{ margin: "8px 0 0" }}>
-              {profile?.timezone ?? "Asia/Riyadh"}
-            </p>
-          </div>
-        </div>
-
-        <div className="state-card" style={{ maxWidth: "100%", margin: 0 }}>
-          <strong>النبذة</strong>
-          <p style={{ margin: "8px 0 0" }}>
-            {profile?.bio ?? "لا توجد نبذة مضافة بعد."}
+          <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>
+            {p.description}
           </p>
         </div>
-      </div>
-    </section>
+
+        <SettingsForm
+          displayName={profile?.displayName ?? data.user.username}
+          bio={profile?.bio ?? null}
+          avatarUrl={profile?.avatarUrl ?? null}
+          locale={profile?.locale ?? locale}
+          timezone={profile?.timezone ?? "Asia/Bahrain"}
+        />
+      </section>
+    </AppShell>
   );
 }

@@ -1,190 +1,128 @@
-import Link from "next/link";
-import { SectionHeading } from "@/components/content/section-heading";
-import { EmptyState } from "@/components/ui/empty-state";
+import { cookies } from "next/headers";
+import { AppShell } from "@/components/layout/app-shell";
 import { ErrorState } from "@/components/ui/error-state";
-import { dashboardApiGet } from "@/lib/dashboard-api";
+import { apiGet } from "@/lib/web-api";
+import { dashboardCopy } from "@/lib/dashboard-copy";
 import { formatDateTimeInMakkah } from "@/lib/date-time";
 
-interface InvitesResponse {
-  user: {
-    id: string;
-    username: string;
-  };
-  invites: Array<{
-    id: string;
-    email: string;
-    token: string;
-    status: string;
-    maxUses: number;
-    sentAt: string | null;
-    expiresAt: string;
-    acceptedAt: string | null;
-    revokedAt: string | null;
-    createdAt: string;
-  }>;
+interface InviteItem {
+  id: string;
+  email: string;
+  status: string;
+  createdAt?: string;
+  expiresAt?: string | null;
 }
 
-async function loadData() {
-  try {
-    return {
-      data: await dashboardApiGet<InvitesResponse>("/api/invitations"),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      data: null,
-      error:
-        error instanceof Error ? error.message : "تعذر تحميل صفحة الدعوات.",
-    };
-  }
+interface InvitesResponse {
+  data?: {
+    invitations?: InviteItem[];
+    invites?: InviteItem[];
+  };
+  invitations?: InviteItem[];
+  invites?: InviteItem[];
+}
+
+const pageCopy = {
+  ar: {
+    eyebrow: "الدعوات",
+    description: "راجع دعواتك الحالية وحالتها.",
+    failedTitle: "تعذر تحميل الدعوات",
+    failedDescription: "تعذر تحميل بيانات الدعوات.",
+    empty: "لا توجد دعوات حالياً.",
+    email: "البريد",
+    status: "الحالة",
+    createdAt: "تاريخ الإنشاء",
+    expiresAt: "تاريخ الانتهاء",
+    na: "غير متوفر",
+  },
+  en: {
+    eyebrow: "Invites",
+    description: "Review your current invitations and status.",
+    failedTitle: "Failed to load invites",
+    failedDescription: "Failed to load invites data.",
+    empty: "No invites right now.",
+    email: "Email",
+    status: "Status",
+    createdAt: "Created At",
+    expiresAt: "Expires At",
+    na: "Not available",
+  },
+} as const;
+
+function extractInvites(payload: InvitesResponse | null | undefined): InviteItem[] {
+  if (!payload) return [];
+  if (payload.data?.invitations) return payload.data.invitations;
+  if (payload.data?.invites) return payload.data.invites;
+  if (payload.invitations) return payload.invitations;
+  if (payload.invites) return payload.invites;
+  return [];
 }
 
 export default async function DashboardInvitesPage() {
-  const { data, error } = await loadData();
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
+  const t = dashboardCopy[locale];
+  const p = pageCopy[locale];
 
-  if (error || !data) {
+  let data: InvitesResponse | null = null;
+  let error: string | null = null;
+
+  try {
+    data = await apiGet<InvitesResponse>("/api/invitations");
+  } catch (requestError) {
+    error = requestError instanceof Error ? requestError.message : p.failedDescription;
+  }
+
+  if (!data || error) {
     return (
-      <ErrorState
-        title="تعذر تحميل الدعوات"
-        description={error ?? "تعذر تحميل صفحة الدعوات."}
-      />
+      <AppShell>
+        <section className="dashboard-panel">
+          <ErrorState title={p.failedTitle} description={error ?? p.failedDescription} />
+        </section>
+      </AppShell>
     );
   }
 
-  const activeInvites = data.invites.filter(
-    (invite) => invite.status === "PENDING" || invite.status === "SENT"
-  ).length;
+  const invitations = extractInvites(data);
 
   return (
-    <section className="dashboard-panel">
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginBottom: "18px",
-        }}
-      >
-        <Link href="/dashboard/settings" className="btn small">
-          الإعدادات
-        </Link>
-        <Link href="/dashboard/activity" className="btn small">
-          النشاط
-        </Link>
-        <Link href="/search" className="btn small">
-          البحث
-        </Link>
-        <Link href={`/u/${data.user.username}`} className="btn small">
-          الملف العام
-        </Link>
-      </div>
-
-      <SectionHeading
-        eyebrow="Invites"
-        title="الدعوات"
-        description="راجع الدعوات التي تم إنشاؤها وحالتها الحالية من مكان واحد."
-      />
-
-      <div
-        className="state-card"
-        style={{
-          maxWidth: "100%",
-          margin: "0 0 18px",
-          display: "grid",
-          gap: "8px",
-        }}
-      >
-        <strong>ملخص الدعوات</strong>
-        <p style={{ margin: 0 }}>
-          لديك {activeInvites} دعوة نشطة من أصل {data.invites.length} دعوة.
-        </p>
-      </div>
-
-      {data.invites.length === 0 ? (
-        <EmptyState
-          title="لا توجد دعوات بعد"
-          description="عندما تقوم بإنشاء أو استلام دعوات ستظهر هنا."
-        />
-      ) : (
-        <div className="dashboard-list">
-          {data.invites.map((invite) => (
-            <article key={invite.id} className="dashboard-card">
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                  alignItems: "start",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ display: "grid", gap: "6px" }}>
-                  <strong>{invite.email}</strong>
-                  <span style={{ color: "var(--muted)", fontSize: "14px" }}>
-                    الحالة: {invite.status}
-                  </span>
-                </div>
-
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "6px 10px",
-                    borderRadius: "999px",
-                    background:
-                      invite.status === "ACCEPTED"
-                        ? "rgba(34,197,94,0.14)"
-                        : invite.status === "REVOKED"
-                          ? "rgba(239,68,68,0.14)"
-                          : "rgba(59,130,246,0.14)",
-                    color:
-                      invite.status === "ACCEPTED"
-                        ? "#bbf7d0"
-                        : invite.status === "REVOKED"
-                          ? "#fecaca"
-                          : "#dbeafe",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {invite.status}
-                </span>
-              </div>
-
-              <div
-                style={{
-                  marginTop: "12px",
-                  display: "grid",
-                  gap: "6px",
-                  color: "var(--muted)",
-                  fontSize: "14px",
-                }}
-              >
-                <span>عدد الاستخدامات: {invite.maxUses}</span>
-                <span>
-                  الإنشاء: {formatDateTimeInMakkah(invite.createdAt, "ar-BH")}
-                </span>
-                <span>
-                  الإرسال:{" "}
-                  {invite.sentAt
-                    ? formatDateTimeInMakkah(invite.sentAt, "ar-BH")
-                    : "لم تُرسل بعد"}
-                </span>
-                <span>
-                  الانتهاء: {formatDateTimeInMakkah(invite.expiresAt, "ar-BH")}
-                </span>
-                <span>
-                  القبول:{" "}
-                  {invite.acceptedAt
-                    ? formatDateTimeInMakkah(invite.acceptedAt, "ar-BH")
-                    : "لم تُقبل بعد"}
-                </span>
-              </div>
-            </article>
-          ))}
+    <AppShell>
+      <section className="dashboard-panel" style={{ display: "grid", gap: "18px" }}>
+        <div style={{ display: "grid", gap: "6px" }}>
+          <p style={{ margin: 0, color: "#7dd3fc", fontSize: "12px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {p.eyebrow}
+          </p>
+          <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>{t.invites}</h1>
+          <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>{p.description}</p>
         </div>
-      )}
-    </section>
+
+        {invitations.length === 0 ? (
+          <div className="dashboard-card" style={{ padding: "18px", color: "var(--muted)" }}>
+            {p.empty}
+          </div>
+        ) : (
+          <div style={{ display: "grid", gap: "12px" }}>
+            {invitations.map((invite) => (
+              <article key={invite.id} className="dashboard-card" style={{ padding: "16px", display: "grid", gap: "8px" }}>
+                <div><strong>{p.email}:</strong> {invite.email}</div>
+                <div><strong>{p.status}:</strong> {invite.status}</div>
+                <div>
+                  <strong>{p.createdAt}:</strong>{" "}
+                  {invite.createdAt
+                    ? formatDateTimeInMakkah(invite.createdAt, locale === "en" ? "en-US" : "ar-BH")
+                    : p.na}
+                </div>
+                <div>
+                  <strong>{p.expiresAt}:</strong>{" "}
+                  {invite.expiresAt
+                    ? formatDateTimeInMakkah(invite.expiresAt, locale === "en" ? "en-US" : "ar-BH")
+                    : p.na}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </AppShell>
   );
 }

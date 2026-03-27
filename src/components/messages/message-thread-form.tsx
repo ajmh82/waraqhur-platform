@@ -5,75 +5,97 @@ import { useRouter } from "next/navigation";
 
 interface MessageThreadFormProps {
   threadId: string;
+  locale?: "ar" | "en";
 }
 
-export function MessageThreadForm({ threadId }: MessageThreadFormProps) {
+const copy = {
+  ar: {
+    placeholder: "اكتب رسالتك...",
+    send: "إرسال",
+    sending: "جارٍ الإرسال...",
+    required: "نص الرسالة مطلوب.",
+    failed: "تعذر إرسال الرسالة.",
+  },
+  en: {
+    placeholder: "Write your message...",
+    send: "Send",
+    sending: "Sending...",
+    required: "Message text is required.",
+    failed: "Failed to send message.",
+  },
+} as const;
+
+export function MessageThreadForm({
+  threadId,
+  locale = "ar",
+}: MessageThreadFormProps) {
   const router = useRouter();
   const [body, setBody] = useState("");
-  const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const t = copy[locale];
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submitMessage() {
     setError(null);
 
-    const trimmed = body.trim();
-
-    if (!trimmed) {
+    const trimmedBody = body.trim();
+    if (!trimmedBody) {
+      setError(t.required);
       return;
     }
 
     const response = await fetch(`/api/messages/${threadId}`, {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        body: trimmed,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: trimmedBody }),
     });
 
     const payload = await response.json().catch(() => null);
-
     if (!response.ok || !payload?.success) {
-      setError(payload?.error?.message ?? "تعذر إرسال الرسالة.");
+      setError(payload?.error?.message ?? t.failed);
       return;
     }
 
     setBody("");
+    startTransition(() => router.refresh());
+  }
 
-    startTransition(() => {
-      router.refresh();
-    });
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await submitMessage();
+  }
+
+  async function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      await submitMessage();
+    }
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="state-card"
-      style={{
-        maxWidth: "100%",
-        margin: 0,
-        display: "grid",
-        gap: "12px",
-      }}
-    >
+    <form onSubmit={handleSubmit} style={{ display: "grid", gap: "10px" }}>
       <textarea
         value={body}
         onChange={(event) => setBody(event.target.value)}
-        rows={4}
-        placeholder="اكتب رسالتك هنا..."
-        maxLength={2000}
+        onKeyDown={handleKeyDown}
+        rows={3}
+        placeholder={t.placeholder}
+        style={{
+          borderRadius: "16px",
+          border: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(15,23,42,0.32)",
+          padding: "12px 14px",
+        }}
       />
 
       {error ? (
-        <p style={{ color: "var(--danger)", margin: 0 }}>{error}</p>
+        <p style={{ margin: 0, color: "var(--danger)", fontSize: "14px" }}>{error}</p>
       ) : null}
 
-      <div>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button type="submit" className="btn-action" disabled={isPending}>
-          {isPending ? "جارٍ الإرسال..." : "إرسال الرسالة"}
+          {isPending ? t.sending : t.send}
         </button>
       </div>
     </form>

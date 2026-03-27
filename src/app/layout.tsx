@@ -1,18 +1,23 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "وراق حر",
-  description: "منصة عربية حديثة للأخبار والموجز والمصادر والتصنيفات.",
+  title: "ورق حر",
+  description: "منصة ورق حر",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
+  const dir = locale === "en" ? "ltr" : "rtl";
+
   return (
-    <html lang="ar" dir="rtl">
+    <html lang={locale} dir={dir}>
       <body>{children}</body>
     </html>
   );

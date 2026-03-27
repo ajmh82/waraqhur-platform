@@ -1,0 +1,261 @@
+DATE: Fri Mar 27 09:07:31 UTC 2026
+BRANCH: 
+COMMIT: 
+----- STATUS (before) -----
+== Quality Gate: start ==
+-- npm run lint
+
+> waraqhur-platform@0.1.0 lint
+> eslint
+
+
+/app/middleware.ts
+  26:10  warning  'isPublicPath' is defined but never used  @typescript-eslint/no-unused-vars
+
+/app/src/app/admin/categories/[categoryId]/page.tsx
+  123:5  warning  'archivedPostsCount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/app/src/app/admin/categories/[categoryId]/posts/page.tsx
+  129:10  warning  'getSortLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+/app/src/app/admin/categories/[categoryId]/sources/page.tsx
+  137:10  warning  'getSortLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+/app/src/app/admin/comment-replies/page.tsx
+  10:11  warning  'ReplyRecord' is defined but never used  @typescript-eslint/no-unused-vars
+
+/app/src/app/admin/roles/[roleId]/users/page.tsx
+  108:10  warning  'getSortLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+/app/src/app/admin/sources/[sourceId]/page.tsx
+  98:9  warning  'publicPosts' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  99:9  warning  'privatePosts' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/app/src/app/admin/users/[userId]/activity/page.tsx
+  145:10  warning  'getSortLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+/app/src/app/admin/users/[userId]/sessions/page.tsx
+  123:10  warning  'getSortLabel' is defined but never used  @typescript-eslint/no-unused-vars
+
+/app/src/app/posts/[slug]/page.tsx
+   80:20  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  231:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  339:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/app/src/components/comments/threaded-comments.tsx
+  229:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/app/src/components/compose/compose-tweet-form.tsx
+  209:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/app/src/components/content/post-card.tsx
+  171:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  304:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  509:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/app/src/components/content/timeline-feed-client.tsx
+  159:6  warning  React Hook useEffect has a missing dependency: 'loadMore'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/app/src/components/layout/account-menu.tsx
+   95:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  112:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/app/src/components/media/media-gallery.tsx
+  81:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/app/src/components/messages/message-thread-view.tsx
+  93:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/app/src/components/messages/messages-inbox.tsx
+  123:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/app/src/components/profile/public-profile-view.tsx
+  141:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/app/src/components/search/search-explorer.tsx
+  238:27  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/app/src/components/settings/settings-form.tsx
+   79:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/app/src/components/settings/settings-form.tsx:79:7
+  77 |   useEffect(() => {
+  78 |     if (!selectedAvatarFile) {
+> 79 |       setAvatarPreviewUrl(formAvatarUrl.trim() || null);
+     |       ^^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  80 |       return;
+  81 |     }
+  82 |  react-hooks/set-state-in-effect
+  223:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @next/next/no-img-element
+
+/app/src/components/social/tweet-owner-controls.tsx
+   84:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/app/src/components/social/tweet-owner-controls.tsx:84:5
+  82 |
+  83 |     const objectUrl = URL.createObjectURL(selectedFile);
+> 84 |     setPreviewUrl(objectUrl);
+     |     ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  85 |     setPreviewType(selectedFile.type.startsWith("video/") ? "video" : "image");
+  86 |
+  87 |     return () => {  react-hooks/set-state-in-effect
+  314:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @next/next/no-img-element
+
+/app/src/components/social/user-connections-list.tsx
+  107:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 31 problems (3 errors, 28 warnings)
+
+-- skip: script 'typecheck' not found
+-- npm run build:prod
+
+> waraqhur-platform@0.1.0 build:prod
+> NODE_ENV=production next build --webpack
+
+▲ Next.js 16.2.0 (webpack)
+- Environments: .env.production
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 10.4s
+  Running TypeScript ...
+  Finished TypeScript in 6.5s ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/68) ...
+  Generating static pages using 3 workers (17/68) 
+  Generating static pages using 3 workers (34/68) 
+  Generating static pages using 3 workers (51/68) 
+✓ Generating static pages using 3 workers (68/68) in 252ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /accept-invitation
+├ ƒ /admin
+├ ƒ /admin/audit-logs
+├ ƒ /admin/categories
+├ ƒ /admin/categories/[categoryId]
+├ ƒ /admin/categories/[categoryId]/edit
+├ ƒ /admin/categories/[categoryId]/posts
+├ ƒ /admin/categories/[categoryId]/sources
+├ ƒ /admin/categories/new
+├ ƒ /admin/comment-replies
+├ ƒ /admin/comments
+├ ƒ /admin/comments/[commentId]
+├ ƒ /admin/invites
+├ ƒ /admin/posts
+├ ƒ /admin/posts/[postId]
+├ ƒ /admin/posts/[postId]/edit
+├ ƒ /admin/roles
+├ ƒ /admin/roles/[roleId]
+├ ƒ /admin/roles/[roleId]/users
+├ ƒ /admin/sources
+├ ƒ /admin/sources/[sourceId]
+├ ƒ /admin/sources/[sourceId]/edit
+├ ƒ /admin/sources/[sourceId]/posts
+├ ƒ /admin/sources/[sourceId]/posts/[postId]/edit
+├ ƒ /admin/sources/[sourceId]/posts/new
+├ ƒ /admin/sources/new
+├ ƒ /admin/users
+├ ƒ /admin/users/[userId]
+├ ƒ /admin/users/[userId]/activity
+├ ƒ /admin/users/[userId]/assign-role
+├ ƒ /admin/users/[userId]/permissions
+├ ƒ /admin/users/[userId]/roles
+├ ƒ /admin/users/[userId]/sessions
+├ ƒ /api/admin/audit-logs
+├ ƒ /api/admin/permissions-check
+├ ƒ /api/admin/roles
+├ ƒ /api/admin/sources/[sourceId]/ingest
+├ ƒ /api/admin/sources/[sourceId]/preview
+├ ƒ /api/admin/sources/ingest-all
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/password-reset
+├ ƒ /api/admin/users/roles
+├ ƒ /api/admin/users/sessions
+├ ƒ /api/admin/users/status
+├ ƒ /api/auth/email-verification/confirm
+├ ƒ /api/auth/email-verification/request
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/me
+├ ƒ /api/auth/password-reset/confirm
+├ ƒ /api/auth/password-reset/request
+├ ƒ /api/auth/register
+├ ƒ /api/categories
+├ ƒ /api/categories/[categoryId]
+├ ƒ /api/comments
+├ ƒ /api/comments/[commentId]
+├ ƒ /api/comments/[commentId]/like
+├ ƒ /api/comments/[commentId]/owner
+├ ƒ /api/health
+├ ƒ /api/invitations
+├ ƒ /api/invitations/accept
+├ ƒ /api/invitations/revoke
+├ ƒ /api/media
+├ ƒ /api/messages
+├ ƒ /api/messages/[threadId]
+├ ƒ /api/notifications
+├ ƒ /api/notifications/read
+├ ƒ /api/notifications/read-all
+├ ƒ /api/posts
+├ ƒ /api/posts/[postId]
+├ ƒ /api/posts/[postId]/bookmark
+├ ƒ /api/posts/[postId]/like
+├ ƒ /api/posts/[postId]/owner
+├ ƒ /api/posts/[postId]/repost
+├ ƒ /api/posts/[postId]/thread
+├ ƒ /api/preferences/locale
+├ ƒ /api/preferences/timeline-sort
+├ ƒ /api/search
+├ ƒ /api/sources
+├ ƒ /api/sources/[sourceId]
+├ ƒ /api/timeline
+├ ƒ /api/tweets
+├ ƒ /api/uploads
+├ ƒ /api/users/[userId]/follow
+├ ƒ /api/users/by-username/[username]
+├ ƒ /api/users/by-username/[username]/connections
+├ ƒ /categories/[slug]
+├ ƒ /compose
+├ ƒ /dashboard
+├ ƒ /dashboard/account
+├ ƒ /dashboard/activity
+├ ƒ /dashboard/invites
+├ ƒ /dashboard/notifications
+├ ƒ /dashboard/profile
+├ ƒ /dashboard/security
+├ ƒ /dashboard/settings
+├ ƒ /login
+├ ƒ /media
+├ ƒ /messages
+├ ƒ /messages/[threadId]
+├ ƒ /posts/[slug]
+├ ƒ /register
+├ ƒ /search
+├ ƒ /sources/[slug]
+├ ƒ /tag/[tag]
+├ ƒ /timeline
+├ ƒ /u/[username]
+├ ƒ /u/[username]/followers
+└ ƒ /u/[username]/following
+
+
+ƒ  (Dynamic)  server-rendered on demand
+
+== Quality Gate: done ==
+== Smoke: http://127.0.0.1:3000 ==
+----- STATUS (after) -----
