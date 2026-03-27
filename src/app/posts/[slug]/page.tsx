@@ -1,4 +1,3 @@
-import Image from "next/image";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import { cookies } from "next/headers";

@@ -57,8 +57,7 @@ export function StartDirectMessageButton({
     }
 
     startTransition(() => {
-      router.push(`/messages/${payload.data.thread.id}`);
-      router.refresh();
+      router.replace(`/messages/${payload.data.thread.id}`);
     });
   }
 

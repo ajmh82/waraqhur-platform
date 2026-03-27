@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 
 import { useState } from "react";
 import { LikeCommentButton } from "@/components/social/like-comment-button";

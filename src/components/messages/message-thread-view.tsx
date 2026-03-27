@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 
 import { useMemo } from "react";
 import { formatDateTimeInMakkah } from "@/lib/date-time";

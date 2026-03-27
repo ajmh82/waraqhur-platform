@@ -14,6 +14,7 @@ export async function AppShell({ children }: AppShellProps) {
     <div className="page-stack">
       <AppHeader />
       <main className="page-container">{children}</main>
+      <MobileBottomNav />
       <MobileBottomNav locale={locale} />
     </div>
   );
