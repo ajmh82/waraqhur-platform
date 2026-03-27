@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatDateTimeInMakkah } from "@/lib/date-time";
 
 interface ThreadUser {
@@ -18,6 +19,7 @@ interface ThreadMessage {
 }
 
 interface MessageThreadViewProps {
+  threadId: string;
   currentUserId: string;
   otherUser: ThreadUser;
   messages: ThreadMessage[];
@@ -28,13 +30,28 @@ interface MessageThreadViewProps {
 const copy = {
   ar: {
     empty: "لا توجد رسائل بعد. ابدأ أول رسالة الآن.",
+    selectAll: "تحديد الكل",
+    clearSelection: "إلغاء التحديد",
+    deleteSelected: "حذف المحدد",
+    deleteAll: "حذف كل الرسائل",
+    deleting: "جارٍ الحذف...",
+    deleteFailed: "تعذر حذف الرسائل.",
+    selectedCount: "محدد",
   },
   en: {
     empty: "No messages yet. Send the first message now.",
+    selectAll: "Select all",
+    clearSelection: "Clear selection",
+    deleteSelected: "Delete selected",
+    deleteAll: "Delete all",
+    deleting: "Deleting...",
+    deleteFailed: "Failed to delete messages.",
+    selectedCount: "selected",
   },
 } as const;
 
 export function MessageThreadView({
+  threadId,
   currentUserId,
   otherUser,
   messages,
@@ -42,6 +59,10 @@ export function MessageThreadView({
   locale = "ar",
 }: MessageThreadViewProps) {
   const t = copy[locale];
+  const router = useRouter();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const sortedMessages = useMemo(
     () =>
@@ -51,6 +72,50 @@ export function MessageThreadView({
       ),
     [messages]
   );
+
+  const messageIds = sortedMessages.map((m) => m.id);
+  const isAllSelected =
+    messageIds.length > 0 && messageIds.every((id) => selectedIds.includes(id));
+
+  function toggleOne(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
+    );
+  }
+
+  function toggleAll() {
+    setSelectedIds(isAllSelected ? [] : messageIds);
+  }
+
+  async function deleteMessages(deleteAll: boolean) {
+    if (isDeleting) return;
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/messages/${threadId}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          deleteAll ? { deleteAll: true } : { messageIds: selectedIds }
+        ),
+      });
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.success) {
+        setError(payload?.error?.message ?? t.deleteFailed);
+        return;
+      }
+
+      setSelectedIds([]);
+      router.refresh();
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <section
@@ -90,6 +155,7 @@ export function MessageThreadView({
           }}
         >
           {otherUser.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={otherUser.avatarUrl}
               alt={otherUser.displayName}
@@ -107,6 +173,48 @@ export function MessageThreadView({
           </span>
         </div>
       </header>
+
+      <div
+        style={{
+          display: "grid",
+          gap: "10px",
+          padding: "12px 18px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(255,255,255,0.02)",
+        }}
+      >
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+          <button type="button" className="btn small" onClick={toggleAll}>
+            {isAllSelected ? t.clearSelection : t.selectAll}
+          </button>
+          <button
+            type="button"
+            className="btn small"
+            disabled={selectedIds.length === 0 || isDeleting}
+            onClick={() => deleteMessages(false)}
+          >
+            {isDeleting ? t.deleting : t.deleteSelected}
+          </button>
+          <button
+            type="button"
+            className="btn small"
+            disabled={sortedMessages.length === 0 || isDeleting}
+            onClick={() => deleteMessages(true)}
+          >
+            {isDeleting ? t.deleting : t.deleteAll}
+          </button>
+        </div>
+
+        <span style={{ color: "var(--muted)", fontSize: "13px" }}>
+          {selectedIds.length} {t.selectedCount}
+        </span>
+
+        {error ? (
+          <p style={{ margin: 0, color: "var(--danger)", fontSize: "14px" }}>
+            {error}
+          </p>
+        ) : null}
+      </div>
 
       <div
         style={{
@@ -132,6 +240,7 @@ export function MessageThreadView({
         ) : (
           sortedMessages.map((message) => {
             const isOwnMessage = message.senderUserId === currentUserId;
+            const checked = selectedIds.includes(message.id);
 
             return (
               <div
@@ -139,8 +248,17 @@ export function MessageThreadView({
                 style={{
                   display: "flex",
                   justifyContent: isOwnMessage ? "flex-start" : "flex-end",
+                  gap: "8px",
+                  alignItems: "flex-start",
                 }}
               >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleOne(message.id)}
+                  style={{ marginTop: "8px" }}
+                />
+
                 <article
                   style={{
                     maxWidth: "min(78%, 520px)",

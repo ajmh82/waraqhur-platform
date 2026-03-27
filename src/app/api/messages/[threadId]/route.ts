@@ -289,3 +289,93 @@ export async function POST(
     );
   }
 }
+
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ threadId: string }> }
+) {
+  const auth = await requireSessionUser();
+
+  if (!auth.ok) {
+    return auth.response;
+  }
+
+  try {
+    const { threadId } = await context.params;
+    const userId = auth.current.user.id;
+    const body = await request.json().catch(() => ({} as Record<string, unknown>));
+
+    const deleteAll = Boolean(body.deleteAll);
+    const rawIds = Array.isArray(body.messageIds) ? body.messageIds : [];
+    const messageIds = rawIds
+      .filter((v): v is string => typeof v === "string")
+      .map((v) => v.trim())
+      .filter(Boolean);
+
+    if (!deleteAll && messageIds.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "MESSAGE_IDS_REQUIRED",
+            message: "Provide messageIds or set deleteAll=true",
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    const thread = await prisma.directThread.findFirst({
+      where: {
+        id: threadId,
+        OR: [{ participantAUserId: userId }, { participantBUserId: userId }],
+      },
+      select: { id: true },
+    });
+
+    if (!thread) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "THREAD_NOT_FOUND",
+            message: "Thread not found",
+          },
+        },
+        { status: 404 }
+      );
+    }
+
+    const deleted = await prisma.directMessage.deleteMany({
+      where: deleteAll
+        ? { threadId: thread.id }
+        : { threadId: thread.id, id: { in: messageIds } },
+    });
+
+    await prisma.directThread.update({
+      where: { id: thread.id },
+      data: { updatedAt: new Date() },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        deletedCount: deleted.count,
+        deleteAll,
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "DELETE_MESSAGES_FAILED",
+          message:
+            error instanceof Error ? error.message : "Failed to delete messages",
+        },
+      },
+      { status: 400 }
+    );
+  }
+}

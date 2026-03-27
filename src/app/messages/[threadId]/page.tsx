@@ -45,6 +45,7 @@ export default async function MessageThreadPage({
     <AppShell>
       <section className="page-section">
         <MessageThreadView
+          threadId={data.thread.id}
           locale={locale}
           currentUserId={data.currentUserId}
           otherUser={data.thread.otherUser}
