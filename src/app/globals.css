@@ -1207,28 +1207,7 @@ html[dir="ltr"] .account-menu__logout {
   color: #7dd3fc;
 }
 
-.global-top-nav {
-  position: sticky;
-  top: 72px;
-  z-index: 55;
-  width: min(100%, 760px);
-  margin: 0 auto;
-  padding: 8px 16px 0;
-  display: flex;
-  gap: 8px;
-  background: #0b1220;
-}
 
-.global-top-nav__btn {
-  text-decoration: none;
-  color: var(--foreground);
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 700;
-}
 
 .settings-form__input {
   width: 100%;
@@ -1317,19 +1296,7 @@ button[data-follow-button="true"] {
   border-radius: 10px;
 }
 
-.global-top-nav {
-  top: 64px;
-  padding-top: 10px;
-  padding-bottom: 2px;
-}
 
-.global-top-nav__btn {
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9px;
-}
 
 .dashboard-panel {
   padding-top: 8px;
@@ -1351,4 +1318,21 @@ button[data-follow-button="true"] {
 .dashboard-list-item__body {
   font-size: 13px;
   line-height: 1.65;
+}
+
+
+/* avatar fixed size */
+.account-menu__trigger {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  overflow: hidden;
+  padding: 0;
+}
+.account-menu__avatar,
+.account-menu__avatar--fallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  object-fit: cover;
 }

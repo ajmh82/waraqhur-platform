@@ -14,6 +14,46 @@ function toLocale(value: string): "ar" | "en" {
   return value === "en" ? "en" : "ar";
 }
 
+async function resizeAvatarForUpload(file: File): Promise<File> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(new Error("Failed to read image"));
+    reader.readAsDataURL(file);
+  });
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("Failed to load image"));
+    i.src = dataUrl;
+  });
+
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return file;
+
+  const scale = Math.max(size / img.width, size / img.height);
+  const sw = img.width * scale;
+  const sh = img.height * scale;
+  const dx = (size - sw) / 2;
+  const dy = (size - sh) / 2;
+
+  ctx.clearRect(0, 0, size, size);
+  ctx.drawImage(img, dx, dy, sw, sh);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/webp", 0.9)
+  );
+  if (!blob) return file;
+
+  const base = file.name.replace(/\.[^.]+$/, "");
+  return new File([blob], `${base}-avatar.webp`, { type: "image/webp" });
+}
+
 export function SettingsForm({
   displayName,
   bio,
@@ -36,6 +76,14 @@ export function SettingsForm({
     typeof document !== "undefined"
       ? document.documentElement.lang?.toLowerCase().startsWith("ar")
       : true;
+
+  const timezoneOptions = useMemo(() => {
+    try {
+      const fn = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf;
+      if (typeof fn === "function") return fn("timeZone");
+    } catch {}
+    return ["Asia/Bahrain","UTC","Europe/London","Europe/Paris","America/New_York","America/Los_Angeles","Asia/Dubai","Asia/Riyadh","Asia/Kolkata","Asia/Tokyo"];
+  }, []);
 
   const t = useMemo(
     () =>
@@ -80,8 +128,9 @@ export function SettingsForm({
     let finalAvatarUrl = formAvatarUrl.trim() || null;
 
     if (selectedAvatarFile) {
+      const preparedAvatar = await resizeAvatarForUpload(selectedAvatarFile);
       const formData = new FormData();
-      formData.append("file", selectedAvatarFile);
+      formData.append("file", preparedAvatar, preparedAvatar.name);
 
       const uploadResponse = await fetch("/api/uploads", {
         method: "POST",
@@ -206,12 +255,15 @@ export function SettingsForm({
 
       <label style={{ display: "grid", gap: 6 }}>
         <span>{t.timezone}</span>
-        <input
+        <select
           value={formTimezone}
           onChange={(event) => setFormTimezone(event.target.value)}
-          maxLength={100}
           className="settings-form__input"
-        />
+        >
+          {timezoneOptions.map((tz) => (
+            <option key={tz} value={tz}>{tz}</option>
+          ))}
+        </select>
       </label>
 
       {error ? <p style={{ margin: 0, color: "var(--danger)" }}>{error}</p> : null}

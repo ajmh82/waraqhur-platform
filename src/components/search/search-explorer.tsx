@@ -20,17 +20,23 @@ interface SearchPost {
   author: { username: string } | null;
 }
 
-export function SearchExplorer() {
+interface SearchExplorerProps {
+  initialQuery?: string;
+  locale?: string;
+}
+
+export function SearchExplorer({ initialQuery = "", locale = "ar" }: SearchExplorerProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialQ = searchParams.get("q") ?? "";
+  const initialQ = searchParams.get("q") ?? initialQuery;
   const [q, setQ] = useState(initialQ);
   const [activeTab, setActiveTab] = useState<"all" | "users" | "posts">("all");
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<SearchUser[]>([]);
   const [posts, setPosts] = useState<SearchPost[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const isArabic = locale !== "en";
 
   useEffect(() => {
     const id = setTimeout(async () => {
@@ -59,14 +65,14 @@ export function SearchExplorer() {
 
         const payload = await response.json().catch(() => null);
         if (!response.ok || !payload?.success) {
-          setError(payload?.error?.message ?? "تعذر تنفيذ البحث.");
+          setError(payload?.error?.message ?? (isArabic ? "تعذر تنفيذ البحث." : "Search failed."));
           return;
         }
 
         setUsers(Array.isArray(payload?.data?.users) ? payload.data.users : []);
         setPosts(Array.isArray(payload?.data?.posts) ? payload.data.posts : []);
       } catch {
-        setError("تعذر تنفيذ البحث.");
+        setError(isArabic ? "تعذر تنفيذ البحث." : "Search failed.");
       } finally {
         setLoading(false);
       }
@@ -101,7 +107,7 @@ export function SearchExplorer() {
     <section className="state-card" style={{ display: "grid", gap: 12 }}>
       <input
         type="search"
-        placeholder="ابحث عن كلمة أو حساب..."
+        placeholder={isArabic ? "ابحث عن كلمة أو حساب..." : "Search for a keyword or account..."}
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />

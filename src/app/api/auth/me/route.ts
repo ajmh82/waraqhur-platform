@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 const updateCurrentUserProfileSchema = z.object({
   displayName: z.string().trim().min(2).max(80),
   bio: z.string().trim().max(280).nullable().optional(),
-  avatarUrl: z.string().trim().url().nullable().optional(),
+  avatarUrl: z.string().trim().refine((v) => v === "" || v.startsWith("/") || /^https?:\/\//.test(v), "Invalid avatar URL").nullable().optional(),
   locale: z.enum(["ar", "en"]).optional().default("ar"),
   timezone: z.string().trim().max(100).nullable().optional(),
 });
@@ -27,6 +27,8 @@ async function recordSessionTouch(userId: string, sessionId: string) {
     await prisma.auditLog.create({
       data: {
         actorUserId: userId,
+        actorType: "USER",
+        entityType: "SESSION",
         action: "SESSION_TOUCH",
         metadata: {
           sessionId,
@@ -176,6 +178,21 @@ export async function PATCH(request: Request) {
       },
     });
 
+    response.cookies.set("locale", profile.locale ?? "ar", {
+      httpOnly: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 180,
+    });
+
+    response.cookies.set("timezone", profile.timezone ?? "Asia/Bahrain", {
+      httpOnly: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 180,
+    });
+
+    // keep locale cookie update
     response.cookies.set("locale", profile.locale ?? "ar", {
       httpOnly: false,
       sameSite: "lax",

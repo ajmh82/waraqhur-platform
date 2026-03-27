@@ -4,6 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 
+type ActivityItem = {
+  id: string;
+  at: string;
+  country: string | null;
+  client: string | null;
+  source: "audit" | "current";
+};
+
 type RawAuditRow = {
   id: string;
   at: Date | string;
@@ -13,6 +21,19 @@ type RawAuditRow = {
 
 function asObj(v: unknown): Record<string, unknown> | null {
   return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
+}
+
+function normalizeClientLabel(value: string | null): string | null {
+  if (!value) return null;
+  const s = value.toLowerCase();
+  if (s.includes("edg")) return "Edge";
+  if (s.includes("chrome")) return "Chrome";
+  if (s.includes("safari") && !s.includes("chrome")) return "Safari";
+  if (s.includes("firefox")) return "Firefox";
+  if (s.includes("app")) return "App";
+  if (s.includes("android")) return "Android";
+  if (s.includes("iphone") || s.includes("ios")) return "iOS";
+  return value.length > 28 ? value.slice(0, 28) + "..." : value;
 }
 
 function parseMeta(meta: unknown) {
@@ -93,14 +114,14 @@ export async function GET() {
     ["LOGIN", "LOGIN_SUCCESS", "SESSION_CREATED", "AUTH_LOGIN", "USER_LOGIN", "SESSION_TOUCH"].includes(String(r.action))
   );
 
-  const items = loginLike.map((r) => {
+  const items: ActivityItem[] = loginLike.map((r) => {
     const meta = parseMeta(r.metadata);
     return {
       id: String(r.id),
       at: typeof r.at === "string" ? r.at : r.at.toISOString(),
       country: meta.country,
-      client: meta.client,
-      source: "audit" as const,
+      client: normalizeClientLabel(meta.client),
+      source: "audit",
     };
   });
 
@@ -110,10 +131,10 @@ export async function GET() {
     at: new Date(String(currentAt ?? "")).toISOString(),
     country: null,
     client: null,
-    source: "current" as const,
+    source: "current",
   });
 
-  const dedup = new Map<string, (typeof items)[number]>();
+  const dedup = new Map<string, ActivityItem>();
   for (const item of items) {
     const k = `${item.at}-${item.source}`;
     if (!dedup.has(k)) dedup.set(k, item);

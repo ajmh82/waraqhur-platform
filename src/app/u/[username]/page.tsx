@@ -1,100 +1,93 @@
-import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
-import { PublicProfileView } from "@/components/profile/public-profile-view";
-import { apiGet } from "@/lib/web-api";
+import { dashboardApiGet } from "@/lib/dashboard-api";
 
-interface PublicProfilePageData {
-  user: {
-    id: string;
-    username: string;
-    email?: string;
-    displayName: string;
-    avatarUrl: string | null;
-    bio: string | null;
-    followersCount: number;
-    followingCount: number;
-    isFollowing: boolean;
-    isOwnProfile: boolean;
-  };
-  posts: Array<{
-    id: string;
-    title: string;
-    slug: string | null;
-    excerpt: string | null;
-    content?: string | null;
-    coverImageUrl?: string | null;
-    createdAt: string;
-    updatedAt?: string;
-    commentsCount: number;
-    likesCount?: number;
-    repostsCount?: number;
-    bookmarksCount?: number;
-    viewsCount?: number;
-    category: { id: string; name: string; slug: string } | null;
-    source: { id: string; name: string; slug: string } | null;
-    author: {
-      id: string;
-      email: string;
-      username: string;
-      displayName?: string;
-      avatarUrl?: string | null;
-      isFollowing?: boolean;
-      isOwnProfile?: boolean;
-    } | null;
-    repostOfPost?: {
-      id: string;
-      title: string;
-      slug: string | null;
-      author: { id: string; username: string } | null;
-    } | null;
-    quotedPost?: {
-      id: string;
-      title: string;
-      slug: string | null;
-      author: { id: string; username: string } | null;
-    } | null;
-    metadata?: {
-      ingestion?: {
-        originalUrl?: string | null;
-      };
-      social?: {
-        postKind?: string;
-        hashtags?: string[];
-        mediaType?: "image" | "video" | null;
-        mediaUrl?: string | null;
-      };
-    } | null;
-  }>;
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
+}
+function asNumber(v: unknown, fallback = 0): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+function asString(v: unknown, fallback = ""): string {
+  return typeof v === "string" ? v : fallback;
 }
 
-export default async function PublicProfilePage({
+export default async function PublicUserPage({
   params,
 }: {
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  const cookieStore = await cookies();
-  const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
 
-  let data: PublicProfilePageData | null = null;
-
+  let data: unknown = null;
   try {
-    data = await apiGet<PublicProfilePageData>(
-      `/api/users/by-username/${encodeURIComponent(username)}`
-    );
+    data = await dashboardApiGet<unknown>(`/api/users/by-username/${encodeURIComponent(username)}`);
   } catch {
-    notFound();
+    data = null;
   }
+
+  const root = asRecord(data);
+  const user = asRecord(root?.user) ?? asRecord(asRecord(root?.data)?.user);
+  const profile = asRecord(user?.profile);
+
+  const viewUsername = asString(user?.username, username);
+  const displayName = asString(profile?.displayName, viewUsername || username);
+
+  const createdAtRaw = user?.createdAt;
+  const createdAt = createdAtRaw
+    ? new Date(String(createdAtRaw)).toLocaleDateString("ar-BH", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "غير متاح";
+
+  const followersCount = asNumber(
+    user?.followersCount ?? asRecord(root?.stats)?.followersCount ?? asRecord(asRecord(root?.data)?.stats)?.followersCount
+  );
+  const followingCount = asNumber(
+    user?.followingCount ?? asRecord(root?.stats)?.followingCount ?? asRecord(asRecord(root?.data)?.stats)?.followingCount
+  );
+  const postsCount = asNumber(
+    user?.postsCount ?? user?.tweetsCount ?? asRecord(root?.stats)?.postsCount ?? asRecord(asRecord(root?.data)?.stats)?.postsCount
+  );
+  const repliesCount = asNumber(
+    user?.repliesCount ?? asRecord(root?.stats)?.repliesCount ?? asRecord(asRecord(root?.data)?.stats)?.repliesCount
+  );
 
   return (
     <AppShell>
-      <section className="page-section">
-        <PublicProfileView
-          locale={locale}
-          user={data.user}
-          posts={data.posts ?? []}
-        />
+      <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
+        <h1 style={{ margin: 0 }}>{displayName}</h1>
+        <p style={{ margin: 0, color: "var(--muted)" }}>@{viewUsername}</p>
+
+        <div className="dashboard-list-nav">
+          <div className="dashboard-list-item">
+            <span className="dashboard-list-item__title">تاريخ التسجيل</span>
+            <span className="dashboard-list-item__body">{createdAt}</span>
+          </div>
+
+          <Link href={`/u/${encodeURIComponent(viewUsername)}/followers`} className="dashboard-list-item">
+            <span className="dashboard-list-item__title">المتابعون</span>
+            <span className="dashboard-list-item__body">{followersCount}</span>
+          </Link>
+
+          <Link href={`/u/${encodeURIComponent(viewUsername)}/following`} className="dashboard-list-item">
+            <span className="dashboard-list-item__title">يتابع</span>
+            <span className="dashboard-list-item__body">{followingCount}</span>
+          </Link>
+
+          <div className="dashboard-list-item">
+            <span className="dashboard-list-item__title">عدد التغريدات</span>
+            <span className="dashboard-list-item__body">{postsCount}</span>
+          </div>
+
+          <div className="dashboard-list-item">
+            <span className="dashboard-list-item__title">عدد الردود</span>
+            <span className="dashboard-list-item__body">{repliesCount}</span>
+          </div>
+        </div>
       </section>
     </AppShell>
   );

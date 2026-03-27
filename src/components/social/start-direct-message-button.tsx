@@ -7,13 +7,17 @@ interface StartDirectMessageButtonProps {
   targetUserId: string;
   label?: string;
   className?: string;
+  locale?: string;
 }
 
 export function StartDirectMessageButton({
   targetUserId,
-  label = "مراسلة خاصة",
+  label,
   className = "btn",
+  locale = "ar",
 }: StartDirectMessageButtonProps) {
+  const isArabic = locale !== "en";
+  const resolvedLabel = label ?? (isArabic ? "مراسلة خاصة" : "Direct Message");
   const router = useRouter();
   const pathname = usePathname();
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +42,7 @@ export function StartDirectMessageButton({
     }
 
     if (!response.ok || !payload?.success) {
-      setError(payload?.error?.message ?? "تعذر بدء المحادثة.");
+      setError(payload?.error?.message ?? (isArabic ? "تعذر بدء المحادثة." : "Failed to start conversation."));
       return;
     }
 
@@ -55,7 +59,7 @@ export function StartDirectMessageButton({
         onClick={handleClick}
         disabled={isPending}
       >
-        {isPending ? "جارٍ فتح المحادثة..." : label}
+        {isPending ? (isArabic ? "جارٍ فتح المحادثة..." : "Opening conversation...") : resolvedLabel}
       </button>
 
       {error ? (
