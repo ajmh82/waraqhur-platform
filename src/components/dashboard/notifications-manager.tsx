@@ -77,6 +77,10 @@ export function NotificationsManager({
           : item
       )
     );
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("notifications:changed"));
+    }
   }
 
   async function markAllAsRead() {
@@ -97,6 +101,10 @@ export function NotificationsManager({
 
       const nowIso = new Date().toISOString();
       setItems((current) => current.map((item) => ({ ...item, readAt: nowIso })));
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("notifications:changed"));
+      }
     });
   }
 

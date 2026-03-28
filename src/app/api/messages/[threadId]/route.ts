@@ -293,29 +293,6 @@ export async function POST(
         ? thread.participantBUserId
         : thread.participantAUserId;
 
-    const blockRelation = await prisma.userBlock.findFirst({
-      where: {
-        OR: [
-          { blockerUserId: userId, blockedUserId: otherUserId },
-          { blockerUserId: otherUserId, blockedUserId: userId },
-        ],
-      },
-      select: { blockerUserId: true },
-    });
-
-    if (blockRelation) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "BLOCK_RELATION_ACTIVE",
-            message: "Messaging is blocked between these users",
-          },
-        },
-        { status: 403 }
-      );
-    }
-
     const message = await prisma.directMessage.create({
       data: {
         threadId: thread.id,
