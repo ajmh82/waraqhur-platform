@@ -6,6 +6,7 @@ type AccountData = {
     email: string;
     username: string;
     profile?: { displayName?: string | null } | null;
+    directMessagesEnabled?: boolean;
   };
 };
 
@@ -30,6 +31,7 @@ export default async function DashboardAccountPage({
     username_format: "اسم المستخدم يجب أن يكون 3-24 حرفًا (a-z, 0-9, _).",
     username_limit: "مسموح التغيير مرتين في السنة فقط.",
     duplicate: "البريد الإلكتروني أو اسم المستخدم مستخدم مسبقًا.",
+    dm_saved: "تم تحديث إعدادات الرسائل الخاصة.",
     failed: "حدث خطأ أثناء الحفظ.",
     not_found: "تعذر العثور على المستخدم.",
   };
@@ -82,6 +84,22 @@ export default async function DashboardAccountPage({
 
           <button className="settings-form__submit" type="submit">{isAr ? "حفظ التغييرات" : "Save changes"}</button>
         </form>
+
+
+        <form className="settings-form" action="/api/preferences/messages" method="post" style={{ display: "grid", gap: 10 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <input
+              type="checkbox"
+              name="directMessagesEnabled"
+              defaultChecked={Boolean(data.user.directMessagesEnabled ?? true)}
+            />
+            <span>{isAr ? "السماح بطلبات الرسائل الخاصة" : "Allow private message requests"}</span>
+          </label>
+          <button className="settings-form__submit" type="submit">
+            {isAr ? "حفظ إعدادات الرسائل" : "Save messaging settings"}
+          </button>
+        </form>
+
       </section>
   );
 }

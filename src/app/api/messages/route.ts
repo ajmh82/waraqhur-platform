@@ -47,6 +47,21 @@ async function requireSessionUser() {
   }
 }
 
+
+async function hasBlockRelation(userAId: string, userBId: string) {
+  const row = await prisma.userBlock.findFirst({
+    where: {
+      OR: [
+        { blockerUserId: userAId, blockedUserId: userBId },
+        { blockerUserId: userBId, blockedUserId: userAId },
+      ],
+    },
+    select: { blockerUserId: true },
+  });
+
+  return Boolean(row);
+}
+
 export async function GET() {
   const auth = await requireSessionUser();
 
@@ -210,6 +225,22 @@ export async function POST(request: Request) {
           },
         },
         { status: 404 }
+      );
+    }
+
+
+    const blocked = await hasBlockRelation(currentUserId, targetUserId);
+
+    if (blocked) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "BLOCK_RELATION_ACTIVE",
+            message: "Messaging is blocked between these users",
+          },
+        },
+        { status: 403 }
       );
     }
 

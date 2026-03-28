@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 import { prisma } from "@/lib/prisma";
+import { createInAppNotification } from "@/services/notification-service";
 
 async function requireSessionUser() {
   const cookieStore = await cookies();
@@ -91,6 +92,38 @@ export async function GET(
       data: { readAt: new Date() },
     });
 
+    await prisma.notification.updateMany({
+      where: {
+        userId,
+        channel: "IN_APP",
+        readAt: null,
+        AND: [
+          { payload: { path: ["event"], equals: "dm.message.received" } },
+          { payload: { path: ["metadata", "threadId"], equals: thread.id } },
+        ],
+      },
+      data: {
+        readAt: new Date(),
+        status: "READ",
+      },
+    });
+
+    await prisma.notification.updateMany({
+      where: {
+        userId,
+        channel: "IN_APP",
+        readAt: null,
+        AND: [
+          { payload: { path: ["event"], equals: "dm.request.accepted" } },
+          { payload: { path: ["metadata", "threadId"], equals: thread.id } },
+        ],
+      },
+      data: {
+        readAt: new Date(),
+        status: "READ",
+      },
+    });
+
     const refreshedThread = await prisma.directThread.findFirst({
       where: { id: thread.id },
       include: {
@@ -118,11 +151,24 @@ export async function GET(
         ? refreshedThread.participantB
         : refreshedThread.participantA;
 
+    const isBlocked = Boolean(
+      await prisma.userBlock.findFirst({
+        where: {
+          OR: [
+            { blockerUserId: userId, blockedUserId: otherUser.id },
+            { blockerUserId: otherUser.id, blockedUserId: userId },
+          ],
+        },
+        select: { blockerUserId: true },
+      })
+    );
+
     return NextResponse.json({
       success: true,
       data: {
         thread: {
           id: refreshedThread.id,
+          isBlocked,
           otherUser: {
             id: otherUser.id,
             username: otherUser.username,
@@ -174,10 +220,11 @@ export async function POST(
   try {
     const { threadId } = await context.params;
     const userId = auth.current.user.id;
+    const senderUsername = auth.current.user.username;
     const body = await request.json();
-    const messageBody = typeof body.body === "string" ? body.body.trim() : "";
+    const messageBody = typeof body.body === "string" ? body.body : "";
 
-    if (!messageBody) {
+    if (!messageBody.trim()) {
       return NextResponse.json(
         {
           success: false,
@@ -195,6 +242,11 @@ export async function POST(
         id: threadId,
         OR: [{ participantAUserId: userId }, { participantBUserId: userId }],
       },
+      select: {
+        id: true,
+        participantAUserId: true,
+        participantBUserId: true,
+      },
     });
 
     if (!thread) {
@@ -204,6 +256,63 @@ export async function POST(
           error: { code: "THREAD_NOT_FOUND", message: "Thread not found" },
         },
         { status: 404 }
+      );
+    }
+
+    const receiverUserId =
+      thread.participantAUserId === userId
+        ? thread.participantBUserId
+        : thread.participantAUserId;
+
+    const blockRelation = await prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          { blockerUserId: userId, blockedUserId: receiverUserId },
+          { blockerUserId: receiverUserId, blockedUserId: userId },
+        ],
+      },
+      select: { blockerUserId: true, blockedUserId: true },
+    });
+
+    if (blockRelation) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "BLOCK_RELATION_EXISTS",
+            message: "Messaging is not allowed between these users",
+          },
+        },
+        { status: 403 }
+      );
+    }
+
+
+    const otherUserId =
+      thread.participantAUserId === userId
+        ? thread.participantBUserId
+        : thread.participantAUserId;
+
+    const blockRelation = await prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          { blockerUserId: userId, blockedUserId: otherUserId },
+          { blockerUserId: otherUserId, blockedUserId: userId },
+        ],
+      },
+      select: { blockerUserId: true },
+    });
+
+    if (blockRelation) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "BLOCK_RELATION_ACTIVE",
+            message: "Messaging is blocked between these users",
+          },
+        },
+        { status: 403 }
       );
     }
 
@@ -218,6 +327,23 @@ export async function POST(
     await prisma.directThread.update({
       where: { id: thread.id },
       data: { updatedAt: new Date() },
+    });
+
+    await createInAppNotification({
+      userId: receiverUserId,
+      title: "رسالة جديدة",
+      body: `لديك رسالة جديدة من @${senderUsername}`,
+      payload: {
+        event: "dm.message.received",
+        actionUrl: `/messages/${thread.id}`,
+        entityType: "direct_message",
+        entityId: message.id,
+        metadata: {
+          threadId: thread.id,
+          senderUserId: userId,
+          receiverUserId,
+        },
+      },
     });
 
     return NextResponse.json({

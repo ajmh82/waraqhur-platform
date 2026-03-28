@@ -14,6 +14,7 @@ interface MessageThreadPageData {
       displayName: string;
       avatarUrl: string | null;
     };
+    isBlocked: boolean;
     messages: Array<{
       id: string;
       body: string;
@@ -50,7 +51,13 @@ export default async function MessageThreadPage({
           currentUserId={data.currentUserId}
           otherUser={data.thread.otherUser}
           messages={data.thread.messages}
-          composer={<MessageThreadForm threadId={data.thread.id} locale={locale} />}
+          composer={
+            <MessageThreadForm
+              threadId={data.thread.id}
+              locale={locale}
+              isBlocked={data.thread.isBlocked}
+            />
+          }
         />
       </section>
     </AppShell>

@@ -127,6 +127,8 @@ model User {
   sentDirectMessages    DirectMessage[]        @relation("DirectMessageSender")
   dmRequestsSent        DirectMessageRequest[] @relation("DMRequestRequester")
   dmRequestsReceived    DirectMessageRequest[] @relation("DMRequestTarget")
+  blockedUsers          UserBlock[]            @relation("BlockerUser")
+  blockedByUsers        UserBlock[]            @relation("BlockedUser")
   auditLogs             AuditLog[]
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
@@ -448,6 +450,19 @@ enum DMRequestStatus {
   ACCEPTED
   REJECTED
   CANCELED
+}
+
+model UserBlock {
+  blockerUserId String
+  blockedUserId String
+  createdAt     DateTime @default(now())
+
+  blocker User @relation("BlockerUser", fields: [blockerUserId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockedUser", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  @@id([blockerUserId, blockedUserId])
+  @@index([blockedUserId, createdAt])
+  @@index([blockerUserId, createdAt])
 }
 
 model DirectMessageRequest {

@@ -1336,3 +1336,53 @@ button[data-follow-button="true"] {
   border-radius: 999px;
   object-fit: cover;
 }
+
+
+/* notifications badge dots */
+.account-menu__trigger-wrap {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.account-menu__notify-dot {
+  position: absolute;
+  top: 1px;
+  inset-inline-end: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #ef4444;
+  border: 2px solid #0b1220;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18);
+}
+
+.account-menu__list-nav > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.account-menu__item-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18);
+}
+
+.mobile-bottom-nav__icon-wrap {
+  position: relative;
+}
+
+.mobile-bottom-nav__notify-dot {
+  position: absolute;
+  top: -2px;
+  inset-inline-end: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #ef4444;
+  border: 2px solid #0b1220;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18);
+}

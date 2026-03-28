@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 import { prisma } from "@/lib/prisma";
+import { createInAppNotification } from "@/services/notification-service";
 
 async function requireSessionUser() {
   const cookieStore = await cookies();
@@ -45,8 +46,8 @@ export async function GET(request: Request) {
   try {
     const userId = auth.current.user.id;
     const { searchParams } = new URL(request.url);
-    const box = searchParams.get("box"); // incoming | outgoing | all
-    const status = searchParams.get("status"); // PENDING | ACCEPTED | REJECTED | CANCELED | all
+    const box = searchParams.get("box");
+    const status = searchParams.get("status");
 
     const whereBase =
       box === "incoming"
@@ -115,6 +116,7 @@ export async function POST(request: Request) {
 
   try {
     const requesterUserId = auth.current.user.id;
+    const requesterUsername = auth.current.user.username;
     const body = await request.json().catch(() => ({} as Record<string, unknown>));
     const targetUserId =
       typeof body.targetUserId === "string" ? body.targetUserId.trim() : "";
@@ -140,10 +142,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const targetUser = await prisma.user.findUnique({
-      where: { id: targetUserId },
-      select: { id: true, directMessagesEnabled: true },
-    });
+    const [targetUser, blockRelation] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: { id: true, directMessagesEnabled: true },
+      }),
+      prisma.userBlock.findFirst({
+        where: {
+          OR: [
+            { blockerUserId: requesterUserId, blockedUserId: targetUserId },
+            { blockerUserId: targetUserId, blockedUserId: requesterUserId },
+          ],
+        },
+        select: { blockerUserId: true, blockedUserId: true },
+      }),
+    ]);
 
     if (!targetUser) {
       return NextResponse.json(
@@ -155,6 +168,19 @@ export async function POST(request: Request) {
       );
     }
 
+    if (blockRelation) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "BLOCK_RELATION_EXISTS",
+            message: "Messaging is not allowed between these users",
+          },
+        },
+        { status: 403 }
+      );
+    }
+
     if (!targetUser.directMessagesEnabled) {
       return NextResponse.json(
         {
@@ -162,6 +188,30 @@ export async function POST(request: Request) {
           error: {
             code: "DM_CLOSED",
             message: "This user has disabled private message requests",
+          },
+        },
+        { status: 403 }
+      );
+    }
+
+
+    const blockRelation = await prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          { blockerUserId: requesterUserId, blockedUserId: targetUserId },
+          { blockerUserId: targetUserId, blockedUserId: requesterUserId },
+        ],
+      },
+      select: { blockerUserId: true },
+    });
+
+    if (blockRelation) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "BLOCK_RELATION_ACTIVE",
+            message: "Messaging is blocked between these users",
           },
         },
         { status: 403 }
@@ -206,6 +256,23 @@ export async function POST(request: Request) {
         targetUserId,
         status: "PENDING",
         note,
+      },
+    });
+
+    await createInAppNotification({
+      userId: targetUserId,
+      title: "طلب محادثة جديد",
+      body: `لديك طلب محادثة جديد من @${requesterUsername}`,
+      payload: {
+        event: "dm.request.sent",
+        actionUrl: "/messages",
+        entityType: "direct_message_request",
+        entityId: dmRequest.id,
+        metadata: {
+          requesterUserId,
+          requesterUsername,
+          requestId: dmRequest.id,
+        },
       },
     });
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateTimeInMakkah } from "@/lib/date-time";
+import { MessageThreadBlockControls } from "@/components/messages/message-thread-block-controls";
 
 interface ThreadUser {
   id: string;
@@ -71,14 +72,81 @@ export function MessageThreadView({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [liveMessages, setLiveMessages] = useState<ThreadMessage[]>(messages);
+  const [pollingActive, setPollingActive] = useState(true);
+
+  useEffect(() => {
+    setLiveMessages(messages);
+  }, [messages]);
+
+  async function refreshThreadSilently() {
+    try {
+      const res = await fetch(`/api/messages/${threadId}`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (res.status === 401 || res.status === 404) {
+        setPollingActive(false);
+        return;
+      }
+      if (!res.ok) return;
+      const payload = await res.json().catch(() => null);
+      if (!payload?.success) return;
+
+      const next = Array.isArray(payload?.data?.thread?.messages)
+        ? payload.data.thread.messages
+            .map((m: { id?: unknown; body?: unknown; createdAt?: unknown; senderUserId?: unknown }) => ({
+              id: typeof m?.id === "string" ? m.id : "",
+              body: typeof m?.body === "string" ? m.body : "",
+              createdAt: typeof m?.createdAt === "string" ? m.createdAt : "",
+              senderUserId: typeof m?.senderUserId === "string" ? m.senderUserId : "",
+            }))
+            .filter((m: ThreadMessage) => m.id && m.createdAt && m.senderUserId)
+        : [];
+
+      setLiveMessages(next);
+    } catch {
+      // silent
+    }
+  }
+
+  useEffect(() => {
+    if (!pollingActive) return;
+
+    let active = true;
+
+    const run = async () => {
+      if (!active) return;
+      if (document.visibilityState !== "visible") return;
+      await refreshThreadSilently();
+    };
+
+    const id = window.setInterval(run, 1500);
+    const onFocus = () => { void run(); };
+    const onSent = () => { void run(); };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("dm:sent", onSent);
+
+    return () => {
+      active = false;
+      window.clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("dm:sent", onSent);
+    };
+  }, [threadId, pollingActive]);
 
   const sortedMessages = useMemo(
     () =>
-      [...messages].sort(
+      [...liveMessages].sort(
         (first, second) =>
           new Date(first.createdAt).getTime() - new Date(second.createdAt).getTime()
       ),
-    [messages]
+    [liveMessages]
   );
 
   const messageIds = sortedMessages.map((m) => m.id);
@@ -203,6 +271,8 @@ export function MessageThreadView({
             @{otherUser.username}
           </span>
         </div>
+
+        <MessageThreadBlockControls targetUserId={otherUser.id} locale={locale} />
       </header>
 
       <div

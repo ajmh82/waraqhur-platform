@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 import { prisma } from "@/lib/prisma";
+import { createInAppNotification } from "@/services/notification-service";
 
 async function requireSessionUser() {
   const cookieStore = await cookies();
@@ -63,6 +64,10 @@ export async function PATCH(
 
     const dmRequest = await prisma.directMessageRequest.findUnique({
       where: { id: requestId },
+      include: {
+        requester: { select: { id: true, username: true } },
+        target: { select: { id: true, username: true } },
+      },
     });
 
     if (!dmRequest) {
@@ -102,6 +107,19 @@ export async function PATCH(
         data: { status: "CANCELED", respondedAt: new Date() },
       });
 
+      await prisma.notification.updateMany({
+        where: {
+          userId,
+          channel: "IN_APP",
+          readAt: null,
+          AND: [
+            { payload: { path: ["event"], equals: "dm.request.sent" } },
+            { payload: { path: ["metadata", "requestId"], equals: dmRequest.id } },
+          ],
+        },
+        data: { status: "READ", readAt: new Date() },
+      });
+
       return NextResponse.json({
         success: true,
         data: {
@@ -128,6 +146,36 @@ export async function PATCH(
         data: { status: "REJECTED", respondedAt: new Date() },
       });
 
+      await createInAppNotification({
+        userId: dmRequest.requesterUserId,
+        title: "تم رفض طلب المحادثة",
+        body: `تم رفض طلب محادثتك من @${dmRequest.target.username}`,
+        payload: {
+          event: "dm.request.rejected",
+          actionUrl: "/messages",
+          entityType: "direct_message_request",
+          entityId: dmRequest.id,
+          metadata: {
+            requestId: dmRequest.id,
+            requesterUserId: dmRequest.requesterUserId,
+            targetUserId: dmRequest.targetUserId,
+          },
+        },
+      });
+
+      await prisma.notification.updateMany({
+        where: {
+          userId,
+          channel: "IN_APP",
+          readAt: null,
+          AND: [
+            { payload: { path: ["event"], equals: "dm.request.sent" } },
+            { payload: { path: ["metadata", "requestId"], equals: dmRequest.id } },
+          ],
+        },
+        data: { status: "READ", readAt: new Date() },
+      });
+
       return NextResponse.json({
         success: true,
         data: {
@@ -136,6 +184,36 @@ export async function PATCH(
           mode: "rejected",
         },
       });
+    }
+
+
+    const blockRelation = await prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          {
+            blockerUserId: dmRequest.requesterUserId,
+            blockedUserId: dmRequest.targetUserId,
+          },
+          {
+            blockerUserId: dmRequest.targetUserId,
+            blockedUserId: dmRequest.requesterUserId,
+          },
+        ],
+      },
+      select: { blockerUserId: true },
+    });
+
+    if (blockRelation) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "BLOCK_RELATION_ACTIVE",
+            message: "Messaging is blocked between these users",
+          },
+        },
+        { status: 403 }
+      );
     }
 
     const [participantAUserId, participantBUserId] =
@@ -157,6 +235,37 @@ export async function PATCH(
     const updated = await prisma.directMessageRequest.update({
       where: { id: dmRequest.id },
       data: { status: "ACCEPTED", respondedAt: new Date() },
+    });
+
+    await createInAppNotification({
+      userId: dmRequest.requesterUserId,
+      title: "تم قبول طلب المحادثة",
+      body: `وافق @${dmRequest.target.username} على طلب المحادثة`,
+      payload: {
+        event: "dm.request.accepted",
+        actionUrl: `/messages/${thread.id}`,
+        entityType: "direct_message_request",
+        entityId: dmRequest.id,
+        metadata: {
+          requestId: dmRequest.id,
+          threadId: thread.id,
+          requesterUserId: dmRequest.requesterUserId,
+          targetUserId: dmRequest.targetUserId,
+        },
+      },
+    });
+
+    await prisma.notification.updateMany({
+      where: {
+        userId,
+        channel: "IN_APP",
+        readAt: null,
+        AND: [
+          { payload: { path: ["event"], equals: "dm.request.sent" } },
+          { payload: { path: ["metadata", "requestId"], equals: dmRequest.id } },
+        ],
+      },
+      data: { status: "READ", readAt: new Date() },
     });
 
     return NextResponse.json({

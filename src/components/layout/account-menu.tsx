@@ -44,6 +44,17 @@ function toCount(v: unknown): number {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
+function toUnreadNotificationsCount(payload: unknown): number {
+  const root = asRecord(payload);
+  const data = asRecord(root?.data);
+  const notifications = Array.isArray(data?.notifications) ? data.notifications : [];
+
+  return notifications.reduce((sum, item) => {
+    const row = asRecord(item);
+    return row?.readAt ? sum : sum + 1;
+  }, 0);
+}
+
 export function AccountMenu() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -51,6 +62,7 @@ export function AccountMenu() {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   const isArabic =
@@ -69,6 +81,7 @@ export function AccountMenu() {
             settings: "الإعدادات",
             notifications: "الإشعارات",
             messages: "الرسائل الخاصة",
+            blockedUsers: "المحظورون",
             search: "البحث",
             followers: "المتابعون",
             following: "يتابعهم",
@@ -82,6 +95,7 @@ export function AccountMenu() {
             settings: "Settings",
             notifications: "Notifications",
             messages: "Messages",
+            blockedUsers: "Blocked Users",
             search: "Search",
             followers: "Followers",
             following: "Following",
@@ -150,6 +164,7 @@ export function AccountMenu() {
           setUser(null);
           setFollowersCount(0);
           setFollowingCount(0);
+          setUnreadNotifications(0);
         }
       } finally {
         if (active) setLoaded(true);
@@ -163,6 +178,50 @@ export function AccountMenu() {
   }, []);
 
   useEffect(() => {
+    if (!user?.id) {
+      setUnreadNotifications(0);
+      return;
+    }
+
+    let active = true;
+
+    async function loadUnreadNotifications() {
+      try {
+        const res = await fetch("/api/notifications/unread-count", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+
+        const payload = await res.json().catch(() => null);
+        if (!active) return;
+
+        if (!res.ok || !payload?.success) {
+          setUnreadNotifications(0);
+          return;
+        }
+
+        setUnreadNotifications(toUnreadNotificationsCount(payload));
+      } catch {
+        if (active) {
+          setUnreadNotifications(0);
+        }
+      }
+    }
+
+    void loadUnreadNotifications();
+    const id = setInterval(() => {
+      void loadUnreadNotifications();
+    }, 15000);
+
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (!rootRef.current) return;
       if (!rootRef.current.contains(e.target as Node)) setOpen(false);
@@ -172,6 +231,9 @@ export function AccountMenu() {
   }, [open]);
 
   function go(path: string) {
+    if (path === "/notifications") {
+      setHasUnreadNotifications(false);
+    }
     setOpen(false);
     router.push(path);
   }
@@ -182,6 +244,7 @@ export function AccountMenu() {
     } finally {
       setOpen(false);
       setUser(null);
+      setUnreadNotifications(0);
       router.replace("/login");
       router.refresh();
     }
@@ -209,6 +272,7 @@ export function AccountMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="Open account menu"
+        style={{ position: "relative" }}
       >
         {user.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -218,6 +282,22 @@ export function AccountMenu() {
             {user.displayName.slice(0, 1).toUpperCase()}
           </span>
         )}
+
+        {unreadNotifications > 0 ? (
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: 2,
+              insetInlineEnd: 2,
+              width: 10,
+              height: 10,
+              borderRadius: "999px",
+              background: "#ef4444",
+              boxShadow: "0 0 0 2px rgba(11,18,32,0.96), 0 0 12px rgba(239,68,68,0.55)",
+            }}
+          />
+        ) : null}
       </button>
 
       {open ? (
@@ -243,8 +323,9 @@ export function AccountMenu() {
             <button type="button" onClick={() => go("/dashboard")}>{t.dashboard}</button>
             <button type="button" onClick={() => go("/dashboard/profile")}>{t.profile}</button>
             <button type="button" onClick={() => go("/dashboard/settings")}>{t.settings}</button>
-            <button type="button" onClick={() => go("/notifications")}>{t.notifications}</button>
+            <button type="button" onClick={() => go("/notifications")}><span>{t.notifications}</span>{hasUnreadNotifications ? <span className="account-menu__item-dot" aria-hidden="true" /> : null}</button>
             <button type="button" onClick={() => go("/messages")}>{t.messages}</button>
+            <button type="button" onClick={() => go("/dashboard/settings/blocks")}>{t.blockedUsers}</button>
             <button type="button" onClick={() => go("/search")}>{t.search}</button>
             <button type="button" className="account-menu__logout" onClick={handleLogout}>
               {t.logout}
