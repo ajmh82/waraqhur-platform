@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { SearchExplorer } from "@/components/search/search-explorer";
+import { PullToRefresh } from "@/components/navigation/pull-to-refresh";
 
 export default async function SearchPage({
   searchParams,
@@ -14,9 +15,11 @@ export default async function SearchPage({
 
   return (
     <AppShell>
-      <section className="page-section">
-        <SearchExplorer initialQuery={initialQuery} locale={locale} />
-      </section>
+      <PullToRefresh locale={locale}>
+        <section className="page-section">
+          <SearchExplorer initialQuery={initialQuery} locale={locale} />
+        </section>
+      </PullToRefresh>
     </AppShell>
   );
 }

@@ -3,6 +3,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { MediaGallery } from "@/components/media/media-gallery";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiGet } from "@/lib/web-api";
+import { PullToRefresh } from "@/components/navigation/pull-to-refresh";
 
 interface TimelineMediaPageData {
   posts: Array<{
@@ -46,14 +47,16 @@ export default async function MediaPage() {
   if (!data || error) {
     return (
       <AppShell>
-        <section className="page-section">
-          <ErrorState
-            title={locale === "en" ? "Failed to load media" : "تعذر تحميل الوسائط"}
-            description={
-              error ?? (locale === "en" ? "Failed to load media page." : "تعذر تحميل صفحة الوسائط.")
-            }
-          />
-        </section>
+        <PullToRefresh locale={locale}>
+          <section className="page-section">
+            <ErrorState
+              title={locale === "en" ? "Failed to load media" : "تعذر تحميل الوسائط"}
+              description={
+                error ?? (locale === "en" ? "Failed to load media page." : "تعذر تحميل صفحة الوسائط.")
+              }
+            />
+          </section>
+        </PullToRefresh>
       </AppShell>
     );
   }
@@ -89,9 +92,11 @@ export default async function MediaPage() {
 
   return (
     <AppShell>
-      <section className="page-section">
-        <MediaGallery locale={locale} items={items} />
-      </section>
+      <PullToRefresh locale={locale}>
+        <section className="page-section">
+          <MediaGallery locale={locale} items={items} />
+        </section>
+      </PullToRefresh>
     </AppShell>
   );
 }

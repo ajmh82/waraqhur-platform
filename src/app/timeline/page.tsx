@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { apiGet } from "@/lib/web-api";
 import { TimelineList } from "@/components/content/timeline-list";
+import { PullToRefresh } from "@/components/navigation/pull-to-refresh";
 
 type TimelinePost = {
   id: string;
@@ -79,32 +80,34 @@ export default async function TimelinePage({
 
   return (
     <AppShell>
-      <section className="page-section" style={{ display: "grid", gap: 12 }}>
-        <div className="state-card" style={{ padding: 12, display: "grid", gap: 10 }}>
-          <div className="timeline-sort-tabs" style={{ minHeight: 0 }}>
-            <Link
-              href={`/timeline?mode=people&sort=${encodeURIComponent(sort)}`}
-              className={`btn small ${mode === "people" ? "btn-action" : ""}`}
-            >
-              {locale === "en" ? "Waraq" : "ورق"}
-            </Link>
-            <Link
-              href={`/timeline?mode=sources&sort=${encodeURIComponent(sort)}`}
-              className={`btn small ${mode === "sources" ? "btn-action" : ""}`}
-            >
-              {locale === "en" ? "My Sources" : "مصادري"}
-            </Link>
+      <PullToRefresh locale={locale}>
+        <section className="page-section" style={{ display: "grid", gap: 12 }}>
+          <div className="state-card" style={{ padding: 12, display: "grid", gap: 10 }}>
+            <div className="timeline-sort-tabs" style={{ minHeight: 0 }}>
+              <Link
+                href={`/timeline?mode=people&sort=${encodeURIComponent(sort)}`}
+                className={`btn small ${mode === "people" ? "btn-action" : ""}`}
+              >
+                {locale === "en" ? "Waraq" : "ورق"}
+              </Link>
+              <Link
+                href={`/timeline?mode=sources&sort=${encodeURIComponent(sort)}`}
+                className={`btn small ${mode === "sources" ? "btn-action" : ""}`}
+              >
+                {locale === "en" ? "My Sources" : "مصادري"}
+              </Link>
+            </div>
           </div>
-        </div>
 
-        {posts.length === 0 ? (
-          <div className="state-card" style={{ padding: 16 }}>
-            {locale === "en" ? "No posts found." : "لا توجد منشورات."}
-          </div>
-        ) : (
-          <TimelineList posts={posts} />
-        )}
-      </section>
+          {posts.length === 0 ? (
+            <div className="state-card" style={{ padding: 16 }}>
+              {locale === "en" ? "No posts found." : "لا توجد منشورات."}
+            </div>
+          ) : (
+            <TimelineList posts={posts} />
+          )}
+        </section>
+      </PullToRefresh>
     </AppShell>
   );
 }
