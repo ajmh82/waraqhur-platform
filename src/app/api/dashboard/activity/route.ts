@@ -1,149 +1,66 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 
-type ActivityItem = {
-  id: string;
-  at: string;
-  country: string | null;
-  client: string | null;
-  source: "audit" | "current";
-};
-
-type RawAuditRow = {
-  id: string;
-  at: Date | string;
-  action: string;
-  metadata: unknown;
-};
-
-function asObj(v: unknown): Record<string, unknown> | null {
-  return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
-}
-
-function normalizeClientLabel(value: string | null): string | null {
-  if (!value) return null;
-  const s = value.toLowerCase();
-  if (s.includes("edg")) return "Edge";
-  if (s.includes("chrome")) return "Chrome";
-  if (s.includes("safari") && !s.includes("chrome")) return "Safari";
-  if (s.includes("firefox")) return "Firefox";
-  if (s.includes("app")) return "App";
-  if (s.includes("android")) return "Android";
-  if (s.includes("iphone") || s.includes("ios")) return "iOS";
-  return value.length > 28 ? value.slice(0, 28) + "..." : value;
-}
-
-function parseMeta(meta: unknown) {
-  const m =
-    typeof meta === "string"
-      ? (() => {
-          try {
-            return JSON.parse(meta) as Record<string, unknown>;
-          } catch {
-            return null;
-          }
-        })()
-      : asObj(meta);
-
-  if (!m) return { country: null as string | null, client: null as string | null };
-
-  const country =
-    (typeof m.country === "string" && m.country) ||
-    (typeof m.geoCountry === "string" && m.geoCountry) ||
-    (typeof m.ipCountry === "string" && m.ipCountry) ||
-    null;
-
-  const client =
-    (typeof m.client === "string" && m.client) ||
-    (typeof m.platform === "string" && m.platform) ||
-    (typeof m.userAgent === "string" && m.userAgent) ||
-    null;
-
-  return { country, client };
-}
-
-async function requireCurrent() {
-  const cookieStore = await cookies();
-  const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  if (!sessionValue) return null;
-  try {
-    return await getCurrentUserFromSession(sessionValue);
-  } catch {
-    return null;
-  }
-}
-
-async function loadAuditRows(userId: string, since: Date): Promise<RawAuditRow[]> {
-  try {
-    const rows = await prisma.$queryRawUnsafe<RawAuditRow[]>(
-      'SELECT "id", "createdAt" as "at", "action", "metadata" FROM "AuditLog" WHERE "actorUserId" = $1 AND "createdAt" >= $2 ORDER BY "createdAt" DESC LIMIT 100',
-      userId,
-      since
-    );
-    return Array.isArray(rows) ? rows : [];
-  } catch {
-    try {
-      const rows = await prisma.$queryRawUnsafe<RawAuditRow[]>(
-        "SELECT id, createdAt as at, action, metadata FROM AuditLog WHERE actorUserId = ? AND createdAt >= ? ORDER BY createdAt DESC LIMIT 100",
-        userId,
-        since.toISOString()
-      );
-      return Array.isArray(rows) ? rows : [];
-    } catch {
-      return [];
-    }
-  }
-}
-
 export async function GET() {
-  const current = await requireCurrent();
-  if (!current) {
+  try {
+    const cookieStore = await cookies();
+    const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: { code: "UNAUTHENTICATED", message: "Authentication required" } },
+        { status: 401 }
+      );
+    }
+
+    const current = await getCurrentUserFromSession(session);
+
+    const sessions = await prisma.userSession.findMany({
+      where: { userId: current.user.id },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      select: {
+        id: true,
+        ipAddress: true,
+        userAgent: true,
+        createdAt: true,
+        lastUsedAt: true,
+        country: true,
+        deviceType: true,
+        browserName: true,
+        platformName: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        activity: sessions.map((s) => ({
+          id: s.id,
+          createdAt: s.createdAt.toISOString(),
+          lastUsedAt: s.lastUsedAt?.toISOString() ?? null,
+          ipAddress: s.ipAddress ?? null,
+          country: (s as any).country ?? null,
+          deviceType: (s as any).deviceType ?? null,
+          browserName: (s as any).browserName ?? null,
+          platformName: (s as any).platformName ?? null,
+          userAgent: s.userAgent ?? null,
+        })),
+      },
+    });
+  } catch (error) {
     return NextResponse.json(
-      { success: false, error: { code: "UNAUTHENTICATED", message: "Authentication required" } },
-      { status: 401 }
+      {
+        success: false,
+        error: {
+          code: "DASHBOARD_ACTIVITY_FAILED",
+          message: error instanceof Error ? error.message : "Failed to load activity",
+        },
+      },
+      { status: 400 }
     );
   }
-
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const rows = await loadAuditRows(current.user.id, since);
-
-  const loginLike = rows.filter((r) =>
-    ["LOGIN", "LOGIN_SUCCESS", "SESSION_CREATED", "AUTH_LOGIN", "USER_LOGIN", "SESSION_TOUCH"].includes(String(r.action))
-  );
-
-  const items: ActivityItem[] = loginLike.map((r) => {
-    const meta = parseMeta(r.metadata);
-    return {
-      id: String(r.id),
-      at: typeof r.at === "string" ? r.at : r.at.toISOString(),
-      country: meta.country,
-      client: normalizeClientLabel(meta.client),
-      source: "audit",
-    };
-  });
-
-  const currentAt = current.session.lastUsedAt ?? current.session.expiresAt;
-  items.unshift({
-    id: `current-${current.session.id}`,
-    at: new Date(String(currentAt ?? "")).toISOString(),
-    country: null,
-    client: null,
-    source: "current",
-  });
-
-  const dedup = new Map<string, ActivityItem>();
-  for (const item of items) {
-    const k = `${item.at}-${item.source}`;
-    if (!dedup.has(k)) dedup.set(k, item);
-  }
-
-  return NextResponse.json({
-    success: true,
-    data: {
-      items: Array.from(dedup.values()).slice(0, 30),
-    },
-  });
 }

@@ -1,143 +1,109 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import Link from "next/link";
 import { cookies } from "next/headers";
-import { TimelineFeedClient } from "@/components/content/timeline-feed-client";
-import { TimelineSortTabs } from "@/components/content/timeline-sort-tabs";
 import { AppShell } from "@/components/layout/app-shell";
-import { ErrorState } from "@/components/ui/error-state";
 import { apiGet } from "@/lib/web-api";
+import { TimelineList } from "@/components/content/timeline-list";
 
-interface TimelinePageData {
-  posts: Array<{
+type TimelinePost = {
+  id: string;
+  title: string;
+  slug: string | null;
+  excerpt: string | null;
+  content?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+  commentsCount: number;
+  likesCount?: number;
+  repostsCount?: number;
+  bookmarksCount?: number;
+  viewsCount?: number;
+  category: { id: string; name: string; slug: string } | null;
+  source: { id: string; name: string; slug: string } | null;
+  author: {
     id: string;
-    title: string;
-    slug: string | null;
-    excerpt: string | null;
-    content?: string | null;
-    coverImageUrl?: string | null;
-    createdAt: string;
-    updatedAt?: string;
-    commentsCount: number;
-    likesCount?: number;
-    repostsCount?: number;
-    bookmarksCount?: number;
-    viewsCount?: number;
-    category: { id: string; name: string; slug: string } | null;
-    source: { id: string; name: string; slug: string } | null;
-    author: {
-      id: string;
-      email: string;
-      username: string;
-      displayName?: string;
-      avatarUrl?: string | null;
-      isFollowing?: boolean;
-      isOwnProfile?: boolean;
-    } | null;
-    repostOfPost?: {
-      id: string;
-      title: string;
-      slug: string | null;
-      author: { id: string; username: string } | null;
-    } | null;
-    quotedPost?: {
-      id: string;
-      title: string;
-      slug: string | null;
-      author: { id: string; username: string } | null;
-    } | null;
-    metadata?: {
-      ingestion?: {
-        originalUrl?: string | null;
-      };
-      social?: {
-        postKind?: string;
-        hashtags?: string[];
-        mediaType?: "image" | "video" | null;
-        mediaUrl?: string | null;
-      };
-    } | null;
-  }>;
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    hasMore: boolean;
-  };
-}
+    email: string;
+    username: string;
+    displayName?: string;
+    avatarUrl?: string | null;
+    isFollowing?: boolean;
+    isOwnProfile?: boolean;
+  } | null;
+};
 
-type SortMode = "latest" | "smart";
+type SourceTimelineResponse = {
+  posts?: TimelinePost[];
+};
 
-async function loadData(sortMode: SortMode) {
-  try {
-    return {
-      data: await apiGet<TimelinePageData>(
-        `/api/timeline?page=1&limit=5&sort=${sortMode}`
-      ),
-      error: null,
-    };
-  } catch (error) {
-    return {
-      data: null,
-      error:
-        error instanceof Error ? error.message : "تعذر تحميل بيانات الموجز.",
-    };
-  }
-}
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function TimelinePage({
   searchParams,
 }: {
-  searchParams?: Promise<{ sort?: string }>;
+  searchParams?: Promise<{ mode?: string; sort?: string }>;
 }) {
   const params = (await searchParams) ?? {};
+  const mode = (params.mode as string) === "sources" ? "sources" : "people";
+  const sort = (params.sort as string) ?? "latest";
+
   const cookieStore = await cookies();
-  const savedSort = cookieStore.get("timeline_sort")?.value;
   const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
 
-  const sortMode: SortMode =
-    params.sort === "smart" || params.sort === "latest"
-      ? params.sort
-      : savedSort === "smart" || savedSort === "latest"
-        ? savedSort
-        : "latest";
+  let peoplePosts: TimelinePost[] = [];
+  let sourcePosts: TimelinePost[] = [];
 
-  const { data, error } = await loadData(sortMode);
-
-  if (error || !data) {
-    return (
-      <AppShell>
-        <section className="page-section">
-          <ErrorState
-            title={locale === "en" ? "Failed to load timeline" : "تعذر تحميل الموجز"}
-            description={
-              error ??
-              (locale === "en"
-                ? "Failed to load timeline data."
-                : "تعذر تحميل بيانات الموجز.")
-            }
-          />
-        </section>
-      </AppShell>
-    );
+  if (mode === "people") {
+    try {
+      const people = await apiGet<any>("/api/timeline/users");
+      const candidate =
+        (people && Array.isArray(people.data?.posts) && people.data.posts) ||
+        (people && Array.isArray(people.posts) && people.posts) ||
+        (Array.isArray(people) ? people : []);
+      peoplePosts = candidate as TimelinePost[];
+    } catch {
+      peoplePosts = [];
+    }
+  } else {
+    try {
+      const sources = await apiGet<SourceTimelineResponse>(
+        `/api/timeline?page=1&limit=50&sort=${encodeURIComponent(sort)}&mode=sources`
+      );
+      sourcePosts = Array.isArray(sources?.posts) ? sources.posts : [];
+    } catch {
+      sourcePosts = [];
+    }
   }
 
-  const posts = data.posts ?? [];
-  const hasMore = Boolean(data.pagination?.hasMore);
+  const posts = mode === "people" ? peoplePosts : sourcePosts;
 
   return (
     <AppShell>
-      <section className="page-section timeline-top-tabs-wrap">
-        <div className="timeline-top-tabs">
-          <TimelineSortTabs sortMode={sortMode} locale={locale} />
+      <section className="page-section" style={{ display: "grid", gap: 12 }}>
+        <div className="state-card" style={{ padding: 12, display: "grid", gap: 10 }}>
+          <div className="timeline-sort-tabs" style={{ minHeight: 0 }}>
+            <Link
+              href={`/timeline?mode=people&sort=${encodeURIComponent(sort)}`}
+              className={`btn small ${mode === "people" ? "btn-action" : ""}`}
+            >
+              {locale === "en" ? "Waraq" : "ورق"}
+            </Link>
+            <Link
+              href={`/timeline?mode=sources&sort=${encodeURIComponent(sort)}`}
+              className={`btn small ${mode === "sources" ? "btn-action" : ""}`}
+            >
+              {locale === "en" ? "My Sources" : "مصادري"}
+            </Link>
+          </div>
         </div>
-      </section>
 
-      <section className="page-section" style={{ paddingTop: "10px" }}>
-        <TimelineFeedClient
-          initialPosts={posts}
-          initialHasMore={hasMore}
-          sortMode={sortMode}
-          pageSize={5}
-          locale={locale}
-        />
+        {posts.length === 0 ? (
+          <div className="state-card" style={{ padding: 16 }}>
+            {locale === "en" ? "No posts found." : "لا توجد منشورات."}
+          </div>
+        ) : (
+          <TimelineList posts={posts} />
+        )}
       </section>
     </AppShell>
   );
