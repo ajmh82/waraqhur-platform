@@ -55,6 +55,11 @@ export default async function PublicUserPage({
   const repliesCount = asNumber(
     user?.repliesCount ?? asRecord(root?.stats)?.repliesCount ?? asRecord(asRecord(root?.data)?.stats)?.repliesCount
   );
+  const repostsCount = Array.isArray(user?.reposts)
+    ? user!.reposts!.length
+    : asNumber(
+        asRecord(root?.stats)?.repostsCount ?? asRecord(asRecord(root?.data)?.stats)?.repostsCount
+      );
 
   return (
     <AppShell>
@@ -86,6 +91,11 @@ export default async function PublicUserPage({
           <Link href={`/u/${encodeURIComponent(viewUsername)}/replies`} className="dashboard-list-item">
             <span className="dashboard-list-item__title">عدد الردود</span>
             <span className="dashboard-list-item__body">{repliesCount}</span>
+          </Link>
+
+          <Link href={`/u/${encodeURIComponent(viewUsername)}/reposts`} className="dashboard-list-item">
+            <span className="dashboard-list-item__title">عدد إعادة النشر</span>
+            <span className="dashboard-list-item__body">{repostsCount}</span>
           </Link>
         </div>
       </section>

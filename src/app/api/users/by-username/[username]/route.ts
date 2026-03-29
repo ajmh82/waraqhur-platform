@@ -252,6 +252,85 @@ export async function GET(
         : null,
     }));
 
+    const repostPosts = canViewContent
+      ? await prisma.post.findMany({
+          where: {
+            authorUserId: user.id,
+            status: "PUBLISHED",
+            repostOfPostId: { not: null },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+          include: {
+            category: true,
+            source: true,
+            comments: true,
+            likes: true,
+            reposts: true,
+            bookmarks: true,
+            repostOfPost: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                author: {
+                  select: {
+                    id: true,
+                    username: true,
+                  },
+                },
+              },
+            },
+          },
+        })
+      : [];
+
+    const reposts = repostPosts.map((post) => ({
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      excerpt: post.excerpt,
+      createdAt: post.createdAt.toISOString(),
+      commentsCount: post.comments.length,
+      likesCount: post.likes.length,
+      repostsCount: post.reposts.length,
+      bookmarksCount: post.bookmarks.length,
+      viewsCount:
+        post.comments.length +
+        post.likes.length +
+        post.reposts.length +
+        post.bookmarks.length +
+        1,
+      category: post.category
+        ? {
+            id: post.category.id,
+            name: post.category.name,
+            slug: post.category.slug,
+          }
+        : null,
+      source: post.source
+        ? {
+            id: post.source.id,
+            name: post.source.name,
+            slug: post.source.slug,
+          }
+        : null,
+      repostOfPost: post.repostOfPost
+        ? {
+            id: post.repostOfPost.id,
+            title: post.repostOfPost.title,
+            slug: post.repostOfPost.slug,
+            author: post.repostOfPost.author
+              ? {
+                  id: post.repostOfPost.author.id,
+                  username: post.repostOfPost.author.username,
+                }
+              : null,
+          }
+        : null,
+      isPinned: false,
+    }));
+
     return NextResponse.json({
       success: true,
       data: {
@@ -283,6 +362,7 @@ export async function GET(
           isPrivateAccount,
           posts,
           replies,
+          reposts,
         },
       },
     });
