@@ -32,7 +32,7 @@ type TimelinePost = {
   } | null;
 };
 
-type SourceTimelineResponse = {
+type TimelineResponse = {
   posts?: TimelinePost[];
 };
 
@@ -51,32 +51,16 @@ export default async function TimelinePage({
   const cookieStore = await cookies();
   const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
 
-  let peoplePosts: TimelinePost[] = [];
-  let sourcePosts: TimelinePost[] = [];
+  let posts: TimelinePost[] = [];
 
-  if (mode === "people") {
-    try {
-      const people = await apiGet<any>("/api/timeline/users");
-      const candidate =
-        (people && Array.isArray(people.data?.posts) && people.data.posts) ||
-        (people && Array.isArray(people.posts) && people.posts) ||
-        (Array.isArray(people) ? people : []);
-      peoplePosts = candidate as TimelinePost[];
-    } catch {
-      peoplePosts = [];
-    }
-  } else {
-    try {
-      const sources = await apiGet<SourceTimelineResponse>(
-        `/api/timeline?page=1&limit=50&sort=${encodeURIComponent(sort)}&mode=sources`
-      );
-      sourcePosts = Array.isArray(sources?.posts) ? sources.posts : [];
-    } catch {
-      sourcePosts = [];
-    }
+  try {
+    const data = await apiGet<TimelineResponse>(
+      `/api/timeline?page=1&limit=50&sort=${encodeURIComponent(sort)}&mode=${encodeURIComponent(mode)}`
+    );
+    posts = Array.isArray(data?.posts) ? data.posts : [];
+  } catch {
+    posts = [];
   }
-
-  const posts = mode === "people" ? peoplePosts : sourcePosts;
 
   return (
     <AppShell>

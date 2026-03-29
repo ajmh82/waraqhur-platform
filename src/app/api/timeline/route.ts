@@ -41,8 +41,10 @@ export async function GET(request: Request) {
   try {
     const currentUserId = await getOptionalCurrentUserId();
     const { searchParams } = new URL(request.url);
+
+    const mode = searchParams.get("mode") === "sources" ? "sources" : "people";
     const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
-    const limit = Math.min(20, Math.max(1, Number(searchParams.get("limit") ?? "10")));
+    const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? "10")));
     const skip = (page - 1) * limit;
 
     const [posts, total] = await Promise.all([
@@ -50,6 +52,7 @@ export async function GET(request: Request) {
         where: {
           status: "PUBLISHED",
           visibility: "PUBLIC",
+          ...(mode === "sources" ? { sourceId: { not: null } } : { sourceId: null }),
         },
         include: {
           category: true,
@@ -84,6 +87,7 @@ export async function GET(request: Request) {
         where: {
           status: "PUBLISHED",
           visibility: "PUBLIC",
+          ...(mode === "sources" ? { sourceId: { not: null } } : { sourceId: null }),
         },
       }),
     ]);
