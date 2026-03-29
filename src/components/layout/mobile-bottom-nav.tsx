@@ -1,22 +1,22 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-function asRecord(v: unknown): Record<string, unknown> | null {
-  return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
-}
+function extractHasUnread(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object") return false;
+  const root = payload as Record<string, unknown>;
+  const data =
+    root.data && typeof root.data === "object"
+      ? (root.data as Record<string, unknown>)
+      : null;
 
-function toUnreadNotificationsCount(payload: unknown): number {
-  const root = asRecord(payload);
-  const data = asRecord(root?.data);
-  const notifications = Array.isArray(data?.notifications) ? data.notifications : [];
+  const hasUnreadDirect = Boolean(data?.hasUnread ?? root.hasUnread);
+  const unreadCountRaw = Number(data?.unreadCount ?? root.unreadCount ?? 0);
 
-  return notifications.reduce((sum, item) => {
-    const row = asRecord(item);
-    return row?.readAt ? sum : sum + 1;
-  }, 0);
+  return hasUnreadDirect || unreadCountRaw > 0;
 }
 
 export function MobileBottomNav() {
@@ -24,8 +24,8 @@ export function MobileBottomNav() {
   const searchParams = useSearchParams();
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -53,16 +53,56 @@ export function MobileBottomNav() {
       }
     }
 
-    void checkAuth();
+    checkAuth();
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setUnreadNotifications(0);
+    if (isAuthenticated === false) {
+      setHasUnreadMessages(false);
+      return;
+    }
+
+    let active = true;
+
+    async function loadUnread() {
+      try {
+        const response = await fetch("/api/messages/unread-count", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          if (active) setHasUnreadMessages(false);
+          return;
+        }
+
+        if (active) setHasUnreadMessages(extractHasUnread(payload));
+      } catch {
+        if (active) setHasUnreadMessages(false);
+      }
+    }
+
+    loadUnread();
+    const id = setInterval(loadUnread, 15000);
+
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, [isAuthenticated, pathname]);
+
+
+  useEffect(() => {
+    if (isAuthenticated === false) {
+      setHasUnreadNotifications(false);
       return;
     }
 
@@ -79,31 +119,29 @@ export function MobileBottomNav() {
 
         const payload = await response.json().catch(() => null);
 
-        if (!active) return;
-
-        if (!response.ok || !payload?.success) {
-          setUnreadNotifications(0);
+        if (!response.ok) {
+          if (active) setHasUnreadNotifications(false);
           return;
         }
 
-        setUnreadNotifications(toUnreadNotificationsCount(payload));
+        if (active) setHasUnreadNotifications(extractHasUnread(payload));
       } catch {
-        if (active) {
-          setUnreadNotifications(0);
-        }
+        if (active) setHasUnreadNotifications(false);
       }
     }
 
     void loadUnreadNotifications();
-    const id = setInterval(() => {
-      void loadUnreadNotifications();
-    }, 15000);
+    const id = setInterval(loadUnreadNotifications, 15000);
+
+    const onChanged = () => void loadUnreadNotifications();
+    window.addEventListener("notifications:changed", onChanged);
 
     return () => {
       active = false;
       clearInterval(id);
+      window.removeEventListener("notifications:changed", onChanged);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, pathname]);
 
   if (pathname === "/compose" || pathname?.startsWith("/compose/")) {
     return null;
@@ -126,9 +164,6 @@ export function MobileBottomNav() {
   const messagesHref =
     isAuthenticated === false ? `/login?next=%2Fmessages` : "/messages";
 
-  const notificationsHref =
-    isAuthenticated === false ? `/login?next=%2Fnotifications` : "/notifications";
-
   const navItems = [
     {
       key: "home",
@@ -138,11 +173,11 @@ export function MobileBottomNav() {
       icon: "⌂",
     },
     {
-      key: "notifications",
-      route: "/notifications",
-      href: notificationsHref,
-      label: isArabic ? "الإشعارات" : "Alerts",
-      icon: "🔔",
+      key: "media",
+      route: "/media",
+      href: "/media",
+      label: isArabic ? "الوسائط" : "Media",
+      icon: "▣",
     },
     {
       key: "compose",
@@ -174,48 +209,41 @@ export function MobileBottomNav() {
   };
 
   return (
-    <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
-      {navItems.map((item) => {
-        const showNotificationDot = item.key === "notifications" && unreadNotifications > 0;
-
-        return (
-          <Link
-            key={item.key}
-            href={item.href}
-            className={`mobile-bottom-nav__item ${isActive(item.route) ? "is-active" : ""} ${
-              "center" in item && item.center ? "is-center" : ""
-            }`}
-            onClick={() => {
-              if (item.key === "notifications") {
-                setUnreadNotifications(0);
-              }
-            }}
-          >
-            <span className="mobile-bottom-nav__icon-wrap" style={{ position: "relative" }}>
-              <span className="mobile-bottom-nav__icon" aria-hidden="true">
-                {item.icon}
-              </span>
-
-              {showNotificationDot ? (
-                <span
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: -3,
-                    insetInlineEnd: -4,
-                    width: 9,
-                    height: 9,
-                    borderRadius: "999px",
-                    background: "#ef4444",
-                    boxShadow: "0 0 0 2px rgba(11,18,32,0.96), 0 0 10px rgba(239,68,68,0.55)",
-                  }}
-                />
-              ) : null}
+    <nav className="mobile-bottom-nav" aria-label="Mobile navigation" style={{ display: "flex" }}>
+      {navItems.map((item) => (
+        <Link
+          key={item.key}
+          href={item.href}
+          className={`mobile-bottom-nav__item ${isActive(item.route) ? "is-active" : ""} ${
+            "center" in item && item.center ? "is-center" : ""
+          }`}
+        >
+          <span className="mobile-bottom-nav__icon-wrap" style={{ position: "relative" }}>
+            <span className="mobile-bottom-nav__icon" aria-hidden="true">
+              {item.icon}
             </span>
-            <span className="mobile-bottom-nav__label">{item.label}</span>
-          </Link>
-        );
-      })}
+
+            {((item.key === "messages" && hasUnreadMessages) || (item.key === "home" && hasUnreadNotifications)) ? (
+              <span
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  top: "-3px",
+                  insetInlineEnd: "-4px",
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "999px",
+                  background: "#ef4444",
+                  border: "2px solid rgba(11,18,32,0.96)",
+                  boxShadow: "0 0 0 2px rgba(239,68,68,0.25)",
+                }}
+              />
+            ) : null}
+          </span>
+
+          <span className="mobile-bottom-nav__label">{item.label}</span>
+        </Link>
+      ))}
     </nav>
   );
 }
