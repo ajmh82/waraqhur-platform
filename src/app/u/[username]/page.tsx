@@ -33,6 +33,8 @@ export default async function PublicUserPage({
 
   const viewUsername = asString(user?.username, username);
   const displayName = asString(profile?.displayName, viewUsername || username);
+  const avatarUrlRaw = asString(profile?.avatarUrl, "");
+  const avatarUrl = avatarUrlRaw.trim() ? avatarUrlRaw : null;
 
   const createdAtRaw = user?.createdAt;
   const createdAt = createdAtRaw
@@ -64,8 +66,38 @@ export default async function PublicUserPage({
   return (
     <AppShell>
       <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
-        <h1 style={{ margin: 0 }}>{displayName}</h1>
-        <p style={{ margin: 0, color: "var(--muted)" }}>@{viewUsername}</p>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <div
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: "999px",
+              overflow: "hidden",
+              flexShrink: 0,
+              background: avatarUrl ? "transparent" : "linear-gradient(135deg, #0ea5e9, #2563eb)",
+              color: "#fff",
+              display: "grid",
+              placeItems: "center",
+              fontSize: "24px",
+              fontWeight: 900,
+            }}
+          >
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            ) : (
+              (displayName || viewUsername || "U").charAt(0).toUpperCase()
+            )}
+          </div>
+
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ margin: 0 }}>{displayName}</h1>
+            <p style={{ margin: 0, color: "var(--muted)" }}>@{viewUsername}</p>
+          </div>
+        </div>
 
         <div className="dashboard-list-nav">
           <div className="dashboard-list-item">
