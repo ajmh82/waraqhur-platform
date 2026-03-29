@@ -36,6 +36,8 @@ const copy = {
     replyFailed: "تعذر إضافة الرد.",
     unknownUser: "مستخدم غير معروف",
     replyDelete: "حذف الرد",
+    openMainReply: "إضافة رد",
+    closeMainReply: "إخفاء نموذج الرد",
   },
   en: {
     replyPlaceholder: "Write your reply here...",
@@ -43,6 +45,8 @@ const copy = {
     replyFailed: "Failed to add reply.",
     unknownUser: "Unknown user",
     replyDelete: "Delete Reply",
+    openMainReply: "Add Reply",
+    closeMainReply: "Hide Reply Form",
   },
 } as const;
 
@@ -191,7 +195,8 @@ function CommentItem({
   const t = copy[locale];
 
   return (
-    <article id={`comment-${comment.id}`}
+    <article
+      id={`comment-${comment.id}`}
       style={{
         marginInlineStart: `${Math.min(depth * 24, 72)}px`,
         border: "1px solid rgba(255,255,255,0.08)",
@@ -249,7 +254,8 @@ function CommentItem({
         </div>
       </div>
 
-      <p dir="auto"
+      <p
+        dir="auto"
         style={{
           margin: 0,
           whiteSpace: "pre-wrap",
@@ -351,6 +357,8 @@ export function ThreadedComments({
 }: ThreadedCommentsProps) {
   const [comments, setComments] = useState<CommentNode[]>(initialComments);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showMainReplyForm, setShowMainReplyForm] = useState(false);
+  const t = copy[locale];
 
   async function refreshComments() {
     const response = await fetch(`/api/posts/${postId}/thread`, {
@@ -370,13 +378,28 @@ export function ThreadedComments({
 
   return (
     <div style={{ display: "grid", gap: "14px" }}>
-      <ReplyForm
-        key={refreshKey}
-        postId={postId}
-        parentId={null}
-        onSuccess={refreshComments}
-        locale={locale}
-      />
+      <div>
+        <button
+          type="button"
+          className="btn small"
+          onClick={() => setShowMainReplyForm((value) => !value)}
+        >
+          {showMainReplyForm ? t.closeMainReply : t.openMainReply}
+        </button>
+      </div>
+
+      {showMainReplyForm ? (
+        <ReplyForm
+          key={refreshKey}
+          postId={postId}
+          parentId={null}
+          onSuccess={() => {
+            setShowMainReplyForm(false);
+            refreshComments();
+          }}
+          locale={locale}
+        />
+      ) : null}
 
       {comments.map((comment) => (
         <CommentItem
