@@ -29,47 +29,27 @@ export async function GET(
     const currentUserId = await getOptionalCurrentUserId();
 
     const user = await prisma.user.findUnique({
-      where: {
-        username,
-      },
+      where: { username },
       include: {
         profile: true,
         userRoles: {
-          include: {
-            role: true,
-          },
-          orderBy: {
-            assignedAt: "asc",
-          },
+          include: { role: true },
+          orderBy: { assignedAt: "asc" },
         },
         authoredPosts: {
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 10,
+          orderBy: { createdAt: "desc" },
+          take: 50,
           include: {
             category: true,
             source: true,
             comments: true,
+            likes: true,
+            reposts: true,
+            bookmarks: true,
           },
         },
         followers: true,
         following: true,
-        authoredComments: {
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 50,
-          include: {
-            post: {
-              select: {
-                id: true,
-                slug: true,
-                title: true,
-              },
-            },
-          },
-        },
       },
     });
 
@@ -87,6 +67,35 @@ export async function GET(
     }
 
     const isOwnProfile = currentUserId === user.id;
+
+    const hasBlockRelation =
+      currentUserId && !isOwnProfile
+        ? Boolean(
+            await prisma.userBlock.findFirst({
+              where: {
+                OR: [
+                  { blockerUserId: currentUserId, blockedUserId: user.id },
+                  { blockerUserId: user.id, blockedUserId: currentUserId },
+                ],
+              },
+              select: { blockerUserId: true },
+            })
+          )
+        : false;
+
+    if (hasBlockRelation) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "PROFILE_BLOCKED",
+            message: "This profile is unavailable",
+          },
+        },
+        { status: 403 }
+      );
+    }
+
     const isFollowing =
       currentUserId && !isOwnProfile
         ? Boolean(
@@ -101,6 +110,148 @@ export async function GET(
           )
         : false;
 
+    const isPrivateAccount = Boolean(user.profile?.isPrivateAccount);
+    const canViewContent = !isPrivateAccount || isOwnProfile || isFollowing;
+
+    const followVisibilityPrivate = Boolean(user.profile?.followVisibilityPrivate);
+    const canShowConnections = !followVisibilityPrivate || isOwnProfile;
+
+    const safeFollowersCount = canShowConnections ? user.followers.length : 0;
+    const safeFollowingCount = canShowConnections ? user.following.length : 0;
+
+    const pinnedPost =
+      canViewContent && user.pinnedPostId
+        ? await prisma.post.findUnique({
+            where: { id: user.pinnedPostId },
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              excerpt: true,
+              createdAt: true,
+              category: true,
+              source: true,
+              comments: true,
+              likes: true,
+              reposts: true,
+              bookmarks: true,
+            },
+          })
+        : null;
+
+    const pinnedPostPayload = pinnedPost
+      ? {
+          id: pinnedPost.id,
+          title: pinnedPost.title,
+          slug: pinnedPost.slug,
+          excerpt: pinnedPost.excerpt,
+          createdAt: pinnedPost.createdAt.toISOString(),
+          commentsCount: pinnedPost.comments.length,
+          likesCount: pinnedPost.likes.length,
+          repostsCount: pinnedPost.reposts.length,
+          bookmarksCount: pinnedPost.bookmarks.length,
+          viewsCount:
+            pinnedPost.comments.length +
+            pinnedPost.likes.length +
+            pinnedPost.reposts.length +
+            pinnedPost.bookmarks.length +
+            1,
+          category: pinnedPost.category
+            ? {
+                id: pinnedPost.category.id,
+                name: pinnedPost.category.name,
+                slug: pinnedPost.category.slug,
+              }
+            : null,
+          source: pinnedPost.source
+            ? {
+                id: pinnedPost.source.id,
+                name: pinnedPost.source.name,
+                slug: pinnedPost.source.slug,
+              }
+            : null,
+          isPinned: true,
+        }
+      : null;
+
+    const mappedPosts = canViewContent
+      ? user.authoredPosts.map((post) => ({
+          id: post.id,
+          title: post.title,
+          slug: post.slug,
+          excerpt: post.excerpt,
+          createdAt: post.createdAt.toISOString(),
+          commentsCount: post.comments.length,
+          likesCount: post.likes.length,
+          repostsCount: post.reposts.length,
+          bookmarksCount: post.bookmarks.length,
+          viewsCount:
+            post.comments.length +
+            post.likes.length +
+            post.reposts.length +
+            post.bookmarks.length +
+            1,
+          category: post.category
+            ? {
+                id: post.category.id,
+                name: post.category.name,
+                slug: post.category.slug,
+              }
+            : null,
+          source: post.source
+            ? {
+                id: post.source.id,
+                name: post.source.name,
+                slug: post.source.slug,
+              }
+            : null,
+          isPinned: user.pinnedPostId === post.id,
+        }))
+      : [];
+
+    const posts = (() => {
+      if (!pinnedPostPayload) return mappedPosts;
+      if (mappedPosts.some((p) => p.id === pinnedPostPayload.id)) {
+        return mappedPosts.map((p) =>
+          p.id === pinnedPostPayload.id ? { ...p, isPinned: true } : p
+        );
+      }
+      return [pinnedPostPayload, ...mappedPosts];
+    })();
+
+    const authoredComments = canViewContent
+      ? await prisma.comment.findMany({
+          where: {
+            authorUserId: user.id,
+            status: "ACTIVE",
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+          include: {
+            post: {
+              select: {
+                id: true,
+                slug: true,
+                title: true,
+              },
+            },
+          },
+        })
+      : [];
+
+    const replies = authoredComments.map((comment) => ({
+      id: comment.id,
+      content: comment.content,
+      createdAt: comment.createdAt.toISOString(),
+      post: comment.post
+        ? {
+            id: comment.post.id,
+            slug: comment.post.slug,
+            title: comment.post.title,
+          }
+        : null,
+    }));
+
     return NextResponse.json({
       success: true,
       data: {
@@ -113,53 +264,25 @@ export async function GET(
             ? {
                 displayName: user.profile.displayName,
                 bio: user.profile.bio,
-                avatarUrl: user.profile.avatarUrl,
+                avatarUrl: user.profile.avatarUrl ?? null,
                 locale: user.profile.locale,
                 timezone: user.profile.timezone,
+                isPrivateAccount: user.profile.isPrivateAccount,
+                showConnectionsPublic: !followVisibilityPrivate,
               }
             : null,
           roles: user.userRoles.map((entry) => ({
             key: entry.role.key,
             name: entry.role.name,
           })),
-          followersCount: user.followers.length,
-          followingCount: user.following.length,
+          followersCount: safeFollowersCount,
+          followingCount: safeFollowingCount,
           isOwnProfile,
+          followVisibilityPrivate,
           isFollowing,
-          posts: user.authoredPosts.map((post) => ({
-            id: post.id,
-            title: post.title,
-            slug: post.slug,
-            excerpt: post.excerpt,
-            createdAt: post.createdAt.toISOString(),
-            commentsCount: post.comments.length,
-            category: post.category
-              ? {
-                  id: post.category.id,
-                  name: post.category.name,
-                  slug: post.category.slug,
-                }
-              : null,
-            source: post.source
-              ? {
-                  id: post.source.id,
-                  name: post.source.name,
-                  slug: post.source.slug,
-                }
-              : null,
-          })),
-          replies: user.authoredComments.map((comment) => ({
-            id: comment.id,
-            content: comment.content,
-            createdAt: comment.createdAt.toISOString(),
-            post: comment.post
-              ? {
-                  id: comment.post.id,
-                  slug: comment.post.slug,
-                  title: comment.post.title,
-                }
-              : null,
-          })),
+          isPrivateAccount,
+          posts,
+          replies,
         },
       },
     });
