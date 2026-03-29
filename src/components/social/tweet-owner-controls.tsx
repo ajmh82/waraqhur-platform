@@ -9,6 +9,7 @@ interface TweetOwnerControlsProps {
   initialContent: string;
   initialMediaUrl?: string | null;
   initialMediaType?: "image" | "video" | null;
+  initialIsPinned?: boolean;
   compact?: boolean;
   locale?: "ar" | "en";
 }
@@ -35,6 +36,11 @@ const copy = {
     uploadFailed: "تعذر رفع الملف.",
     removeMedia: "حذف الوسائط الحالية",
     placeholder: "عدّل نص التغريدة...",
+    pin: "تثبيت التغريدة",
+    unpin: "إلغاء التثبيت",
+    pinShort: "تثبيت",
+    unpinShort: "إلغاء التثبيت",
+    pinFailed: "تعذر تحديث حالة التثبيت.",
   },
   en: {
     edit: "Edit Post",
@@ -54,6 +60,11 @@ const copy = {
     uploadFailed: "Failed to upload file.",
     removeMedia: "Remove current media",
     placeholder: "Edit your post text...",
+    pin: "Pin Post",
+    unpin: "Unpin Post",
+    pinShort: "Pin",
+    unpinShort: "Unpin",
+    pinFailed: "Failed to update pin state.",
   },
 } as const;
 
@@ -62,6 +73,7 @@ export function TweetOwnerControls({
   initialContent,
   initialMediaUrl = null,
   initialMediaType = null,
+  initialIsPinned = false,
   compact = false,
   locale = "ar",
 }: TweetOwnerControlsProps) {
@@ -73,6 +85,7 @@ export function TweetOwnerControls({
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialMediaUrl);
   const [previewType, setPreviewType] = useState<"image" | "video" | null>(initialMediaType);
   const [removeMedia, setRemoveMedia] = useState(false);
+  const [isPinned, setIsPinned] = useState(initialIsPinned);
   const [error, setError] = useState<string | null>(null);
   const t = copy[locale];
 
@@ -89,6 +102,10 @@ export function TweetOwnerControls({
       URL.revokeObjectURL(objectUrl);
     };
   }, [selectedFile]);
+
+  useEffect(() => {
+    setIsPinned(initialIsPinned);
+  }, [initialIsPinned]);
 
   function resetEditor() {
     setContent(initialContent);
@@ -234,6 +251,30 @@ export function TweetOwnerControls({
     });
   }
 
+  async function handleTogglePin() {
+    setError(null);
+
+    const nextPinned = !isPinned;
+    const method = nextPinned ? "POST" : "DELETE";
+
+    const response = await fetch(`/api/posts/${postId}/pin`, {
+      method,
+      credentials: "include",
+    });
+
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || !payload?.success) {
+      setError(payload?.error?.message ?? t.pinFailed);
+      return;
+    }
+
+    setIsPinned(nextPinned);
+    startTransition(() => {
+      router.refresh();
+    });
+  }
+
   return (
     <div style={{ display: "grid", gap: "10px" }}>
       <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
@@ -250,6 +291,25 @@ export function TweetOwnerControls({
           disabled={isPending}
         >
           {isEditing ? t.cancel : compact ? t.editShort : t.edit}
+        </button>
+
+        <button
+          type="button"
+          className="btn small"
+          onClick={handleTogglePin}
+          disabled={isPending}
+          style={{
+            borderColor: "rgba(45,212,191,0.35)",
+            color: "#99f6e4",
+          }}
+        >
+          {compact
+            ? isPinned
+              ? t.unpinShort
+              : t.pinShort
+            : isPinned
+              ? t.unpin
+              : t.pin}
         </button>
 
         <button
