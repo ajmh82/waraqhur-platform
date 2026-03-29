@@ -27,6 +27,7 @@ interface ThreadedCommentsProps {
   initialComments: CommentNode[];
   currentUserId?: string | null;
   locale?: "ar" | "en";
+  canComment?: boolean;
 }
 
 const copy = {
@@ -38,6 +39,7 @@ const copy = {
     replyDelete: "حذف الرد",
     openMainReply: "إضافة رد",
     closeMainReply: "إخفاء نموذج الرد",
+    commentsLocked: "التعليقات مقفلة لهذه التغريدة حالياً.",
   },
   en: {
     replyPlaceholder: "Write your reply here...",
@@ -47,6 +49,7 @@ const copy = {
     replyDelete: "Delete Reply",
     openMainReply: "Add Reply",
     closeMainReply: "Hide Reply Form",
+    commentsLocked: "Comments are currently locked for this post.",
   },
 } as const;
 
@@ -354,6 +357,7 @@ export function ThreadedComments({
   initialComments,
   currentUserId = null,
   locale = "ar",
+  canComment = true,
 }: ThreadedCommentsProps) {
   const [comments, setComments] = useState<CommentNode[]>(initialComments);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -374,6 +378,22 @@ export function ThreadedComments({
 
     setComments(payload.data.comments);
     setRefreshKey((value) => value + 1);
+  }
+
+  if (!canComment) {
+    return (
+      <div
+        style={{
+          borderRadius: "16px",
+          border: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(255,255,255,0.03)",
+          padding: "14px",
+          color: "var(--muted)",
+        }}
+      >
+        {t.commentsLocked}
+      </div>
+    );
   }
 
   return (

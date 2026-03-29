@@ -64,6 +64,10 @@ export async function POST(request: Request) {
       where: {
         id: input.postId,
       },
+      select: {
+        id: true,
+        commentsEnabled: true,
+      },
     });
 
     if (!post) {
@@ -76,6 +80,19 @@ export async function POST(request: Request) {
           },
         },
         { status: 404 }
+      );
+    }
+
+    if (!post.commentsEnabled) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "COMMENTS_DISABLED",
+            message: "Comments are disabled for this post",
+          },
+        },
+        { status: 403 }
       );
     }
 

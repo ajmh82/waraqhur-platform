@@ -22,6 +22,7 @@ interface PostPageData {
     createdAt: string;
     updatedAt?: string;
     commentsCount: number;
+    commentsEnabled?: boolean;
     likesCount?: number;
     repostsCount?: number;
     bookmarksCount?: number;
@@ -411,7 +412,7 @@ export default async function PostPage({
                   initialContent={mainText}
                   initialMediaUrl={mediaUrl}
                   initialMediaType={mediaType}
-                initialIsPinned={Boolean(post.isPinned)}
+                  initialIsPinned={Boolean(post.isPinned)}
                   locale={locale}
                 />
               ) : null}
@@ -474,6 +475,7 @@ export default async function PostPage({
             initialComments={comments}
             currentUserId={currentUser?.user?.id ?? null}
             locale={locale}
+            canComment={Boolean(post.commentsEnabled)}
           />
         </section>
       </section>

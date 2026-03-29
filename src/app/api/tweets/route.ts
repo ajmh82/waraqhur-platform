@@ -146,6 +146,7 @@ export async function GET(request: Request) {
             updatedAt: post.updatedAt.toISOString(),
             commentsCount: post.comments.length,
             likesCount: post.likes.length,
+            commentsEnabled: post.commentsEnabled,
             category: post.category
               ? {
                   id: post.category.id,
@@ -230,6 +231,8 @@ export async function POST(request: Request) {
       body.mediaType === "image" || body.mediaType === "video"
         ? body.mediaType
         : null;
+    const commentsEnabled =
+      typeof body.commentsEnabled === "boolean" ? body.commentsEnabled : true;
 
     if (!content) {
       return NextResponse.json(
@@ -271,6 +274,7 @@ export async function POST(request: Request) {
         coverImageUrl: mediaType === "image" ? mediaUrl || null : null,
         status: "PUBLISHED",
         visibility: "PUBLIC",
+        commentsEnabled,
         publishedAt: new Date(),
         authorUserId: auth.current.user.id,
         updatedByUserId: auth.current.user.id,
@@ -301,6 +305,7 @@ export async function POST(request: Request) {
             title: post.title,
             excerpt: post.excerpt,
             content: post.content,
+            commentsEnabled: post.commentsEnabled,
             createdAt: post.createdAt.toISOString(),
             updatedAt: post.updatedAt.toISOString(),
           },

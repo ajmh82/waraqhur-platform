@@ -25,6 +25,8 @@ const copy = {
     contentRequired: "نص التغريدة مطلوب.",
     publishFailed: "تعذر نشر التغريدة.",
     removeMedia: "حذف الوسائط",
+    commentsEnabled: "التعليقات مفعلة",
+    commentsDisabled: "التعليقات مقفلة",
     submit: "نشر التغريدة",
     submitting: "جارٍ النشر...",
   },
@@ -40,6 +42,8 @@ const copy = {
     contentRequired: "Post text is required.",
     publishFailed: "Failed to publish post.",
     removeMedia: "Remove media",
+    commentsEnabled: "Comments enabled",
+    commentsDisabled: "Comments locked",
     submit: "Publish",
     submitting: "Publishing...",
   },
@@ -52,6 +56,7 @@ export function ComposeTweetForm({ locale = "ar" }: ComposeTweetFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<"image" | "video" | null>(null);
+  const [commentsEnabled, setCommentsEnabled] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const t = copy[locale];
 
@@ -152,6 +157,7 @@ export function ComposeTweetForm({ locale = "ar" }: ComposeTweetFormProps) {
           content: trimmed,
           mediaUrl: uploaded.mediaUrl,
           mediaType: uploaded.mediaType,
+          commentsEnabled,
         }),
       });
 
@@ -202,6 +208,25 @@ export function ComposeTweetForm({ locale = "ar" }: ComposeTweetFormProps) {
       <label style={{ display: "grid", gap: "6px" }}>
         <span style={{ color: "var(--muted)", fontSize: "14px" }}>{t.mediaLabel}</span>
         <input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" onChange={handleFileChange} />
+      </label>
+
+      <label
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "10px",
+          width: "fit-content",
+          color: "var(--muted)",
+          fontSize: "14px",
+          cursor: "pointer",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={commentsEnabled}
+          onChange={(event) => setCommentsEnabled(event.target.checked)}
+        />
+        <span>{commentsEnabled ? t.commentsEnabled : t.commentsDisabled}</span>
       </label>
 
       {previewUrl ? (
