@@ -3,7 +3,6 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { MessagesInbox } from "@/components/messages/messages-inbox";
-import { MessageGroupsPanel } from "@/components/messages/message-groups-panel";
 import { MessageRequestComposer } from "@/components/messages/message-request-composer";
 import { MessageRequestsPanel } from "@/components/messages/message-requests-panel";
 import { ErrorState } from "@/components/ui/error-state";
@@ -65,7 +64,6 @@ export default async function MessagesPage() {
             }
           />
 
-          <MessageGroupsPanel />
         </section>
       </AppShell>
     );
