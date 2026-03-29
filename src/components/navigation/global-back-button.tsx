@@ -1,32 +1,27 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 export function GlobalBackButton() {
-  const [mounted, setMounted] = useState(false);
-  const [pathname, setPathname] = useState<string>("");
+  const router = useRouter();
+  const pathname = usePathname();
 
-  useEffect(() => {
-    setMounted(true);
-    setPathname(window.location.pathname);
-  }, []);
-
-  if (!mounted) return null;
-  if (!pathname || pathname === "/" || pathname === "/timeline") return null;
+  if (!pathname || pathname === "/" || pathname === "/timeline") {
+    return null;
+  }
 
   return (
     <button
       type="button"
       aria-label="Back"
       onClick={() => {
-        if (window.history.length > 1) {
-          window.history.back();
+        if (typeof window !== "undefined" && window.history.length > 1) {
+          router.back();
           return;
         }
-        window.location.assign("/timeline");
+        router.push("/timeline");
       }}
-      className="global-back-btn"
+      className="global-back-button"
     >
       ←
     </button>
