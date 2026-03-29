@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -53,7 +54,7 @@ export function StoriesStrip() {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [, setImageFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
 
   const [tool, setTool] = useState<"move" | "text" | "draw">("move");
