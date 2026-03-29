@@ -35,24 +35,16 @@ export async function GET(
         profile: true,
         followers: includeFollowers
           ? {
-              include: {
-                follower: {
-                  include: {
-                    profile: true,
-                  },
-                },
+              select: {
+                followerId: true,
               },
               orderBy: { createdAt: "desc" },
             }
           : false,
         following: includeFollowing
           ? {
-              include: {
-                following: {
-                  include: {
-                    profile: true,
-                  },
-                },
+              select: {
+                followingId: true,
               },
               orderBy: { createdAt: "desc" },
             }
@@ -70,28 +62,79 @@ export async function GET(
       );
     }
 
-    const followerUsers = includeFollowers
-      ? (user.followers ?? []).map((entry) => entry.follower)
+    const followVisibilityPrivate = Boolean(user.profile?.followVisibilityPrivate);
+    const canShowConnections = !followVisibilityPrivate || viewerUserId === user.id;
+
+    if (!canShowConnections) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            username: user.username,
+            displayName: user.profile?.displayName ?? user.username,
+            avatarUrl: user.profile?.avatarUrl ?? null,
+            followersCount: 0,
+            followingCount: 0,
+          },
+          followers: [],
+          following: [],
+          hidden: true,
+        },
+      });
+    }
+
+    const followerIds = includeFollowers
+      ? (user.followers ?? []).map((entry) => entry.followerId)
       : [];
-    const followingUsers = includeFollowing
-      ? (user.following ?? []).map((entry) => entry.following)
+    const followingIds = includeFollowing
+      ? (user.following ?? []).map((entry) => entry.followingId)
       : [];
 
-    const candidateIds = Array.from(
-      new Set([...followerUsers.map((u) => u.id), ...followingUsers.map((u) => u.id)])
-    );
+    const candidateIds = Array.from(new Set([...followerIds, ...followingIds]));
+    const users = candidateIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: candidateIds } },
+          include: { profile: true },
+        })
+      : [];
+
+    const usersById = new Map(users.map((u) => [u.id, u]));
 
     let viewerFollowingSet = new Set<string>();
     if (viewerUserId && candidateIds.length > 0) {
-      const relations = await prisma.userFollow.findMany({
+      const relations = await prisma.follow.findMany({
         where: {
-          followerUserId: viewerUserId,
-          followingUserId: { in: candidateIds },
+          followerId: viewerUserId,
+          followingId: { in: candidateIds },
         },
-        select: { followingUserId: true },
+        select: { followingId: true },
       });
-      viewerFollowingSet = new Set(relations.map((r) => r.followingUserId));
+
+      viewerFollowingSet = new Set(relations.map((r) => r.followingId));
     }
+
+    const followers = followerIds
+      .map((id) => usersById.get(id))
+      .filter((u): u is NonNullable<typeof u> => Boolean(u))
+      .map((u) => ({
+        id: u.id,
+        username: u.username,
+        displayName: u.profile?.displayName ?? u.username,
+        avatarUrl: u.profile?.avatarUrl ?? null,
+        isFollowing: viewerFollowingSet.has(u.id),
+      }));
+
+    const following = followingIds
+      .map((id) => usersById.get(id))
+      .filter((u): u is NonNullable<typeof u> => Boolean(u))
+      .map((u) => ({
+        id: u.id,
+        username: u.username,
+        displayName: u.profile?.displayName ?? u.username,
+        avatarUrl: u.profile?.avatarUrl ?? null,
+        isFollowing: viewerFollowingSet.has(u.id),
+      }));
 
     return NextResponse.json({
       success: true,
@@ -101,23 +144,11 @@ export async function GET(
           username: user.username,
           displayName: user.profile?.displayName ?? user.username,
           avatarUrl: user.profile?.avatarUrl ?? null,
-          followersCount: user.followersCount ?? followerUsers.length,
-          followingCount: user.followingCount ?? followingUsers.length,
+          followersCount: followers.length,
+          followingCount: following.length,
         },
-        followers: followerUsers.map((u) => ({
-          id: u.id,
-          username: u.username,
-          displayName: u.profile?.displayName ?? u.username,
-          avatarUrl: u.profile?.avatarUrl ?? null,
-          isFollowing: viewerFollowingSet.has(u.id),
-        })),
-        following: followingUsers.map((u) => ({
-          id: u.id,
-          username: u.username,
-          displayName: u.profile?.displayName ?? u.username,
-          avatarUrl: u.profile?.avatarUrl ?? null,
-          isFollowing: viewerFollowingSet.has(u.id),
-        })),
+        followers,
+        following,
       },
     });
   } catch (error) {
