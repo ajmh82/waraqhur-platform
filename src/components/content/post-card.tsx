@@ -24,6 +24,7 @@ interface PostCardProps {
     repostsCount?: number;
     bookmarksCount?: number;
     viewsCount?: number;
+    isPinned?: boolean;
     metadata?: {
       ingestion?: {
         provider?: string;
@@ -382,6 +383,7 @@ export function PostCard({
                 initialContent={mainText}
                 initialMediaUrl={mediaUrl}
                 initialMediaType={mediaType}
+                initialIsPinned={Boolean(post.isPinned)}
                 compact
                 locale={locale}
               />

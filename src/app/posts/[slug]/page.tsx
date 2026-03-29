@@ -26,6 +26,7 @@ interface PostPageData {
     repostsCount?: number;
     bookmarksCount?: number;
     viewsCount?: number;
+    isPinned?: boolean;
     category: { id: string; name: string; slug: string } | null;
     source: { id: string; name: string; slug: string } | null;
     author: {
@@ -410,6 +411,7 @@ export default async function PostPage({
                   initialContent={mainText}
                   initialMediaUrl={mediaUrl}
                   initialMediaType={mediaType}
+                initialIsPinned={Boolean(post.isPinned)}
                   locale={locale}
                 />
               ) : null}
