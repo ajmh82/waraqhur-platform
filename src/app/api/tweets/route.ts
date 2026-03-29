@@ -278,6 +278,7 @@ export async function POST(request: Request) {
         publishedAt: new Date(),
         authorUserId: auth.current.user.id,
         updatedByUserId: auth.current.user.id,
+        sourceId: null,
         metadata: {
           social: {
             postKind: "tweet",

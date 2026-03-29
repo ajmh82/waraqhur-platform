@@ -47,50 +47,53 @@ export async function GET(request: Request) {
     const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? "10")));
     const skip = (page - 1) * limit;
 
-    const [posts, total] = await Promise.all([
-      prisma.post.findMany({
-        where: {
-          status: "PUBLISHED",
-          visibility: "PUBLIC",
-          ...(mode === "sources" ? { sourceId: { not: null } } : { sourceId: null }),
-        },
-        include: {
-          category: true,
-          source: true,
-          author: {
-            include: {
-              profile: true,
-              followers: currentUserId
-                ? {
-                    where: {
-                      followerId: currentUserId,
-                    },
-                    select: {
-                      followerId: true,
-                    },
-                  }
-                : false,
-            },
+    const allPosts = await prisma.post.findMany({
+      where: {
+        status: "PUBLISHED",
+        visibility: "PUBLIC",
+      },
+      include: {
+        category: true,
+        source: true,
+        author: {
+          include: {
+            profile: true,
+            followers: currentUserId
+              ? {
+                  where: {
+                    followerId: currentUserId,
+                  },
+                  select: {
+                    followerId: true,
+                  },
+                }
+              : false,
           },
-          comments: true,
-          likes: true,
-          reposts: true,
-          bookmarks: true,
         },
-        orderBy: {
-          createdAt: "desc",
-        },
-        skip,
-        take: limit,
-      }),
-      prisma.post.count({
-        where: {
-          status: "PUBLISHED",
-          visibility: "PUBLIC",
-          ...(mode === "sources" ? { sourceId: { not: null } } : { sourceId: null }),
-        },
-      }),
-    ]);
+        comments: true,
+        likes: true,
+        reposts: true,
+        bookmarks: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    const filteredPosts = allPosts.filter((post) => {
+      const social = getSocialMetadata(post.metadata);
+      const isTweet = social?.postKind === "tweet";
+      const hasSource = Boolean(post.sourceId);
+
+      if (mode === "people") {
+        return isTweet || !hasSource;
+      }
+
+      return hasSource && !isTweet;
+    });
+
+    const total = filteredPosts.length;
+    const posts = filteredPosts.slice(skip, skip + limit);
 
     return NextResponse.json({
       success: true,
