@@ -1,92 +1,73 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { AppShell } from "@/components/layout/app-shell";
 import { dashboardCopy } from "@/lib/dashboard-copy";
 
 const pageCopy = {
   ar: {
-    overview: "نظرة عامة",
-    description:
-      "هذه هي نقطة الدخول المركزية إلى حسابك، علاقاتك، رسائلك، وإعداداتك داخل المنصة.",
-    quickLinks: [
+    title: "لوحة المستخدم",
+    subtitle: "اختر القسم الذي تريد إدارته.",
+    sections: [
       {
         href: "/dashboard/profile",
         title: "الملف الشخصي",
-        body: "إدارة الاسم والصورة والنبذة.",
+        body: "تعديل الاسم المستعار، الصورة الشخصية، والنبذة.",
       },
       {
         href: "/dashboard/account",
         title: "الحساب",
-        body: "راجع بيانات الحساب الأساسية.",
+        body: "إدارة البريد الإلكتروني واسم المستخدم.",
       },
       {
         href: "/dashboard/security",
         title: "الأمان",
-        body: "حدّث إعدادات الأمان والجلسات.",
-      },
-      {
-        href: "/dashboard/notifications",
-        title: "الإشعارات",
-        body: "راجع تنبيهاتك الأخيرة.",
+        body: "إعدادات الأمان وسجل الدخول.",
       },
       {
         href: "/dashboard/activity",
         title: "النشاط",
-        body: "تابع أحدث نشاطاتك داخل المنصة.",
-      },
-      {
-        href: "/dashboard/settings",
-        title: "الإعدادات",
-        body: "غيّر اللغة والمنطقة الزمنية وتفضيلاتك.",
+        body: "عرض آخر عمليات تسجيل الدخول خلال الأسبوع.",
       },
       {
         href: "/dashboard/invites",
         title: "الدعوات",
-        body: "راجع الدعوات المرتبطة بحسابك.",
+        body: "إدارة الدعوات وإرسال دعوات جديدة.",
       },
     ],
+    open: "فتح",
+    home: "الصفحة الرئيسية",
   },
   en: {
-    overview: "Overview",
-    description:
-      "This is the central entry point to your account, connections, messages, and settings inside the platform.",
-    quickLinks: [
+    title: "User Dashboard",
+    subtitle: "Choose the section you want to manage.",
+    sections: [
       {
         href: "/dashboard/profile",
         title: "Profile",
-        body: "Manage your name, avatar, and bio.",
+        body: "Update nickname, avatar, and bio.",
       },
       {
         href: "/dashboard/account",
         title: "Account",
-        body: "Review your core account details.",
+        body: "Manage email and username.",
       },
       {
         href: "/dashboard/security",
         title: "Security",
-        body: "Update security settings and sessions.",
-      },
-      {
-        href: "/dashboard/notifications",
-        title: "Notifications",
-        body: "Review your latest alerts.",
+        body: "Security settings and sign-in history.",
       },
       {
         href: "/dashboard/activity",
         title: "Activity",
-        body: "Track your latest actions on the platform.",
-      },
-      {
-        href: "/dashboard/settings",
-        title: "Settings",
-        body: "Change language, time zone, and preferences.",
+        body: "See recent sign-ins from the last 7 days.",
       },
       {
         href: "/dashboard/invites",
         title: "Invites",
-        body: "Review invites associated with your account.",
+        body: "Manage and send invitations.",
       },
     ],
+    open: "Open",
+    home: "Home",
   },
 } as const;
 
@@ -97,79 +78,31 @@ export default async function DashboardPage() {
   const p = pageCopy[locale];
 
   return (
-    <AppShell>
-      <section
-        className="dashboard-panel"
-        style={{
-          display: "grid",
-          gap: "18px",
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gap: "6px",
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: "#7dd3fc",
-              fontSize: "12px",
-              fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-            }}
-          >
-            {p.overview}
-          </p>
-
-          <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>
-            {t.dashboard}
-          </h1>
-
-          <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>
-            {p.description}
-          </p>
+    <section className="dashboard-panel" style={{ display: "grid", gap: "18px" }}>
+        <div style={{ display: "grid", gap: "8px" }}>
+          <h1 style={{ margin: 0, fontSize: "30px", lineHeight: 1.2 }}>{p.title}</h1>
+          <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>{p.subtitle}</p>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gap: "14px",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          }}
-        >
-          {p.quickLinks.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="dashboard-card"
-              style={{
-                textDecoration: "none",
-                color: "inherit",
-                padding: "18px",
-                display: "grid",
-                gap: "8px",
-              }}
-            >
-              <strong style={{ fontSize: "16px" }}>{item.title}</strong>
-              <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.7 }}>
-                {item.body}
-              </p>
-              <span
-                style={{
-                  color: "#7dd3fc",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                }}
-              >
-                {t.open}
-              </span>
+        <div>
+          <Link href="/timeline" className="dashboard-list-item" style={{ textDecoration: "none", color: "inherit" }}>
+            <span className="dashboard-list-item__title">{p.home}</span>
+            <span className="dashboard-list-item__body">
+              {locale === "ar" ? "الرجوع إلى التايم لاين." : "Back to timeline."}
+            </span>
+            <span className="dashboard-list-item__open">{p.open}</span>
+          </Link>
+        </div>
+
+        <nav className="dashboard-list-nav" aria-label="Dashboard navigation">
+          {p.sections.map((section) => (
+            <Link key={section.href} href={section.href} className="dashboard-list-item">
+              <span className="dashboard-list-item__title">{section.title}</span>
+              <span className="dashboard-list-item__body">{section.body}</span>
+              <span className="dashboard-list-item__open">{p.open}</span>
             </Link>
           ))}
-        </div>
+        </nav>
       </section>
-    </AppShell>
   );
 }

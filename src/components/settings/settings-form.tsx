@@ -1,56 +1,58 @@
-import Image from "next/image";
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useMemo, useState, useTransition } from "react";
 
 interface SettingsFormProps {
   displayName: string;
   bio: string | null;
   avatarUrl: string | null;
-  locale: string | null;
-  timezone: string | null;
+  locale: string;
+  timezone: string;
 }
 
-const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
+function toLocale(value: string): "ar" | "en" {
+  return value === "en" ? "en" : "ar";
+}
 
-const copy = {
-  ar: {
-    displayName: "الاسم المعروض",
-    language: "اللغة",
-    avatarUrl: "رابط الصورة الرمزية",
-    timezone: "المنطقة الزمنية",
-    bio: "النبذة",
-    bioPlaceholder: "اكتب نبذة مختصرة عنك...",
-    avatarUpload: "رفع صورة",
-    avatarDelete: "حذف الصورة",
-    avatarTypeError: "الصورة الرمزية يجب أن تكون ملف صورة.",
-    avatarSizeError: "حجم الصورة الرمزية يجب ألا يتجاوز 5MB.",
-    avatarUploadError: "تعذر رفع الصورة الرمزية.",
-    saveError: "تعذر حفظ الإعدادات.",
-    saveSuccess: "تم حفظ الإعدادات بنجاح.",
-    save: "حفظ الإعدادات",
-    saving: "جارٍ الحفظ...",
-  },
-  en: {
-    displayName: "Display Name",
-    language: "Language",
-    avatarUrl: "Avatar URL",
-    timezone: "Timezone",
-    bio: "Bio",
-    bioPlaceholder: "Write a short bio about yourself...",
-    avatarUpload: "Upload Image",
-    avatarDelete: "Remove Image",
-    avatarTypeError: "Avatar must be an image file.",
-    avatarSizeError: "Avatar size must not exceed 5MB.",
-    avatarUploadError: "Failed to upload avatar.",
-    saveError: "Failed to save settings.",
-    saveSuccess: "Settings saved successfully.",
-    save: "Save Settings",
-    saving: "Saving...",
-  },
-} as const;
+async function resizeAvatarForUpload(file: File): Promise<File> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(new Error("Failed to read image"));
+    reader.readAsDataURL(file);
+  });
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("Failed to load image"));
+    i.src = dataUrl;
+  });
+
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return file;
+
+  const scale = Math.max(size / img.width, size / img.height);
+  const sw = img.width * scale;
+  const sh = img.height * scale;
+  const dx = (size - sw) / 2;
+  const dy = (size - sh) / 2;
+
+  ctx.clearRect(0, 0, size, size);
+  ctx.drawImage(img, dx, dy, sw, sh);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/webp", 0.9)
+  );
+  if (!blob) return file;
+
+  const base = file.name.replace(/\.[^.]+$/, "");
+  return new File([blob], `${base}-avatar.webp`, { type: "image/webp" });
+}
 
 export function SettingsForm({
   displayName,
@@ -59,310 +61,217 @@ export function SettingsForm({
   locale,
   timezone,
 }: SettingsFormProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-
-  const initialLocaleRef = useRef((locale === "en" ? "en" : "ar") as "ar" | "en");
-
-  const [formDisplayName, setFormDisplayName] = useState(displayName);
+  const [formDisplayName, setFormDisplayName] = useState(displayName ?? "");
   const [formBio, setFormBio] = useState(bio ?? "");
   const [formAvatarUrl, setFormAvatarUrl] = useState(avatarUrl ?? "");
-  const [formLocale, setFormLocale] = useState((locale === "en" ? "en" : "ar") as "ar" | "en");
-  const [formTimezone, setFormTimezone] = useState(timezone ?? "Asia/Bahrain");
+  const [formLocale, setFormLocale] = useState<"ar" | "en">(toLocale(locale));
+  const [formTimezone, setFormTimezone] = useState(timezone || "Asia/Bahrain");
   const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
-  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(
-    avatarUrl ?? null
-  );
+
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  const t = copy[formLocale];
+  const isArabic =
+    typeof document !== "undefined"
+      ? document.documentElement.lang?.toLowerCase().startsWith("ar")
+      : true;
 
-  useEffect(() => {
-    if (!selectedAvatarFile) {
-      setAvatarPreviewUrl(formAvatarUrl.trim() || null);
-      return;
-    }
+  const timezoneOptions = useMemo(() => {
+    try {
+      const fn = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf;
+      if (typeof fn === "function") return fn("timeZone");
+    } catch {}
+    return ["Asia/Bahrain","UTC","Europe/London","Europe/Paris","America/New_York","America/Los_Angeles","Asia/Dubai","Asia/Riyadh","Asia/Kolkata","Asia/Tokyo"];
+  }, []);
 
-    const objectUrl = URL.createObjectURL(selectedAvatarFile);
-    setAvatarPreviewUrl(objectUrl);
+  const t = useMemo(
+    () =>
+      isArabic
+        ? {
+            title: "تحديث الملف الشخصي",
+            displayName: "الاسم المستعار",
+            bio: "النبذة",
+            avatar: "الصورة الشخصية",
+            uploadHint: "اختر صورة من جهازك (PNG/JPG/WebP)",
+            currentAvatar: "الصورة الحالية",
+            locale: "اللغة",
+            timezone: "المنطقة الزمنية",
+            save: "حفظ التغييرات",
+            saving: "جارٍ الحفظ...",
+            success: "تم حفظ التغييرات بنجاح.",
+            failedUpload: "فشل رفع الصورة الشخصية.",
+            failedSave: "تعذر حفظ الإعدادات.",
+          }
+        : {
+            title: "Update Profile",
+            displayName: "Display Name",
+            bio: "Bio",
+            avatar: "Avatar",
+            uploadHint: "Choose an image from your device (PNG/JPG/WebP)",
+            currentAvatar: "Current avatar",
+            locale: "Language",
+            timezone: "Time zone",
+            save: "Save Changes",
+            saving: "Saving...",
+            success: "Changes saved successfully.",
+            failedUpload: "Failed to upload avatar.",
+            failedSave: "Failed to save settings.",
+          },
+    [isArabic]
+  );
 
-    return () => {
-      URL.revokeObjectURL(objectUrl);
-    };
-  }, [selectedAvatarFile, formAvatarUrl]);
-
-  function handleAvatarFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function submitProfile() {
     setError(null);
+    setOk(null);
 
-    const file = event.target.files?.[0] ?? null;
+    let finalAvatarUrl = formAvatarUrl.trim() || null;
 
-    if (!file) {
-      setSelectedAvatarFile(null);
-      return;
+    if (selectedAvatarFile) {
+      const preparedAvatar = await resizeAvatarForUpload(selectedAvatarFile);
+      const formData = new FormData();
+      formData.append("file", preparedAvatar, preparedAvatar.name);
+
+      const uploadResponse = await fetch("/api/uploads", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      const uploadPayload = await uploadResponse.json().catch(() => null);
+
+      if (!uploadResponse.ok || !uploadPayload?.success) {
+        throw new Error(uploadPayload?.error?.message ?? t.failedUpload);
+      }
+
+      finalAvatarUrl =
+        uploadPayload?.data?.url ??
+        uploadPayload?.data?.fileUrl ??
+        uploadPayload?.url ??
+        null;
+
+      if (!finalAvatarUrl) {
+        throw new Error(t.failedUpload);
+      }
     }
 
-    if (!file.type.startsWith("image/")) {
-      setError(t.avatarTypeError);
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > MAX_AVATAR_SIZE) {
-      setError(t.avatarSizeError);
-      event.target.value = "";
-      return;
-    }
-
-    setSelectedAvatarFile(file);
-  }
-
-  async function uploadAvatarIfNeeded() {
-    if (!selectedAvatarFile) {
-      return formAvatarUrl.trim() ? formAvatarUrl.trim() : null;
-    }
-
-    const formData = new FormData();
-    formData.append("file", selectedAvatarFile);
-
-    const response = await fetch("/api/uploads", {
-      method: "POST",
+    const response = await fetch("/api/auth/me", {
+      method: "PATCH",
       credentials: "include",
-      body: formData,
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        displayName: formDisplayName.trim(),
+        bio: formBio.trim() || null,
+        avatarUrl: finalAvatarUrl,
+        locale: formLocale,
+        timezone: formTimezone.trim() || null,
+      }),
     });
 
     const payload = await response.json().catch(() => null);
 
     if (!response.ok || !payload?.success) {
-      throw new Error(payload?.error?.message ?? t.avatarUploadError);
+      throw new Error(payload?.error?.message ?? t.failedSave);
     }
 
-    return typeof payload?.data?.url === "string" ? payload.data.url : null;
+    setFormAvatarUrl(finalAvatarUrl ?? "");
+    setSelectedAvatarFile(null);
+    setOk(t.success);
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const nextAvatarUrl = await uploadAvatarIfNeeded();
-
-      const response = await fetch("/api/auth/me", {
-        method: "PATCH",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          displayName: formDisplayName.trim(),
-          bio: formBio.trim() ? formBio.trim() : null,
-          avatarUrl: nextAvatarUrl,
-          locale: formLocale,
-          timezone: formTimezone.trim() ? formTimezone.trim() : null,
-        }),
+    startTransition(() => {
+      void submitProfile().catch((submitError) => {
+        setOk(null);
+        setError(submitError instanceof Error ? submitError.message : t.failedSave);
       });
-
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok || !payload?.success) {
-        setError(payload?.error?.message ?? t.saveError);
-        return;
-      }
-
-      setSuccess(t.saveSuccess);
-      setSelectedAvatarFile(null);
-
-      const localeChanged = initialLocaleRef.current !== formLocale;
-      initialLocaleRef.current = formLocale;
-
-      startTransition(() => {
-        router.refresh();
-        if (localeChanged && typeof window !== "undefined") {
-          window.location.reload();
-        }
-      });
-    } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : t.saveError
-      );
-    }
+    });
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="state-card"
-      style={{
-        maxWidth: "100%",
-        margin: 0,
-        display: "grid",
-        gap: "16px",
-        padding: "18px",
-      }}
-    >
-      <div
-        style={{
-          display: "grid",
-          gap: "16px",
-          gridTemplateColumns: "minmax(0, 160px) minmax(0, 1fr)",
-          alignItems: "start",
-        }}
-      >
-        <div style={{ display: "grid", gap: "10px", justifyItems: "center" }}>
-          <div
-            style={{
-              width: "112px",
-              height: "112px",
-              borderRadius: "999px",
-              overflow: "hidden",
-              background: avatarPreviewUrl
-                ? "transparent"
-                : "linear-gradient(135deg, #0ea5e9, #2563eb)",
-              color: "#fff",
-              display: "grid",
-              placeItems: "center",
-              fontSize: "34px",
-              fontWeight: 900,
-              border: "1px solid rgba(255,255,255,0.08)",
-            }}
-          >
-            {avatarPreviewUrl ? (
-              <img
-                src={avatarPreviewUrl}
-                alt={formDisplayName}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                }}
-              />
-            ) : (
-              formDisplayName.charAt(0).toUpperCase()
-            )}
-          </div>
+    <form className="settings-form" onSubmit={onSubmit} style={{ display: "grid", gap: 14 }}>
+      <h2 style={{ margin: 0, fontSize: 18 }}>{t.title}</h2>
 
-          <label
-            className="btn small"
-            style={{ cursor: "pointer", width: "100%", justifyContent: "center" }}
-          >
-            {t.avatarUpload}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarFileChange}
-              style={{ display: "none" }}
-            />
-          </label>
+      <label style={{ display: "grid", gap: 6 }}>
+        <span>{t.displayName}</span>
+        <input
+          value={formDisplayName}
+          onChange={(event) => setFormDisplayName(event.target.value)}
+          minLength={2}
+          maxLength={80}
+          required
+          className="settings-form__input"
+        />
+      </label>
 
-          {(selectedAvatarFile || formAvatarUrl) ? (
-            <button
-              type="button"
-              className="btn small"
-              onClick={() => {
-                setSelectedAvatarFile(null);
-                setFormAvatarUrl("");
-                setAvatarPreviewUrl(null);
-              }}
-              disabled={isPending}
-              style={{
-                width: "100%",
-                borderColor: "rgba(248,113,113,0.25)",
-                color: "#fecaca",
-              }}
-            >
-              {t.avatarDelete}
-            </button>
-          ) : null}
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gap: "14px",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          }}
-        >
-          <label style={{ display: "grid", gap: "6px" }}>
-            <span>{t.displayName}</span>
-            <input
-              type="text"
-              value={formDisplayName}
-              onChange={(event) => setFormDisplayName(event.target.value)}
-              minLength={2}
-              maxLength={80}
-              required
-            />
-          </label>
-
-          <label style={{ display: "grid", gap: "6px" }}>
-            <span>{t.language}</span>
-            <select
-              value={formLocale}
-              onChange={(event) => setFormLocale(event.target.value as "ar" | "en")}
-            >
-              <option value="ar">العربية</option>
-              <option value="en">English</option>
-            </select>
-          </label>
-
-          <label style={{ display: "grid", gap: "6px" }}>
-            <span>{t.avatarUrl}</span>
-            <input
-              type="url"
-              value={formAvatarUrl}
-              onChange={(event) => {
-                setFormAvatarUrl(event.target.value);
-                setSelectedAvatarFile(null);
-              }}
-              placeholder="https://example.com/avatar.jpg"
-            />
-          </label>
-
-          <label style={{ display: "grid", gap: "6px" }}>
-            <span>{t.timezone}</span>
-            <select
-              value={formTimezone}
-              onChange={(event) => setFormTimezone(event.target.value)}
-            >
-              <option value="Asia/Bahrain">Asia/Bahrain</option>
-              <option value="Asia/Riyadh">Asia/Riyadh</option>
-              <option value="UTC">UTC</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <label style={{ display: "grid", gap: "6px" }}>
+      <label style={{ display: "grid", gap: 6 }}>
         <span>{t.bio}</span>
         <textarea
           value={formBio}
           onChange={(event) => setFormBio(event.target.value)}
-          rows={5}
           maxLength={280}
-          placeholder={t.bioPlaceholder}
+          rows={4}
+          className="settings-form__input"
         />
       </label>
 
-      {error ? (
-        <p style={{ margin: 0, color: "var(--danger)" }}>{error}</p>
+      <label style={{ display: "grid", gap: 6 }}>
+        <span>{t.avatar}</span>
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          onChange={(event) => setSelectedAvatarFile(event.target.files?.[0] ?? null)}
+          className="settings-form__input"
+        />
+        <small style={{ color: "var(--muted)" }}>{t.uploadHint}</small>
+      </label>
+
+      {formAvatarUrl ? (
+        <div style={{ display: "grid", gap: 6 }}>
+          <span>{t.currentAvatar}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={formAvatarUrl}
+            alt="avatar"
+            style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "1px solid var(--line)" }}
+          />
+        </div>
       ) : null}
 
-      {success ? (
-        <p style={{ margin: 0, color: "#86efac" }}>{success}</p>
-      ) : null}
-
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button
-          type="submit"
-          className="btn-action"
-          disabled={isPending}
+      <label style={{ display: "grid", gap: 6 }}>
+        <span>{t.locale}</span>
+        <select
+          value={formLocale}
+          onChange={(event) => setFormLocale(toLocale(event.target.value))}
+          className="settings-form__input"
         >
-          {isPending ? t.saving : t.save}
-        </button>
-      </div>
+          <option value="ar">العربية</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+
+      <label style={{ display: "grid", gap: 6 }}>
+        <span>{t.timezone}</span>
+        <select
+          value={formTimezone}
+          onChange={(event) => setFormTimezone(event.target.value)}
+          className="settings-form__input"
+        >
+          {timezoneOptions.map((tz) => (
+            <option key={tz} value={tz}>{tz}</option>
+          ))}
+        </select>
+      </label>
+
+      {error ? <p style={{ margin: 0, color: "var(--danger)" }}>{error}</p> : null}
+      {ok ? <p style={{ margin: 0, color: "#86efac" }}>{ok}</p> : null}
+
+      <button type="submit" disabled={isPending} className="settings-form__submit">
+        {isPending ? t.saving : t.save}
+      </button>
     </form>
   );
 }

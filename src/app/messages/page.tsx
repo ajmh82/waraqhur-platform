@@ -1,8 +1,12 @@
+/* eslint-disable @next/next/no-html-link-for-pages */
+import Link from "next/link";
+import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { MessagesInbox } from "@/components/messages/messages-inbox";
+import { MessageRequestComposer } from "@/components/messages/message-request-composer";
+import { MessageRequestsPanel } from "@/components/messages/message-requests-panel";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiGet } from "@/lib/web-api";
-import { cookies } from "next/headers";
 
 interface MessagesPageData {
   threads: Array<{
@@ -44,13 +48,22 @@ export default async function MessagesPage() {
   if (!data || error) {
     return (
       <AppShell>
-        <section className="page-section">
+        <section className="page-section" style={{ display: "grid", gap: 12 }}>
+          <a
+            href="/messages/groups/new"
+            className="btn-action"
+            style={{ width: "fit-content" }}
+          >
+            {locale === "en" ? "Create Group" : "إنشاء مجموعة"}
+          </a>
+
           <ErrorState
             title={locale === "en" ? "Failed to load messages" : "تعذر تحميل الرسائل"}
             description={
               error ?? (locale === "en" ? "Failed to load conversations." : "تعذر تحميل المحادثات.")
             }
           />
+
         </section>
       </AppShell>
     );
@@ -58,7 +71,18 @@ export default async function MessagesPage() {
 
   return (
     <AppShell>
-      <section className="page-section">
+      <section className="page-section" style={{ display: "grid", gap: 12 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link href="/timeline" className="btn small">
+            {locale === "en" ? "Home" : "الصفحة الرئيسية"}
+          </Link>
+          <Link href="/messages" className="btn small">
+            {locale === "en" ? "Messages" : "الرسائل الخاصة"}
+          </Link>
+        </div>
+
+        <MessageRequestComposer locale={locale} />
+        <MessageRequestsPanel locale={locale} />
         <MessagesInbox locale={locale} threads={data.threads ?? []} />
       </section>
     </AppShell>

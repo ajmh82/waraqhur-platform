@@ -1,6 +1,5 @@
-import Image from "next/image";
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";

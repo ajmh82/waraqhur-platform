@@ -1,4 +1,3 @@
-import Image from "next/image";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import { cookies } from "next/headers";
@@ -327,7 +326,7 @@ export default async function PostPage({
                   {renderTextWithHashtags(mainText)}
                 </div>
               ) : (
-                <p style={{ margin: 0, color: "var(--muted)" }}>{t.noText}</p>
+                <p dir="auto" style={{ margin: 0, color: "var(--muted)" }}>{t.noText}</p>
               )}
 
               {mediaUrl && mediaType === "image" ? (
@@ -463,7 +462,7 @@ export default async function PostPage({
         >
           <div style={{ display: "grid", gap: "4px" }}>
             <h2 style={{ margin: 0, fontSize: "22px" }}>{t.comments}</h2>
-            <p style={{ margin: 0, color: "var(--muted)" }}>
+            <p dir="auto" style={{ margin: 0, color: "var(--muted)" }}>
               {comments.length} {t.commentsCount}
             </p>
           </div>

@@ -1,177 +1,104 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
-import { updateCommentSchema } from "@/services/content-schemas";
-import { deleteComment, updateComment } from "@/services/content-service";
-import { userHasPermission } from "@/services/authorization-service";
-import { createAuditLog } from "@/services/audit-log-service";
+import { prisma } from "@/lib/prisma";
 
-export async function PATCH(
-  request: Request,
-  context: { params: Promise<{ commentId: string }> }
-) {
+async function requireSessionUser() {
   const cookieStore = await cookies();
   const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!sessionValue) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
+    return {
+      ok: false as const,
+      response: NextResponse.json(
+        {
+          success: false,
+          error: { code: "UNAUTHENTICATED", message: "Authentication required" },
         },
-      },
-      { status: 401 }
-    );
+        { status: 401 }
+      ),
+    };
   }
 
   try {
     const current = await getCurrentUserFromSession(sessionValue);
-    const canModerateComments = await userHasPermission(
-      current.user.id,
-      "comments.moderate"
-    );
-
-    if (!canModerateComments) {
-      return NextResponse.json(
+    return { ok: true as const, current };
+  } catch {
+    return {
+      ok: false as const,
+      response: NextResponse.json(
         {
           success: false,
-          error: {
-            code: "FORBIDDEN",
-            message: "You do not have permission to update comments",
-          },
+          error: { code: "INVALID_SESSION", message: "Invalid or expired session" },
         },
-        { status: 403 }
-      );
-    }
-
-    const { commentId } = await context.params;
-    const body = await request.json();
-    const input = updateCommentSchema.parse(body);
-    const comment = await updateComment(commentId, input);
-
-    await createAuditLog({
-      actorUserId: current.user.id,
-      actorType: "USER",
-      action: "COMMENT_UPDATED",
-      targetType: "COMMENT",
-      targetId: comment.id,
-      metadata: {
-        postId: comment.postId,
-        status: comment.status,
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        comment,
-      },
-    });
-  } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid comment update payload",
-            details: error.flatten(),
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "COMMENT_UPDATE_FAILED",
-          message:
-            error instanceof Error ? error.message : "Comment update failed",
-        },
-      },
-      { status: 400 }
-    );
+        { status: 401 }
+      ),
+    };
   }
+}
+
+async function collectDescendantCommentIds(rootId: string): Promise<string[]> {
+  const allIds: string[] = [rootId];
+  const queue: string[] = [rootId];
+
+  while (queue.length > 0) {
+    const parentId = queue.shift()!;
+    const children = await prisma.comment.findMany({
+      where: { parentId: parentId },
+      select: { id: true },
+    });
+
+    for (const child of children) {
+      allIds.push(child.id);
+      queue.push(child.id);
+    }
+  }
+
+  return allIds;
 }
 
 export async function DELETE(
   _request: Request,
   context: { params: Promise<{ commentId: string }> }
 ) {
-  const cookieStore = await cookies();
-  const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const auth = await requireSessionUser();
+  if (!auth.ok) return auth.response;
 
-  if (!sessionValue) {
+  const { commentId } = await context.params;
+  const currentUserId = auth.current.user.id;
+
+  const target = await prisma.comment.findUnique({
+    where: { id: commentId },
+    select: { id: true, authorUserId: true },
+  });
+
+  if (!target) {
     return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      },
-      { status: 401 }
+      { success: false, error: { code: "COMMENT_NOT_FOUND", message: "Comment not found" } },
+      { status: 404 }
     );
   }
 
-  try {
-    const current = await getCurrentUserFromSession(sessionValue);
-    const canModerateComments = await userHasPermission(
-      current.user.id,
-      "comments.moderate"
-    );
-
-    if (!canModerateComments) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "FORBIDDEN",
-            message: "You do not have permission to delete comments",
-          },
-        },
-        { status: 403 }
-      );
-    }
-
-    const { commentId } = await context.params;
-    const comment = await deleteComment(commentId);
-
-    await createAuditLog({
-      actorUserId: current.user.id,
-      actorType: "USER",
-      action: "COMMENT_DELETED",
-      targetType: "COMMENT",
-      targetId: comment.id,
-      metadata: {
-        postId: comment.postId,
-        status: comment.status,
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        comment,
-      },
-    });
-  } catch (error) {
+  if (target.authorUserId !== currentUserId) {
     return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "COMMENT_DELETE_FAILED",
-          message:
-            error instanceof Error ? error.message : "Comment delete failed",
-        },
-      },
-      { status: 400 }
+      { success: false, error: { code: "FORBIDDEN", message: "You can only delete your own comment" } },
+      { status: 403 }
     );
   }
+
+  const ids = await collectDescendantCommentIds(commentId);
+
+  await prisma.$transaction([
+    prisma.commentLike.deleteMany({ where: { commentId: { in: ids } } }),
+    prisma.comment.deleteMany({ where: { id: { in: ids } } }),
+  ]);
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      deleted: true,
+      deletedCount: ids.length,
+    },
+  });
 }

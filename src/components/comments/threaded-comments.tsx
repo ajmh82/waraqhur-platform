@@ -1,4 +1,3 @@
-import Image from "next/image";
 "use client";
 
 import { useState } from "react";
@@ -123,7 +122,7 @@ function ReplyForm({
       />
 
       {error ? (
-        <p style={{ margin: 0, color: "var(--danger)", fontSize: "14px" }}>
+        <p dir="auto" style={{ margin: 0, color: "var(--danger)", fontSize: "14px" }}>
           {error}
         </p>
       ) : null}
@@ -192,7 +191,7 @@ function CommentItem({
   const t = copy[locale];
 
   return (
-    <article
+    <article id={`comment-${comment.id}`}
       style={{
         marginInlineStart: `${Math.min(depth * 24, 72)}px`,
         border: "1px solid rgba(255,255,255,0.08)",
@@ -250,7 +249,7 @@ function CommentItem({
         </div>
       </div>
 
-      <p
+      <p dir="auto"
         style={{
           margin: 0,
           whiteSpace: "pre-wrap",

@@ -1,8 +1,9 @@
-import Image from "next/image";
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatDateTimeInMakkah } from "@/lib/date-time";
+import { MessageThreadBlockControls } from "@/components/messages/message-thread-block-controls";
 
 interface ThreadUser {
   id: string;
@@ -19,6 +20,7 @@ interface ThreadMessage {
 }
 
 interface MessageThreadViewProps {
+  threadId: string;
   currentUserId: string;
   otherUser: ThreadUser;
   messages: ThreadMessage[];
@@ -29,13 +31,36 @@ interface MessageThreadViewProps {
 const copy = {
   ar: {
     empty: "لا توجد رسائل بعد. ابدأ أول رسالة الآن.",
+    selectAll: "تحديد الكل",
+    clearSelection: "إلغاء التحديد",
+    deleteSelected: "حذف المحدد",
+    deleteAll: "حذف كل الرسائل",
+    deleteOne: "حذف",
+    deleting: "جارٍ الحذف...",
+    deleteFailed: "تعذر حذف الرسائل.",
+    selectedCount: "محدد",
+    confirmDeleteOne: "هل أنت متأكد من حذف هذه الرسالة؟",
+    confirmDeleteSelected: "هل أنت متأكد من حذف الرسائل المحددة؟",
+    confirmDeleteAll: "هل أنت متأكد من حذف كل الرسائل في المحادثة؟",
   },
   en: {
     empty: "No messages yet. Send the first message now.",
+    selectAll: "Select all",
+    clearSelection: "Clear selection",
+    deleteSelected: "Delete selected",
+    deleteAll: "Delete all",
+    deleteOne: "Delete",
+    deleting: "Deleting...",
+    deleteFailed: "Failed to delete messages.",
+    selectedCount: "selected",
+    confirmDeleteOne: "Are you sure you want to delete this message?",
+    confirmDeleteSelected: "Are you sure you want to delete selected messages?",
+    confirmDeleteAll: "Are you sure you want to delete all messages in this thread?",
   },
 } as const;
 
 export function MessageThreadView({
+  threadId,
   currentUserId,
   otherUser,
   messages,
@@ -43,15 +68,153 @@ export function MessageThreadView({
   locale = "ar",
 }: MessageThreadViewProps) {
   const t = copy[locale];
+  const router = useRouter();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [liveMessages, setLiveMessages] = useState<ThreadMessage[]>(messages);
+  const [pollingActive, setPollingActive] = useState(true);
+
+  useEffect(() => {
+    setLiveMessages(messages);
+  }, [messages]);
+
+  async function refreshThreadSilently() {
+    try {
+      const res = await fetch(`/api/messages/${threadId}`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (res.status === 401 || res.status === 404) {
+        setPollingActive(false);
+        return;
+      }
+      if (!res.ok) return;
+      const payload = await res.json().catch(() => null);
+      if (!payload?.success) return;
+
+      const next = Array.isArray(payload?.data?.thread?.messages)
+        ? payload.data.thread.messages
+            .map((m: { id?: unknown; body?: unknown; createdAt?: unknown; senderUserId?: unknown }) => ({
+              id: typeof m?.id === "string" ? m.id : "",
+              body: typeof m?.body === "string" ? m.body : "",
+              createdAt: typeof m?.createdAt === "string" ? m.createdAt : "",
+              senderUserId: typeof m?.senderUserId === "string" ? m.senderUserId : "",
+            }))
+            .filter((m: ThreadMessage) => m.id && m.createdAt && m.senderUserId)
+        : [];
+
+      setLiveMessages(next);
+    } catch {
+      // silent
+    }
+  }
+
+  useEffect(() => {
+    if (!pollingActive) return;
+
+    let active = true;
+
+    const run = async () => {
+      if (!active) return;
+      if (document.visibilityState !== "visible") return;
+      await refreshThreadSilently();
+    };
+
+    const id = window.setInterval(run, 1500);
+    const onFocus = () => { void run(); };
+    const onSent = () => { void run(); };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("dm:sent", onSent);
+
+    return () => {
+      active = false;
+      window.clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("dm:sent", onSent);
+    };
+  }, [threadId, pollingActive]);
 
   const sortedMessages = useMemo(
     () =>
-      [...messages].sort(
+      [...liveMessages].sort(
         (first, second) =>
           new Date(first.createdAt).getTime() - new Date(second.createdAt).getTime()
       ),
-    [messages]
+    [liveMessages]
   );
+
+  const messageIds = sortedMessages.map((m) => m.id);
+  const isAllSelected =
+    messageIds.length > 0 && messageIds.every((id) => selectedIds.includes(id));
+  const isSelectionMode = selectedIds.length > 0;
+
+  function toggleOne(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
+    );
+  }
+
+  function toggleAll() {
+    setSelectedIds(isAllSelected ? [] : messageIds);
+  }
+
+  async function runDelete(payload: { deleteAll?: boolean; messageIds?: string[] }) {
+    if (isDeleting) return;
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/messages/${threadId}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const apiPayload = await response.json().catch(() => null);
+
+      if (!response.ok || !apiPayload?.success) {
+        setError(apiPayload?.error?.message ?? t.deleteFailed);
+        return;
+      }
+
+      setSelectedIds([]);
+
+      if (apiPayload?.data?.threadDeleted) {
+        router.push("/messages");
+        return;
+      }
+
+      router.refresh();
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  async function deleteMessages(deleteAll: boolean) {
+    if (!deleteAll && selectedIds.length === 0) return;
+
+    const confirmed = deleteAll
+      ? window.confirm(t.confirmDeleteAll)
+      : window.confirm(t.confirmDeleteSelected);
+
+    if (!confirmed) return;
+
+    await runDelete(deleteAll ? { deleteAll: true } : { messageIds: selectedIds });
+  }
+
+  async function deleteSingle(messageId: string) {
+    const confirmed = window.confirm(t.confirmDeleteOne);
+    if (!confirmed) return;
+    await runDelete({ messageIds: [messageId] });
+  }
 
   return (
     <section
@@ -91,6 +254,7 @@ export function MessageThreadView({
           }}
         >
           {otherUser.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={otherUser.avatarUrl}
               alt={otherUser.displayName}
@@ -107,7 +271,51 @@ export function MessageThreadView({
             @{otherUser.username}
           </span>
         </div>
+
+        <MessageThreadBlockControls targetUserId={otherUser.id} locale={locale} />
       </header>
+
+      <div
+        style={{
+          display: "grid",
+          gap: "10px",
+          padding: "12px 18px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(255,255,255,0.02)",
+        }}
+      >
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+          <button type="button" className="btn small" onClick={toggleAll}>
+            {isAllSelected ? t.clearSelection : t.selectAll}
+          </button>
+          <button
+            type="button"
+            className="btn small"
+            disabled={selectedIds.length === 0 || isDeleting}
+            onClick={() => deleteMessages(false)}
+          >
+            {isDeleting ? t.deleting : t.deleteSelected}
+          </button>
+          <button
+            type="button"
+            className="btn small"
+            disabled={sortedMessages.length === 0 || isDeleting}
+            onClick={() => deleteMessages(true)}
+          >
+            {isDeleting ? t.deleting : t.deleteAll}
+          </button>
+        </div>
+
+        <span style={{ color: "var(--muted)", fontSize: "13px" }}>
+          {selectedIds.length} {t.selectedCount}
+        </span>
+
+        {error ? (
+          <p style={{ margin: 0, color: "var(--danger)", fontSize: "14px" }}>
+            {error}
+          </p>
+        ) : null}
+      </div>
 
       <div
         style={{
@@ -133,6 +341,7 @@ export function MessageThreadView({
         ) : (
           sortedMessages.map((message) => {
             const isOwnMessage = message.senderUserId === currentUserId;
+            const checked = selectedIds.includes(message.id);
 
             return (
               <div
@@ -140,13 +349,22 @@ export function MessageThreadView({
                 style={{
                   display: "flex",
                   justifyContent: isOwnMessage ? "flex-start" : "flex-end",
+                  gap: "8px",
+                  alignItems: "flex-start",
                 }}
               >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleOne(message.id)}
+                  style={{ marginTop: "8px" }}
+                />
+
                 <article
                   style={{
                     maxWidth: "min(78%, 520px)",
                     display: "grid",
-                    gap: "6px",
+                    gap: "8px",
                     padding: "12px 14px",
                     borderRadius: "18px",
                     background: isOwnMessage
@@ -162,12 +380,32 @@ export function MessageThreadView({
                     {message.body}
                   </p>
 
-                  <span style={{ fontSize: "12px", color: "var(--muted)" }}>
-                    {formatDateTimeInMakkah(
-                      message.createdAt,
-                      locale === "en" ? "en-US" : "ar-BH"
-                    )}
-                  </span>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "10px",
+                    }}
+                  >
+                    <span style={{ fontSize: "12px", color: "var(--muted)" }}>
+                      {formatDateTimeInMakkah(
+                        message.createdAt,
+                        locale === "en" ? "en-US" : "ar-BH"
+                      )}
+                    </span>
+
+                    {!isSelectionMode ? (
+                      <button
+                        type="button"
+                        className="btn small"
+                        disabled={isDeleting}
+                        onClick={() => deleteSingle(message.id)}
+                      >
+                        {isDeleting ? t.deleting : t.deleteOne}
+                      </button>
+                    ) : null}
+                  </div>
                 </article>
               </div>
             );

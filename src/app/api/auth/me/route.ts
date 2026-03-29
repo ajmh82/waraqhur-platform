@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
@@ -8,10 +8,41 @@ import { prisma } from "@/lib/prisma";
 const updateCurrentUserProfileSchema = z.object({
   displayName: z.string().trim().min(2).max(80),
   bio: z.string().trim().max(280).nullable().optional(),
-  avatarUrl: z.string().trim().url().nullable().optional(),
+  avatarUrl: z.string().trim().refine((v) => v === "" || v.startsWith("/") || /^https?:\/\//.test(v), "Invalid avatar URL").nullable().optional(),
   locale: z.enum(["ar", "en"]).optional().default("ar"),
   timezone: z.string().trim().max(100).nullable().optional(),
 });
+
+async function recordSessionTouch(userId: string, sessionId: string) {
+  try {
+    const h = await headers();
+    const userAgent = h.get("user-agent") ?? null;
+    const country =
+      h.get("x-vercel-ip-country") ??
+      h.get("cf-ipcountry") ??
+      h.get("x-country-code") ??
+      null;
+    const forwardedFor = h.get("x-forwarded-for") ?? null;
+
+    await prisma.auditLog.create({
+      data: {
+        actorUserId: userId,
+        actorType: "USER",
+        entityType: "SESSION",
+        action: "SESSION_TOUCH",
+        metadata: {
+          sessionId,
+          client: userAgent,
+          country,
+          ip: forwardedFor,
+          source: "auth_me",
+        },
+      },
+    });
+  } catch {
+    // non-blocking
+  }
+}
 
 async function requireSessionUser() {
   const cookieStore = await cookies();
@@ -63,14 +94,15 @@ export async function GET() {
     return auth.response;
   }
 
+  await recordSessionTouch(auth.current.user.id, auth.current.session.id);
+
   const profile = await prisma.profile.findUnique({
     where: {
       userId: auth.current.user.id,
     },
   });
 
-  return NextResponse.json({
-    success: true,
+  const payload = {
     user: {
       id: auth.current.user.id,
       email: auth.current.user.email,
@@ -91,6 +123,13 @@ export async function GET() {
       expiresAt: auth.current.session.expiresAt,
       lastUsedAt: auth.current.session.lastUsedAt ?? null,
     },
+  };
+
+  return NextResponse.json({
+    success: true,
+    data: payload,
+    user: payload.user,
+    session: payload.session,
   });
 }
 
@@ -139,6 +178,21 @@ export async function PATCH(request: Request) {
       },
     });
 
+    response.cookies.set("locale", profile.locale ?? "ar", {
+      httpOnly: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 180,
+    });
+
+    response.cookies.set("timezone", profile.timezone ?? "Asia/Bahrain", {
+      httpOnly: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 180,
+    });
+
+    // keep locale cookie update
     response.cookies.set("locale", profile.locale ?? "ar", {
       httpOnly: false,
       sameSite: "lax",

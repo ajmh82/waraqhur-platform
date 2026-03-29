@@ -11,7 +11,11 @@ export type NotificationEventKey =
   | "invitation.accepted"
   | "invitation.revoked"
   | "role.assigned"
-  | "system.announcement";
+  | "system.announcement"
+  | "dm.request.sent"
+  | "dm.request.accepted"
+  | "dm.request.rejected"
+  | "dm.message.received";
 
 export interface NotificationPayload {
   event: NotificationEventKey;

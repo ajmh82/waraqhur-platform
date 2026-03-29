@@ -1,4 +1,3 @@
-import Image from "next/image";
 "use client";
 
 import { useState } from "react";
@@ -268,7 +267,7 @@ export function PostCard({
             ) : null}
 
             {mainText ? (
-              <p
+              <p dir="auto"
                 className="tweet-card__excerpt"
                 style={{
                   whiteSpace: "pre-wrap",
@@ -278,7 +277,7 @@ export function PostCard({
                 {renderTextWithHashtags(mainText)}
               </p>
             ) : (
-              <p
+              <p dir="auto"
                 className="tweet-card__excerpt"
                 style={{ color: "rgba(255,255,255,0.52)" }}
               >
@@ -395,7 +394,7 @@ export function PostCard({
                   fontSize: "13px",
                 }}
               >
-                {t.edited} • {formatDateTimeInMakkah(post.updatedAt!, locale === "en" ? "en-US" : "ar-BH")}
+                {t.edited} • <span suppressHydrationWarning>{formatDateTimeInMakkah(post.updatedAt!, locale === "en" ? "en-US" : "ar-BH")}</span>
               </div>
             ) : null}
 

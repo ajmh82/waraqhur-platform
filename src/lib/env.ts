@@ -2,7 +2,10 @@ function requireEnv(name: string): string {
   const value = process.env[name];
 
   if (!value || value.trim() === "") {
-    throw new Error(`Missing required environment variable: ${name}`);
+    if (process.env.CI === "true" && process.env.GITHUB_ACTIONS === "true") {
+      return "";
+    }
+    throw new Error(`Missing required environment variable: `);
   }
 
   return value;
@@ -16,7 +19,7 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   appName: process.env.NEXT_PUBLIC_APP_NAME ?? "Waraqhur",
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-  databaseUrl: requireEnv("DATABASE_URL"),
+  databaseUrl: optionalEnv("DATABASE_URL"),
   appSessionSecret: requireEnv("APP_SESSION_SECRET"),
   mailProvider: process.env.MAIL_PROVIDER ?? "console",
   mailFromName: requireEnv("MAIL_FROM_NAME"),

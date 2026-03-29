@@ -58,8 +58,7 @@ export function FollowUserButton({
   const following = isFollowing;
 
   return (
-    <button
-      type="button"
+    <button data-follow-button="true" type="button"
       onClick={handleClick}
       disabled={isPending}
       style={{

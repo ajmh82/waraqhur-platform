@@ -96,48 +96,64 @@ enum AuditActorType {
 }
 
 model User {
-  id                     String              @id @default(cuid())
-  email                  String              @unique
-  username               String              @unique
-  passwordHash           String?
-  status                 UserStatus          @default(PENDING)
-  lastLoginAt            DateTime?
-  emailVerifiedAt        DateTime?
-  invitedByInviteId      String?
-  invitedByInvite        Invite?             @relation("InviteAcceptedUsers", fields: [invitedByInviteId], references: [id], onDelete: SetNull)
-  profile                Profile?
-  userRoles              UserRole[]
-  following              Follow[]            @relation("UserFollowing")
-  followers              Follow[]            @relation("UserFollowers")
-  issuedInvites          Invite[]            @relation("InviteIssuer")
-  inviteUsages           InviteUsage[]
-  notifications          Notification[]
-  emailVerifications     EmailVerification[]
-  passwordResets         PasswordReset[]
-  sessions               UserSession[]
-  authoredPosts          Post[]              @relation("PostAuthor")
-  updatedPosts           Post[]              @relation("PostUpdater")
-  comments               Comment[]           @relation("CommentAuthor")
-  likes                  Like[]
-  commentLikes           CommentLike[]
-  bookmarks              Bookmark[]
-  directThreadsAsA       DirectThread[]      @relation("DirectThreadParticipantA")
-  directThreadsAsB       DirectThread[]      @relation("DirectThreadParticipantB")
-  sentDirectMessages     DirectMessage[]     @relation("DirectMessageSender")
-  auditLogs              AuditLog[]
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id                    String                 @id @default(cuid())
+  email                 String                 @unique
+  username              String                 @unique
+  passwordHash          String?
+  status                UserStatus             @default(PENDING)
+  lastLoginAt           DateTime?
+  pinnedPostId          String?
+  emailVerifiedAt       DateTime?
+  directMessagesEnabled Boolean                @default(true)
+  invitedByInviteId     String?
+  invitedByInvite       Invite?                @relation("InviteAcceptedUsers", fields: [invitedByInviteId], references: [id], onDelete: SetNull)
+  profile               Profile?
+  userRoles             UserRole[]
+  following             Follow[]               @relation("UserFollowing")
+  followers             Follow[]               @relation("UserFollowers")
+  issuedInvites         Invite[]               @relation("InviteIssuer")
+  inviteUsages          InviteUsage[]
+  notifications         Notification[]
+  emailVerifications    EmailVerification[]
+  passwordResets        PasswordReset[]
+  sessions              UserSession[]
+  authoredPosts         Post[]                 @relation("PostAuthor")
+  updatedPosts          Post[]                 @relation("PostUpdater")
+  comments              Comment[]              @relation("CommentAuthor")
+  likes                 Like[]
+  commentLikes          CommentLike[]
+  bookmarks             Bookmark[]
+  directThreadsAsA      DirectThread[]         @relation("DirectThreadParticipantA")
+  directThreadsAsB      DirectThread[]         @relation("DirectThreadParticipantB")
+  sentDirectMessages    DirectMessage[]        @relation("DirectMessageSender")
+  dmRequestsSent        DirectMessageRequest[] @relation("DMRequestRequester")
+  dmRequestsReceived    DirectMessageRequest[] @relation("DMRequestTarget")
+  blockedUsers          UserBlock[]            @relation("BlockerUser")
+  blockedByUsers        UserBlock[]            @relation("BlockedUser")
+  auditLogs             AuditLog[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  ownedMessageGroups      MessageGroup[]       @relation("MessageGroupOwner")
+  messageGroupMemberships MessageGroupMember[]
+  sentGroupMessages       GroupMessage[]       @relation("GroupMessageSender")
+
+  followRequestsSent     FollowRequest[] @relation("FollowRequestRequester")
+  followRequestsReceived FollowRequest[] @relation("FollowRequestTarget")
+
+  storiesAuthored Story[]
+  storyViews      StoryView[]
 
   @@index([status])
 }
 
 model Follow {
-  followerId             String
-  followingId            String
-  createdAt              DateTime            @default(now())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
 
-  follower               User                @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
-  following              User                @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@id([followerId, followingId])
   @@index([followingId, createdAt])
@@ -145,84 +161,86 @@ model Follow {
 }
 
 model Profile {
-  id                     String              @id @default(cuid())
-  userId                 String              @unique
-  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  displayName            String
-  bio                    String?
-  avatarUrl              String?
-  locale                 String?
-  timezone               String?
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName             String
+  bio                     String?
+  avatarUrl               String?
+  locale                  String?
+  timezone                String?
+  followVisibilityPrivate Boolean  @default(false)
+  isPrivateAccount        Boolean  @default(false)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }
 
 model Role {
-  id                     String              @id @default(cuid())
-  key                    String              @unique
-  name                   String
-  description            String?
-  isSystem               Boolean             @default(false)
-  rolePermissions        RolePermission[]
-  userRoles              UserRole[]
-  invites                Invite[]
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id              String           @id @default(cuid())
+  key             String           @unique
+  name            String
+  description     String?
+  isSystem        Boolean          @default(false)
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+  invites         Invite[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
 model Permission {
-  id                     String              @id @default(cuid())
-  key                    String              @unique
-  name                   String
-  description            String?
-  rolePermissions        RolePermission[]
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id              String           @id @default(cuid())
+  key             String           @unique
+  name            String
+  description     String?
+  rolePermissions RolePermission[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
 model RolePermission {
-  id                     String              @id @default(cuid())
-  roleId                 String
-  permissionId           String
-  role                   Role                @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission             Permission          @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  createdAt              DateTime            @default(now())
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
 
   @@unique([roleId, permissionId])
   @@index([permissionId])
 }
 
 model UserRole {
-  id                     String              @id @default(cuid())
-  userId                 String
-  roleId                 String
-  assignedByUserId       String?
-  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role                   Role                @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  assignedAt             DateTime            @default(now())
+  id               String   @id @default(cuid())
+  userId           String
+  roleId           String
+  assignedByUserId String?
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role             Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedAt       DateTime @default(now())
 
   @@unique([userId, roleId])
   @@index([roleId])
 }
 
 model Invite {
-  id                     String              @id @default(cuid())
-  email                  String
-  token                  String              @unique
-  status                 InviteStatus        @default(PENDING)
-  roleId                 String?
-  issuerUserId           String
-  maxUses                Int                 @default(1)
-  sentAt                 DateTime?
-  expiresAt              DateTime
-  acceptedAt             DateTime?
-  revokedAt              DateTime?
-  issuerUser             User                @relation("InviteIssuer", fields: [issuerUserId], references: [id], onDelete: Cascade)
-  role                   Role?               @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  usages                 InviteUsage[]
-  acceptedUsers          User[]              @relation("InviteAcceptedUsers")
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id            String        @id @default(cuid())
+  email         String
+  token         String        @unique
+  status        InviteStatus  @default(PENDING)
+  roleId        String?
+  issuerUserId  String
+  maxUses       Int           @default(1)
+  sentAt        DateTime?
+  expiresAt     DateTime
+  acceptedAt    DateTime?
+  revokedAt     DateTime?
+  issuerUser    User          @relation("InviteIssuer", fields: [issuerUserId], references: [id], onDelete: Cascade)
+  role          Role?         @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  usages        InviteUsage[]
+  acceptedUsers User[]        @relation("InviteAcceptedUsers")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@index([email])
   @@index([status])
@@ -231,147 +249,152 @@ model Invite {
 }
 
 model InviteUsage {
-  id                     String              @id @default(cuid())
-  inviteId               String
-  userId                 String
-  invite                 Invite              @relation(fields: [inviteId], references: [id], onDelete: Cascade)
-  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  usedAt                 DateTime            @default(now())
+  id       String   @id @default(cuid())
+  inviteId String
+  userId   String
+  invite   Invite   @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usedAt   DateTime @default(now())
 
   @@unique([inviteId, userId])
   @@index([userId])
 }
 
 model Notification {
-  id                     String              @id @default(cuid())
-  userId                 String
-  channel                NotificationChannel
-  status                 NotificationStatus  @default(QUEUED)
-  title                  String
-  body                   String
-  payload                Json?
-  sentAt                 DateTime?
-  readAt                 DateTime?
-  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id        String              @id @default(cuid())
+  userId    String
+  channel   NotificationChannel
+  status    NotificationStatus  @default(QUEUED)
+  title     String
+  body      String
+  payload   Json?
+  sentAt    DateTime?
+  readAt    DateTime?
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 
   @@index([userId, status])
   @@index([channel, status])
 }
 
 model EmailVerification {
-  id                     String              @id @default(cuid())
-  userId                 String
-  email                  String
-  token                  String              @unique
-  status                 VerificationStatus  @default(PENDING)
-  expiresAt              DateTime
-  verifiedAt             DateTime?
-  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id         String             @id @default(cuid())
+  userId     String
+  email      String
+  token      String             @unique
+  status     VerificationStatus @default(PENDING)
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
 
   @@index([userId, status])
   @@index([email])
 }
 
 model PasswordReset {
-  id                     String              @id @default(cuid())
-  userId                 String
-  token                  String              @unique
-  status                 PasswordResetStatus @default(PENDING)
-  expiresAt              DateTime
-  usedAt                 DateTime?
-  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id        String              @id @default(cuid())
+  userId    String
+  token     String              @unique
+  status    PasswordResetStatus @default(PENDING)
+  expiresAt DateTime
+  usedAt    DateTime?
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 
   @@index([userId, status])
 }
 
 model UserSession {
-  id                     String              @id @default(cuid())
-  userId                 String
-  tokenHash              String              @unique
-  expiresAt              DateTime
-  lastUsedAt             DateTime?
-  revokedAt              DateTime?
-  ipAddress              String?
-  userAgent              String?
-  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id           String    @id @default(cuid())
+  userId       String
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  lastUsedAt   DateTime?
+  revokedAt    DateTime?
+  ipAddress    String?
+  userAgent    String?
+  country      String?
+  deviceType   String?
+  browserName  String?
+  platformName String?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([userId, expiresAt])
   @@index([revokedAt])
 }
 
 model Category {
-  id                     String              @id @default(cuid())
-  slug                   String              @unique
-  name                   String
-  description            String?
-  status                 CategoryStatus      @default(ACTIVE)
-  sortOrder              Int                 @default(0)
-  sources                Source[]
-  posts                  Post[]
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id          String         @id @default(cuid())
+  slug        String         @unique
+  name        String
+  description String?
+  status      CategoryStatus @default(ACTIVE)
+  sortOrder   Int            @default(0)
+  sources     Source[]
+  posts       Post[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@index([status, sortOrder])
 }
 
 model Source {
-  id                     String              @id @default(cuid())
-  categoryId             String
-  slug                   String              @unique
-  name                   String
-  type                   SourceType
-  status                 SourceStatus        @default(ACTIVE)
-  url                    String?
-  handle                 String?
-  config                 Json?
-  lastFetchedAt          DateTime?
-  category               Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  posts                  Post[]
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id            String       @id @default(cuid())
+  categoryId    String
+  slug          String       @unique
+  name          String
+  type          SourceType
+  status        SourceStatus @default(ACTIVE)
+  url           String?
+  handle        String?
+  config        Json?
+  lastFetchedAt DateTime?
+  category      Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  posts         Post[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@index([categoryId, status])
   @@index([type, status])
 }
 
 model Post {
-  id                     String              @id @default(cuid())
-  categoryId             String?
-  sourceId               String?
-  authorUserId           String?
-  updatedByUserId        String?
-  repostOfPostId         String?
-  quotedPostId           String?
-  slug                   String?             @unique
-  title                  String
-  content                String?
-  excerpt                String?
-  coverImageUrl          String?
-  status                 PostStatus          @default(DRAFT)
-  visibility             PostVisibility      @default(PRIVATE)
-  publishedAt            DateTime?
-  metadata               Json?
-  category               Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  source                 Source?             @relation(fields: [sourceId], references: [id], onDelete: SetNull)
-  author                 User?               @relation("PostAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
-  updatedBy              User?               @relation("PostUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
-  repostOfPost           Post?               @relation("PostReposts", fields: [repostOfPostId], references: [id], onDelete: SetNull)
-  reposts                Post[]              @relation("PostReposts")
-  quotedPost             Post?               @relation("PostQuotes", fields: [quotedPostId], references: [id], onDelete: SetNull)
-  quotes                 Post[]              @relation("PostQuotes")
-  comments               Comment[]
-  likes                  Like[]
-  bookmarks              Bookmark[]
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id              String         @id @default(cuid())
+  categoryId      String?
+  sourceId        String?
+  authorUserId    String?
+  updatedByUserId String?
+  repostOfPostId  String?
+  quotedPostId    String?
+  slug            String?        @unique
+  title           String
+  commentsEnabled Boolean        @default(true)
+  content         String?
+  excerpt         String?
+  coverImageUrl   String?
+  status          PostStatus     @default(DRAFT)
+  visibility      PostVisibility @default(PRIVATE)
+  publishedAt     DateTime?
+  metadata        Json?
+  category        Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  source          Source?        @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  author          User?          @relation("PostAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  updatedBy       User?          @relation("PostUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  repostOfPost    Post?          @relation("PostReposts", fields: [repostOfPostId], references: [id], onDelete: SetNull)
+  reposts         Post[]         @relation("PostReposts")
+  quotedPost      Post?          @relation("PostQuotes", fields: [quotedPostId], references: [id], onDelete: SetNull)
+  quotes          Post[]         @relation("PostQuotes")
+  comments        Comment[]
+  likes           Like[]
+  bookmarks       Bookmark[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   @@index([status, visibility])
   @@index([categoryId, status])
@@ -382,12 +405,12 @@ model Post {
 }
 
 model Bookmark {
-  userId                 String
-  postId                 String
-  createdAt              DateTime            @default(now())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
 
-  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post                   Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@id([userId, postId])
   @@index([postId, createdAt])
@@ -395,12 +418,12 @@ model Bookmark {
 }
 
 model Like {
-  userId                 String
-  postId                 String
-  createdAt              DateTime            @default(now())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
 
-  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post                   Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@id([userId, postId])
   @@index([postId, createdAt])
@@ -408,19 +431,19 @@ model Like {
 }
 
 model Comment {
-  id                     String              @id @default(cuid())
-  postId                 String
-  authorUserId           String?
-  parentId               String?
-  content                String
-  status                 CommentStatus       @default(ACTIVE)
-  post                   Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author                 User?               @relation("CommentAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
-  parent                 Comment?            @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies                Comment[]           @relation("CommentReplies")
-  likes                  CommentLike[]
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id           String        @id @default(cuid())
+  postId       String
+  authorUserId String?
+  parentId     String?
+  content      String
+  status       CommentStatus @default(ACTIVE)
+  post         Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author       User?         @relation("CommentAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  parent       Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      Comment[]     @relation("CommentReplies")
+  likes        CommentLike[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@index([postId, status])
   @@index([authorUserId])
@@ -428,27 +451,64 @@ model Comment {
 }
 
 model CommentLike {
-  userId                 String
-  commentId              String
-  createdAt              DateTime            @default(now())
+  userId    String
+  commentId String
+  createdAt DateTime @default(now())
 
-  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comment                Comment             @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
   @@id([userId, commentId])
   @@index([commentId, createdAt])
   @@index([userId, createdAt])
 }
 
+enum DMRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELED
+}
+
+model UserBlock {
+  blockerUserId String
+  blockedUserId String
+  createdAt     DateTime @default(now())
+
+  blocker User @relation("BlockerUser", fields: [blockerUserId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockedUser", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  @@id([blockerUserId, blockedUserId])
+  @@index([blockedUserId, createdAt])
+  @@index([blockerUserId, createdAt])
+}
+
+model DirectMessageRequest {
+  id              String          @id @default(cuid())
+  requesterUserId String
+  targetUserId    String
+  status          DMRequestStatus @default(PENDING)
+  note            String?
+  respondedAt     DateTime?
+  requester       User            @relation("DMRequestRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  target          User            @relation("DMRequestTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([requesterUserId, targetUserId])
+  @@index([targetUserId, status, createdAt])
+  @@index([requesterUserId, status, createdAt])
+}
+
 model DirectThread {
-  id                     String              @id @default(cuid())
-  participantAUserId     String
-  participantBUserId     String
-  participantA           User                @relation("DirectThreadParticipantA", fields: [participantAUserId], references: [id], onDelete: Cascade)
-  participantB           User                @relation("DirectThreadParticipantB", fields: [participantBUserId], references: [id], onDelete: Cascade)
-  messages               DirectMessage[]
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id                 String          @id @default(cuid())
+  participantAUserId String
+  participantBUserId String
+  participantA       User            @relation("DirectThreadParticipantA", fields: [participantAUserId], references: [id], onDelete: Cascade)
+  participantB       User            @relation("DirectThreadParticipantB", fields: [participantBUserId], references: [id], onDelete: Cascade)
+  messages           DirectMessage[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   @@unique([participantAUserId, participantBUserId])
   @@index([participantAUserId, updatedAt])
@@ -456,15 +516,26 @@ model DirectThread {
 }
 
 model DirectMessage {
-  id                     String              @id @default(cuid())
-  threadId               String
-  senderUserId           String
-  body                   String
-  readAt                 DateTime?
-  thread                 DirectThread        @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  sender                 User                @relation("DirectMessageSender", fields: [senderUserId], references: [id], onDelete: Cascade)
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  id                  String                   @id @default(cuid())
+  threadId            String
+  senderUserId        String
+  body                String
+  contentType         DirectMessageContentType @default(TEXT)
+  mediaUrl            String?
+  mediaMimeType       String?
+  mediaSizeBytes      Int?
+  audioDurationSec    Int?
+  viewOnce            Boolean                  @default(false)
+  viewOnceSeconds     Int?
+  openedAt            DateTime?
+  screenshotFlaggedAt DateTime?
+  deletedForViewerAAt DateTime?
+  deletedForViewerBAt DateTime?
+  readAt              DateTime?
+  thread              DirectThread             @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender              User                     @relation("DirectMessageSender", fields: [senderUserId], references: [id], onDelete: Cascade)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
 
   @@index([threadId, createdAt])
   @@index([senderUserId, createdAt])
@@ -472,21 +543,150 @@ model DirectMessage {
 }
 
 model AuditLog {
-  id                     String              @id @default(cuid())
-  actorUserId            String?
-  actorType              AuditActorType
-  action                 String
-  entityType             String
-  entityId               String?
-  summary                String?
-  metadata               Json?
-  ipAddress              String?
-  userAgent              String?
-  actorUser              User?               @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
-  createdAt              DateTime            @default(now())
+  id          String         @id @default(cuid())
+  actorUserId String?
+  actorType   AuditActorType
+  action      String
+  entityType  String
+  entityId    String?
+  summary     String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  actorUser   User?          @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
 
   @@index([actorUserId])
   @@index([entityType, entityId])
   @@index([action])
   @@index([createdAt])
+}
+
+enum DirectMessageContentType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  SYSTEM
+}
+
+model MessageGroup {
+  id          String               @id @default(cuid())
+  name        String
+  ownerUserId String
+  owner       User                 @relation("MessageGroupOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  members     MessageGroupMember[]
+  messages    GroupMessage[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([ownerUserId, createdAt])
+}
+
+model MessageGroupMember {
+  id       String       @id @default(cuid())
+  groupId  String
+  userId   String
+  role     String       @default("member")
+  joinedAt DateTime     @default(now())
+  group    MessageGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId, joinedAt])
+}
+
+model GroupMessage {
+  id               String                   @id @default(cuid())
+  groupId          String
+  senderUserId     String
+  body             String?
+  contentType      DirectMessageContentType @default(TEXT)
+  mediaUrl         String?
+  mediaMimeType    String?
+  mediaSizeBytes   Int?
+  audioDurationSec Int?
+  viewOnce         Boolean                  @default(false)
+  viewOnceSeconds  Int?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  group            MessageGroup             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender           User                     @relation("GroupMessageSender", fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@index([senderUserId, createdAt])
+}
+
+enum FollowRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELED
+}
+
+model FollowRequest {
+  id              String              @id @default(cuid())
+  requesterUserId String
+  targetUserId    String
+  status          FollowRequestStatus @default(PENDING)
+  respondedAt     DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  requester User @relation("FollowRequestRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  target    User @relation("FollowRequestTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterUserId, targetUserId])
+  @@index([targetUserId, status, createdAt])
+  @@index([requesterUserId, status, createdAt])
+}
+
+enum StoryType {
+  IMAGE
+  VIDEO
+  TEXT
+}
+
+enum StoryPrivacy {
+  AUTHENTICATED
+  FOLLOWERS
+  PRIVATE
+  CLOSE_FRIENDS
+}
+
+model Story {
+  id              String       @id @default(cuid())
+  authorUserId    String
+  type            StoryType    @default(IMAGE)
+  mediaUrl        String?
+  thumbnailUrl    String?
+  textContent     String?
+  backgroundStyle String?
+  caption         String?
+  privacy         StoryPrivacy @default(AUTHENTICATED)
+  durationSeconds Int          @default(5)
+  sortOrder       Int          @default(0)
+  expiresAt       DateTime
+  deletedAt       DateTime?
+  createdAt       DateTime     @default(now())
+  author          User         @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  views           StoryView[]
+
+  @@index([authorUserId, createdAt])
+  @@index([authorUserId, expiresAt])
+  @@index([expiresAt])
+  @@index([deletedAt])
+  @@index([privacy])
+}
+
+model StoryView {
+  id           String   @id @default(cuid())
+  storyId      String
+  viewerUserId String
+  viewedAt     DateTime @default(now())
+  story        Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  viewer       User     @relation(fields: [viewerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, viewerUserId])
+  @@index([viewerUserId, viewedAt])
 }

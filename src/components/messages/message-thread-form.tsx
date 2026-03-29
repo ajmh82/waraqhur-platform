@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 interface MessageThreadFormProps {
   threadId: string;
   locale?: "ar" | "en";
+  isBlocked?: boolean;
 }
 
 const copy = {
@@ -15,6 +16,7 @@ const copy = {
     sending: "جارٍ الإرسال...",
     required: "نص الرسالة مطلوب.",
     failed: "تعذر إرسال الرسالة.",
+    blocked: "لا يمكنك إرسال رسائل لأن هناك بلوك بين الطرفين.",
   },
   en: {
     placeholder: "Write your message...",
@@ -22,12 +24,14 @@ const copy = {
     sending: "Sending...",
     required: "Message text is required.",
     failed: "Failed to send message.",
+    blocked: "You cannot send messages because one side has blocked the other.",
   },
 } as const;
 
 export function MessageThreadForm({
   threadId,
   locale = "ar",
+  isBlocked = false,
 }: MessageThreadFormProps) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -38,8 +42,13 @@ export function MessageThreadForm({
   async function submitMessage() {
     setError(null);
 
-    const trimmedBody = body.trim();
-    if (!trimmedBody) {
+    if (isBlocked) {
+      setError(t.blocked);
+      return;
+    }
+
+    const rawBody = body;
+    if (!rawBody.trim()) {
       setError(t.required);
       return;
     }
@@ -48,7 +57,7 @@ export function MessageThreadForm({
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: trimmedBody }),
+      body: JSON.stringify({ body: rawBody }),
     });
 
     const payload = await response.json().catch(() => null);
@@ -58,6 +67,9 @@ export function MessageThreadForm({
     }
 
     setBody("");
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("dm:sent"));
+    }
     startTransition(() => router.refresh());
   }
 
@@ -67,6 +79,12 @@ export function MessageThreadForm({
   }
 
   async function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      await submitMessage();
+      return;
+    }
+
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       await submitMessage();
@@ -81,6 +99,7 @@ export function MessageThreadForm({
         onKeyDown={handleKeyDown}
         rows={3}
         placeholder={t.placeholder}
+        disabled={isPending || isBlocked}
         style={{
           borderRadius: "16px",
           border: "1px solid rgba(255,255,255,0.08)",
@@ -93,8 +112,12 @@ export function MessageThreadForm({
         <p style={{ margin: 0, color: "var(--danger)", fontSize: "14px" }}>{error}</p>
       ) : null}
 
+      {isBlocked ? (
+        <p style={{ margin: 0, color: "var(--muted)", fontSize: "13px" }}>{t.blocked}</p>
+      ) : null}
+
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button type="submit" className="btn-action" disabled={isPending}>
+        <button type="submit" className="btn-action" disabled={isPending || isBlocked}>
           {isPending ? t.sending : t.send}
         </button>
       </div>
