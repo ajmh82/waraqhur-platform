@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type ApiUser = {
   id: string;
@@ -44,25 +44,26 @@ function toCount(v: unknown): number {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
-function toUnreadNotificationsCount(payload: unknown): number {
+function hasUnreadFromPayload(payload: unknown): boolean {
   const root = asRecord(payload);
   const data = asRecord(root?.data);
-  const notifications = Array.isArray(data?.notifications) ? data.notifications : [];
 
-  return notifications.reduce((sum, item) => {
-    const row = asRecord(item);
-    return row?.readAt ? sum : sum + 1;
-  }, 0);
+  const unreadCount = Number(data?.unreadCount ?? root?.unreadCount ?? 0);
+  const hasUnreadFlag = Boolean(data?.hasUnread ?? root?.hasUnread);
+
+  return hasUnreadFlag || (Number.isFinite(unreadCount) && unreadCount > 0);
 }
 
 export function AccountMenu() {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [user, setUser] = useState<ApiUser | null>(null);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   const isArabic =
@@ -81,7 +82,9 @@ export function AccountMenu() {
             settings: "الإعدادات",
             notifications: "الإشعارات",
             messages: "الرسائل الخاصة",
+            messagesSettings: "إعدادات الرسائل",
             blockedUsers: "المحظورون",
+            activity: "النشاط",
             search: "البحث",
             followers: "المتابعون",
             following: "يتابعهم",
@@ -95,7 +98,9 @@ export function AccountMenu() {
             settings: "Settings",
             notifications: "Notifications",
             messages: "Messages",
+            messagesSettings: "Messages Settings",
             blockedUsers: "Blocked Users",
+            activity: "Activity",
             search: "Search",
             followers: "Followers",
             following: "Following",
@@ -164,62 +169,140 @@ export function AccountMenu() {
           setUser(null);
           setFollowersCount(0);
           setFollowingCount(0);
-          setUnreadNotifications(0);
         }
       } finally {
         if (active) setLoaded(true);
       }
     }
 
-    loadSidebarData();
+    void loadSidebarData();
+
+    const reloadConnections = () => void loadSidebarData();
+    window.addEventListener("connections:changed", reloadConnections);
+
+    const statsInterval = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void loadSidebarData();
+    }, 20000);
+
     return () => {
       active = false;
+      window.removeEventListener("connections:changed", reloadConnections);
+      window.clearInterval(statsInterval);
     };
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
-    if (!user?.id) {
-      setUnreadNotifications(0);
+    if (!user) {
+      setHasUnreadNotifications(false);
       return;
     }
 
     let active = true;
 
-    async function loadUnreadNotifications() {
+    async function loadNotificationBadge() {
       try {
-        const res = await fetch("/api/notifications/unread-count", {
+        const response = await fetch("/api/notifications/unread-count", {
           method: "GET",
           credentials: "include",
           cache: "no-store",
           headers: { Accept: "application/json" },
         });
 
-        const payload = await res.json().catch(() => null);
         if (!active) return;
 
-        if (!res.ok || !payload?.success) {
-          setUnreadNotifications(0);
+        if (response.status === 401) {
+          setHasUnreadNotifications(false);
           return;
         }
 
-        setUnreadNotifications(toUnreadNotificationsCount(payload));
+        const payload = await response.json().catch(() => null);
+        if (!active) return;
+
+        setHasUnreadNotifications(hasUnreadFromPayload(payload));
       } catch {
-        if (active) {
-          setUnreadNotifications(0);
-        }
+        if (active) setHasUnreadNotifications(false);
       }
     }
 
-    void loadUnreadNotifications();
-    const id = setInterval(() => {
-      void loadUnreadNotifications();
+    void loadNotificationBadge();
+
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void loadNotificationBadge();
     }, 15000);
+
+    const onFocus = () => void loadNotificationBadge();
+    const onChanged = () => void loadNotificationBadge();
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("notifications:changed", onChanged);
 
     return () => {
       active = false;
-      clearInterval(id);
+      window.clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("notifications:changed", onChanged);
     };
-  }, [user?.id]);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setHasUnreadMessages(false);
+      return;
+    }
+
+    let active = true;
+
+    async function loadMessagesBadge() {
+      try {
+        const response = await fetch("/api/messages/unread-count", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+
+        if (!active) return;
+
+        if (response.status === 401) {
+          setHasUnreadMessages(false);
+          return;
+        }
+
+        const payload = await response.json().catch(() => null);
+        if (!active) return;
+
+        setHasUnreadMessages(hasUnreadFromPayload(payload));
+      } catch {
+        if (active) setHasUnreadMessages(false);
+      }
+    }
+
+    void loadMessagesBadge();
+
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void loadMessagesBadge();
+    }, 12000);
+
+    const onFocus = () => void loadMessagesBadge();
+    const onChanged = () => void loadMessagesBadge();
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("messages:changed", onChanged);
+
+    return () => {
+      active = false;
+      window.clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("messages:changed", onChanged);
+    };
+  }, [user]);
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -234,6 +317,9 @@ export function AccountMenu() {
     if (path === "/notifications") {
       setHasUnreadNotifications(false);
     }
+    if (path === "/messages") {
+      setHasUnreadMessages(false);
+    }
     setOpen(false);
     router.push(path);
   }
@@ -244,15 +330,12 @@ export function AccountMenu() {
     } finally {
       setOpen(false);
       setUser(null);
-      setUnreadNotifications(0);
       router.replace("/login");
       router.refresh();
     }
   }
 
-  if (!loaded) {
-    return <span className="account-menu__guest-login">...</span>;
-  }
+  if (!loaded) return <span className="account-menu__guest-login">...</span>;
 
   if (!user) {
     return (
@@ -264,15 +347,16 @@ export function AccountMenu() {
     );
   }
 
+  const hasAnyUnread = hasUnreadNotifications || hasUnreadMessages;
+
   return (
     <div className="account-menu" ref={rootRef}>
       <button
         type="button"
-        className="account-menu__trigger"
+        className={`account-menu__trigger ${hasAnyUnread ? "has-unread" : ""}`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="Open account menu"
-        style={{ position: "relative" }}
       >
         {user.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -282,26 +366,17 @@ export function AccountMenu() {
             {user.displayName.slice(0, 1).toUpperCase()}
           </span>
         )}
-
-        {unreadNotifications > 0 ? (
-          <span
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              top: 2,
-              insetInlineEnd: 2,
-              width: 10,
-              height: 10,
-              borderRadius: "999px",
-              background: "#ef4444",
-              boxShadow: "0 0 0 2px rgba(11,18,32,0.96), 0 0 12px rgba(239,68,68,0.55)",
-            }}
-          />
-        ) : null}
       </button>
 
       {open ? (
-        <aside className="account-menu__panel account-menu__panel--clean">
+        <>
+          <button
+            type="button"
+            className="account-menu__backdrop"
+            aria-label="Close account menu"
+            onClick={() => setOpen(false)}
+          />
+          <aside className="account-menu__panel account-menu__panel--clean">
           <header className="account-menu__head account-menu__head--clean">
             <div className="account-menu__name">{user.displayName}</div>
             <div className="account-menu__username">@{user.username}</div>
@@ -324,14 +399,17 @@ export function AccountMenu() {
             <button type="button" onClick={() => go("/dashboard/profile")}>{t.profile}</button>
             <button type="button" onClick={() => go("/dashboard/settings")}>{t.settings}</button>
             <button type="button" onClick={() => go("/notifications")}><span>{t.notifications}</span>{hasUnreadNotifications ? <span className="account-menu__item-dot" aria-hidden="true" /> : null}</button>
-            <button type="button" onClick={() => go("/messages")}>{t.messages}</button>
+            <button type="button" onClick={() => go("/messages")}><span>{t.messages}</span>{hasUnreadMessages ? <span className="account-menu__item-dot" aria-hidden="true" /> : null}</button>
+            <button type="button" onClick={() => go("/dashboard/settings/messages")}>{t.messagesSettings}</button>
             <button type="button" onClick={() => go("/dashboard/settings/blocks")}>{t.blockedUsers}</button>
+            <button type="button" onClick={() => go("/dashboard/activity")}>{t.activity}</button>
             <button type="button" onClick={() => go("/search")}>{t.search}</button>
             <button type="button" className="account-menu__logout" onClick={handleLogout}>
               {t.logout}
             </button>
           </nav>
-        </aside>
+          </aside>
+        </>
       ) : null}
     </div>
   );
