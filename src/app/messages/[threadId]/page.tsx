@@ -18,8 +18,19 @@ interface MessageThreadPageData {
     messages: Array<{
       id: string;
       body: string;
+      contentType?: string;
+      mediaUrl?: string | null;
+      mediaMimeType?: string | null;
+      mediaSizeBytes?: number | null;
       createdAt: string;
+      readAt?: string | null;
       senderUserId: string;
+      sender?: {
+        id: string;
+        username: string;
+        displayName: string;
+        avatarUrl: string | null;
+      };
     }>;
   };
   currentUserId: string;

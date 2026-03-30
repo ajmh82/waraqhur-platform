@@ -1,13 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface MessageThreadFormProps {
   threadId: string;
   locale?: "ar" | "en";
   isBlocked?: boolean;
+}
+
+interface ReplyTarget {
+  messageId: string;
+  senderUserId: string;
+  senderDisplayName: string;
+  previewText: string;
 }
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -26,6 +33,9 @@ const copy = {
     attachImage: "إرفاق صورة",
     removeImage: "حذف الصورة",
     imagePreview: "معاينة الصورة",
+    replyingTo: "رد على",
+    closeReply: "إغلاق الرد",
+    me: "أنا",
   },
   en: {
     placeholder: "Write your message...",
@@ -40,6 +50,9 @@ const copy = {
     attachImage: "Attach image",
     removeImage: "Remove image",
     imagePreview: "Image preview",
+    replyingTo: "Replying to",
+    closeReply: "Close reply",
+    me: "Me",
   },
 } as const;
 
@@ -52,15 +65,28 @@ function isSupportedImageType(type: string) {
   );
 }
 
+function isMobileLikeDevice() {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(pointer: coarse)").matches ||
+    "ontouchstart" in window ||
+    navigator.maxTouchPoints > 0
+  );
+}
+
 export function MessageThreadForm({
   threadId,
   locale = "ar",
   isBlocked = false,
 }: MessageThreadFormProps) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
   const [body, setBody] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const t = copy[locale];
@@ -73,12 +99,47 @@ export function MessageThreadForm({
     };
   }, [previewUrl]);
 
+  useEffect(() => {
+    function onReplyTarget(event: Event) {
+      const custom = event as CustomEvent<ReplyTarget>;
+      const detail = custom.detail;
+
+      if (!detail?.messageId) return;
+
+      setReplyTarget({
+        messageId: detail.messageId,
+        senderUserId: detail.senderUserId,
+        senderDisplayName: detail.senderDisplayName,
+        previewText: detail.previewText,
+      });
+
+      const anchor = document.getElementById("dm-composer-anchor");
+      if (anchor) {
+        anchor.scrollIntoView({ behavior: "smooth", block: "end" });
+      }
+
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 120);
+    }
+
+    window.addEventListener("dm:reply-target", onReplyTarget as EventListener);
+    return () => window.removeEventListener("dm:reply-target", onReplyTarget as EventListener);
+  }, []);
+
   function clearSelectedImage() {
     if (previewUrl && previewUrl.startsWith("blob:")) {
       URL.revokeObjectURL(previewUrl);
     }
     setSelectedImage(null);
     setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function clearReplyTarget() {
+    setReplyTarget(null);
   }
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -170,6 +231,10 @@ export function MessageThreadForm({
           mediaUrl: uploaded.mediaUrl,
           mediaMimeType: uploaded.mediaMimeType,
           mediaSizeBytes: uploaded.mediaSizeBytes,
+          replyToMessageId: replyTarget?.messageId ?? null,
+          replySenderUserId: replyTarget?.senderUserId ?? null,
+          replySenderDisplayName: replyTarget?.senderDisplayName ?? null,
+          replyPreviewText: replyTarget?.previewText ?? null,
         }),
       });
 
@@ -181,6 +246,7 @@ export function MessageThreadForm({
 
       setBody("");
       clearSelectedImage();
+      clearReplyTarget();
 
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("dm:sent"));
@@ -200,55 +266,147 @@ export function MessageThreadForm({
   }
 
   async function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
+    const isDesktop = !isMobileLikeDevice();
+
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       await submitMessage();
       return;
     }
 
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+    if (event.key === "Enter" && !event.shiftKey && isDesktop) {
       event.preventDefault();
       await submitMessage();
     }
   }
 
+  function openFilePicker() {
+    if (isSubmitting || isBlocked) return;
+    fileInputRef.current?.click();
+  }
+
+  const sendOnLeft = locale === "ar";
+
   return (
-    <form onSubmit={handleSubmit} style={{ display: "grid", gap: "10px" }}>
-      <textarea
-        value={body}
-        onChange={(event) => setBody(event.target.value)}
-        onKeyDown={handleKeyDown}
-        rows={3}
-        placeholder={t.placeholder}
+    <form id="dm-composer-anchor" onSubmit={handleSubmit} style={{ display: "grid", gap: "10px" }}>
+      {replyTarget ? (
+        <div
+          style={{
+            border: "1px solid rgba(255,255,255,0.14)",
+            background: "rgba(2,6,23,0.35)",
+            borderRadius: "12px",
+            padding: "8px 10px",
+            display: "flex",
+            alignItems: "start",
+            justifyContent: "space-between",
+            gap: "10px",
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: "12px", color: "#93c5fd", fontWeight: 700 }}>
+              {t.replyingTo} {replyTarget.senderDisplayName || t.me}
+            </div>
+            <div
+              style={{
+                fontSize: "13px",
+                color: "var(--muted)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: "100%",
+              }}
+            >
+              {replyTarget.previewText}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={clearReplyTarget}
+            aria-label={t.closeReply}
+            title={t.closeReply}
+            style={{
+              border: "1px solid rgba(255,255,255,0.18)",
+              background: "rgba(15,23,42,0.7)",
+              color: "#e2e8f0",
+              width: "26px",
+              height: "26px",
+              borderRadius: "999px",
+              lineHeight: 1,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
+
+      <div style={{ position: "relative" }}>
+        <textarea
+          ref={textareaRef}
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          onKeyDown={handleKeyDown}
+          rows={3}
+          placeholder={t.placeholder}
+          disabled={isSubmitting || isBlocked}
+          enterKeyHint="enter"
+          style={{
+            width: "100%",
+            borderRadius: "16px",
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(15,23,42,0.32)",
+            paddingTop: "12px",
+            paddingBottom: "12px",
+            paddingInlineStart: sendOnLeft ? "54px" : "14px",
+            paddingInlineEnd: sendOnLeft ? "14px" : "54px",
+            resize: "vertical",
+            minHeight: "92px",
+          }}
+        />
+
+        <button
+          type="submit"
+          disabled={isSubmitting || isBlocked}
+          aria-label={t.send}
+          title={t.send}
+          style={{
+            position: "absolute",
+            top: "12px",
+            insetInlineStart: sendOnLeft ? "10px" : "auto",
+            insetInlineEnd: sendOnLeft ? "auto" : "10px",
+            border: "1px solid rgba(56,189,248,0.45)",
+            background: "rgba(14,165,233,0.2)",
+            color: "#e0f2fe",
+            borderRadius: "10px",
+            padding: "6px 10px",
+            fontWeight: 700,
+            cursor: isSubmitting || isBlocked ? "not-allowed" : "pointer",
+          }}
+        >
+          {isSubmitting ? t.sending : t.send}
+        </button>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        onChange={handleFileChange}
         disabled={isSubmitting || isBlocked}
-        style={{
-          borderRadius: "16px",
-          border: "1px solid rgba(255,255,255,0.08)",
-          background: "rgba(15,23,42,0.32)",
-          padding: "12px 14px",
-        }}
+        style={{ display: "none" }}
       />
 
-      <label
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "8px",
-          width: "fit-content",
-          cursor: isSubmitting || isBlocked ? "not-allowed" : "pointer",
-          color: "var(--muted)",
-          fontSize: "14px",
-        }}
+      <button
+        type="button"
+        className="btn small"
+        onClick={openFilePicker}
+        disabled={isSubmitting || isBlocked}
+        style={{ width: "fit-content" }}
       >
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          onChange={handleFileChange}
-          disabled={isSubmitting || isBlocked}
-          style={{ display: "none" }}
-        />
-        <span className="btn small">{t.attachImage}</span>
-      </label>
+        {t.attachImage}
+      </button>
 
       {previewUrl ? (
         <div style={{ display: "grid", gap: "8px" }}>
@@ -294,12 +452,6 @@ export function MessageThreadForm({
       {isBlocked ? (
         <p style={{ margin: 0, color: "var(--muted)", fontSize: "13px" }}>{t.blocked}</p>
       ) : null}
-
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button type="submit" className="btn-action" disabled={isSubmitting || isBlocked}>
-          {isSubmitting ? t.sending : t.send}
-        </button>
-      </div>
     </form>
   );
 }

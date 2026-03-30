@@ -376,38 +376,56 @@ export function AccountMenu() {
             aria-label="Close account menu"
             onClick={() => setOpen(false)}
           />
-          <aside className="account-menu__panel account-menu__panel--clean">
-          <header className="account-menu__head account-menu__head--clean">
-            <div className="account-menu__name">{user.displayName}</div>
-            <div className="account-menu__username">@{user.username}</div>
-          </header>
+          <aside
+            className="account-menu__panel account-menu__panel--clean"
+            style={{
+              maxHeight: "min(84vh, calc(100dvh - 88px))",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <header className="account-menu__head account-menu__head--clean">
+              <div className="account-menu__name">{user.displayName}</div>
+              <div className="account-menu__username">@{user.username}</div>
+            </header>
 
-          <div className="account-menu__meta-row">
-            <button type="button" className="account-menu__meta-btn" onClick={() => go(`/u/${user.username}/following`)}>
-              <strong>{followingCount}</strong>
-              <span>{t.following}</span>
-            </button>
-            <button type="button" className="account-menu__meta-btn" onClick={() => go(`/u/${user.username}/followers`)}>
-              <strong>{followersCount}</strong>
-              <span>{t.followers}</span>
-            </button>
-          </div>
+            <div className="account-menu__meta-row">
+              <button type="button" className="account-menu__meta-btn" onClick={() => go(`/u/${user.username}/following`)}>
+                <strong>{followingCount}</strong>
+                <span>{t.following}</span>
+              </button>
+              <button type="button" className="account-menu__meta-btn" onClick={() => go(`/u/${user.username}/followers`)}>
+                <strong>{followersCount}</strong>
+                <span>{t.followers}</span>
+              </button>
+            </div>
 
-          <nav className="account-menu__list-nav" aria-label="Account navigation">
-            <button type="button" onClick={() => go("/timeline")}>{t.timeline}</button>
-            <button type="button" onClick={() => go("/dashboard")}>{t.dashboard}</button>
-            <button type="button" onClick={() => go("/dashboard/profile")}>{t.profile}</button>
-            <button type="button" onClick={() => go("/dashboard/settings")}>{t.settings}</button>
-            <button type="button" onClick={() => go("/notifications")}><span>{t.notifications}</span>{hasUnreadNotifications ? <span className="account-menu__item-dot" aria-hidden="true" /> : null}</button>
-            <button type="button" onClick={() => go("/messages")}><span>{t.messages}</span>{hasUnreadMessages ? <span className="account-menu__item-dot" aria-hidden="true" /> : null}</button>
-            <button type="button" onClick={() => go("/dashboard/settings/messages")}>{t.messagesSettings}</button>
-            <button type="button" onClick={() => go("/dashboard/settings/blocks")}>{t.blockedUsers}</button>
-            <button type="button" onClick={() => go("/dashboard/activity")}>{t.activity}</button>
-            <button type="button" onClick={() => go("/search")}>{t.search}</button>
-            <button type="button" className="account-menu__logout" onClick={handleLogout}>
-              {t.logout}
-            </button>
-          </nav>
+            <nav
+              className="account-menu__list-nav"
+              aria-label="Account navigation"
+              style={{
+                overflowY: "auto",
+                overscrollBehavior: "contain",
+                paddingRight: "2px",
+                flex: "1 1 auto",
+                minHeight: 0,
+              }}
+            >
+              <button type="button" onClick={() => go("/timeline")}>{t.timeline}</button>
+              <button type="button" onClick={() => go("/dashboard")}>{t.dashboard}</button>
+              <button type="button" onClick={() => go("/dashboard/profile")}>{t.profile}</button>
+              <button type="button" onClick={() => go("/dashboard/settings")}>{t.settings}</button>
+              <button type="button" onClick={() => go("/notifications")}><span>{t.notifications}</span>{hasUnreadNotifications ? <span className="account-menu__item-dot" aria-hidden="true" /> : null}</button>
+              <button type="button" onClick={() => go("/messages")}><span>{t.messages}</span>{hasUnreadMessages ? <span className="account-menu__item-dot" aria-hidden="true" /> : null}</button>
+              <button type="button" onClick={() => go("/dashboard/settings/messages")}>{t.messagesSettings}</button>
+              <button type="button" onClick={() => go("/dashboard/settings/blocks")}>{t.blockedUsers}</button>
+              <button type="button" onClick={() => go("/dashboard/activity")}>{t.activity}</button>
+              <button type="button" onClick={() => go("/search")}>{t.search}</button>
+              <button type="button" className="account-menu__logout" onClick={handleLogout}>
+                {t.logout}
+              </button>
+            </nav>
           </aside>
         </>
       ) : null}
