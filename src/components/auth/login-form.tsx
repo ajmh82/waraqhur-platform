@@ -9,8 +9,10 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? "/timeline";
   const [isPending, startTransition] = useTransition();
-  const [email, setEmail] = useState("");
+
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -21,7 +23,7 @@ export function LoginForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: identifier, password }),
     });
 
     const payload = await response.json().catch(() => null);
@@ -40,31 +42,57 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="state-card">
       <h2>تسجيل الدخول</h2>
-      <p>ادخل إلى حسابك للوصول إلى المتابعة والتفاعل وباقي ميزات وراق حر.</p>
+      <p>ادخل إلى حسابك للوصول إلى المتابعة والتفاعل وباقي ميزات ورق حر.</p>
 
       <div style={{ display: "grid", gap: "12px", marginTop: "18px" }}>
         <label style={{ display: "grid", gap: "6px" }}>
-          <span>البريد الإلكتروني</span>
+          <span>البريد الإلكتروني أو اسم المستخدم</span>
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="example@email.com"
-            autoComplete="email"
+            type="text"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="example@email.com أو username"
+            autoComplete="username"
             required
           />
         </label>
+
         <label style={{ display: "grid", gap: "6px" }}>
           <span>كلمة المرور</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="كلمة المرور"
-            autoComplete="current-password"
-            required
-          />
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="كلمة المرور"
+              autoComplete="current-password"
+              required
+              minLength={8}
+            />
+            <button
+              type="button"
+              className="btn small"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+              style={{ whiteSpace: "nowrap" }}
+            >
+              {showPassword ? "إخفاء" : "إظهار"}
+            </button>
+          </div>
         </label>
+      </div>
+
+      <div style={{ marginTop: "10px" }}>
+        <Link href="/password-reset/request" style={{ color: "var(--muted)", fontSize: "14px" }}>
+          نسيت كلمة المرور؟
+        </Link>
       </div>
 
       {error ? (

@@ -83,9 +83,14 @@ export async function registerUser(input: RegisterInput) {
 }
 
 export async function loginUser(input: LoginInput, meta?: { ipAddress?: string | null; userAgent?: string | null }) {
-  const user = await prisma.user.findUnique({
+  const loginValue = input.email.trim();
+
+  const user = await prisma.user.findFirst({
     where: {
-      email: input.email,
+      OR: [
+        { email: { equals: loginValue, mode: "insensitive" } },
+        { username: { equals: loginValue, mode: "insensitive" } },
+      ],
     },
     include: {
       profile: true,
@@ -93,13 +98,17 @@ export async function loginUser(input: LoginInput, meta?: { ipAddress?: string |
   });
 
   if (!user?.passwordHash) {
-    throw new Error("Invalid email or password");
+    throw new Error("Invalid email/username or password");
+  }
+
+  if (!user.emailVerifiedAt) {
+    throw new Error("Please verify your email before logging in");
   }
 
   const passwordMatches = await verifyPassword(input.password, user.passwordHash);
 
   if (!passwordMatches) {
-    throw new Error("Invalid email or password");
+    throw new Error("Invalid email/username or password");
   }
 
   const rawSessionToken = generateSessionToken();

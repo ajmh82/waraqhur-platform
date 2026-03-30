@@ -11,6 +11,7 @@ export function RegisterForm() {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -22,7 +23,7 @@ export function RegisterForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ email, username, displayName, password }),
+      body: JSON.stringify({ email, username, displayName, password, confirmPassword }),
     });
 
     const payload = await response.json().catch(() => null);
@@ -42,7 +43,7 @@ export function RegisterForm() {
     return (
       <div className="state-card">
         <h2>تم إنشاء الحساب بنجاح ✅</h2>
-        <p>يمكنك الآن تسجيل الدخول بحسابك الجديد.</p>
+        <p>تم إرسال رابط تفعيل الحساب إلى بريدك الإلكتروني. فعّل البريد ثم سجّل الدخول.</p>
         <Link href="/login" className="btn-action" style={{ marginTop: "14px", display: "inline-flex" }}>
           الذهاب لتسجيل الدخول
         </Link>
@@ -53,7 +54,7 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="state-card">
       <h2>إنشاء حساب جديد</h2>
-      <p>أنشئ حسابك للانضمام إلى وراق حر والمشاركة في النقاشات.</p>
+      <p>أنشئ حسابك للانضمام إلى ورق حر والمشاركة في النقاشات.</p>
 
       <div style={{ display: "grid", gap: "12px", marginTop: "18px" }}>
         <label style={{ display: "grid", gap: "6px" }}>
@@ -103,6 +104,19 @@ export function RegisterForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="8 أحرف على الأقل"
+            autoComplete="new-password"
+            required
+            minLength={8}
+          />
+        </label>
+
+        <label style={{ display: "grid", gap: "6px" }}>
+          <span>تأكيد كلمة المرور</span>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="أعد كتابة كلمة المرور"
             autoComplete="new-password"
             required
             minLength={8}

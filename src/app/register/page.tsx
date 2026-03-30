@@ -20,7 +20,7 @@ export default function RegisterPage() {
           <div className="state-card">
             <p className="section-heading__eyebrow">إنشاء حساب</p>
             <h1 style={{ marginTop: 0, marginBottom: "14px" }}>
-              انضم إلى وراق حر بحساب واضح وبسيط
+              انضم إلى ورق حر بحساب واضح وبسيط
             </h1>
             <p style={{ color: "var(--muted)", lineHeight: 1.8 }}>
               التسجيل هنا يجهزك مباشرة لتجربة القراءة، المتابعة، الإشعارات،

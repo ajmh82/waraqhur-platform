@@ -43,6 +43,7 @@ const copy = {
     recordTooLong: "تم إيقاف التسجيل بعد دقيقة واحدة",
     noMic: "الميكروفون غير متاح في هذا المتصفح",
     removeAudio: "حذف الصوت",
+    pickAudio: "اختيار صوت",
   },
   en: {
     placeholder: "Write your message...",
@@ -66,6 +67,7 @@ const copy = {
     recordTooLong: "Recording stopped after 60 seconds",
     noMic: "Microphone is unavailable in this browser",
     removeAudio: "Remove audio",
+    pickAudio: "Pick audio",
   },
 } as const;
 
@@ -94,6 +96,7 @@ export function MessageThreadForm({
 }: MessageThreadFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const audioInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -112,7 +115,7 @@ export function MessageThreadForm({
   const t = copy[locale];
 
   const sendOnLeft = locale === "ar";
-  const SINGLE_LINE_HEIGHT = 28;
+  const SINGLE_LINE_HEIGHT = 24;
 
   useEffect(() => {
     return () => {
@@ -164,7 +167,7 @@ export function MessageThreadForm({
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = `${SINGLE_LINE_HEIGHT}px`;
-    const next = Math.min(el.scrollHeight, 160);
+    const next = Math.min(el.scrollHeight, 150);
     el.style.height = `${Math.max(next, SINGLE_LINE_HEIGHT)}px`;
   }
 
@@ -185,6 +188,9 @@ export function MessageThreadForm({
     }
     setRecordedAudio(null);
     setRecordedAudioUrl(null);
+    if (audioInputRef.current) {
+      audioInputRef.current.value = "";
+    }
   }
 
   function clearReplyTarget() {
@@ -207,7 +213,7 @@ export function MessageThreadForm({
 
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
-        setError(t.noMic);
+        audioInputRef.current?.click();
         return;
       }
 
@@ -249,7 +255,7 @@ export function MessageThreadForm({
         }
       }, MAX_AUDIO_SECONDS * 1000);
     } catch {
-      setError(t.noMic);
+      audioInputRef.current?.click();
     }
   }
 
@@ -285,6 +291,15 @@ export function MessageThreadForm({
 
     setSelectedImage(file);
     setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function handleAudioInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) return;
+
+    clearRecordedAudio();
+    setRecordedAudio(file);
+    setRecordedAudioUrl(URL.createObjectURL(file));
   }
 
   async function uploadFile(file: File) {
@@ -478,13 +493,13 @@ export function MessageThreadForm({
             borderRadius: "12px",
             border: "1px solid rgba(255,255,255,0.08)",
             background: "rgba(15,23,42,0.32)",
-            paddingTop: "3px",
-            paddingBottom: "3px",
+            paddingTop: "2px",
+            paddingBottom: "2px",
             paddingLeft: sendOnLeft ? "150px" : "10px",
             paddingRight: sendOnLeft ? "10px" : "150px",
             resize: "none",
             minHeight: `${SINGLE_LINE_HEIGHT}px`,
-            maxHeight: "160px",
+            maxHeight: "150px",
             overflowY: "auto",
             lineHeight: "20px",
             fontSize: "14px",
@@ -588,6 +603,15 @@ export function MessageThreadForm({
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
         onChange={handleFileChange}
+        disabled={isSubmitting || isBlocked}
+        style={{ display: "none" }}
+      />
+
+      <input
+        ref={audioInputRef}
+        type="file"
+        accept="audio/*"
+        onChange={handleAudioInputChange}
         disabled={isSubmitting || isBlocked}
         style={{ display: "none" }}
       />

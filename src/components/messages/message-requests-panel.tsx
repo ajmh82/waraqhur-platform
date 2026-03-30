@@ -1,73 +1,71 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-
-interface RequestUser {
-  id: string;
-  username: string;
-  displayName: string;
-  avatarUrl: string | null;
-}
+import { useEffect, useState } from "react";
 
 interface RequestRow {
   id: string;
-  status: "PENDING" | "ACCEPTED" | "REJECTED" | "CANCELED";
-  createdAt: string;
-  requester: RequestUser;
-  target: RequestUser;
-  isIncoming: boolean;
+  target: {
+    id: string;
+    username: string;
+    displayName: string;
+    avatarUrl: string | null;
+  };
+}
+
+interface InboxThread {
+  id: string;
+  unreadCount: number;
 }
 
 interface MessageRequestsPanelProps {
   locale?: "ar" | "en";
 }
 
+type MessagesFilter = "all" | "incoming_unread" | "outgoing_pending";
+
 const copy = {
   ar: {
-    title: "طلبات المحادثة",
-    incoming: "الواردة",
-    outgoing: "الصادرة",
-    loading: "جارٍ تحميل الطلبات...",
-    loadFailed: "تعذر تحميل طلبات المحادثة.",
-    authRequired: "يجب تسجيل الدخول لعرض طلبات المحادثة.",
-    incomingEmpty: "لا توجد طلبات واردة حالياً.",
-    outgoingEmpty: "لا توجد طلبات صادرة حالياً.",
-    accept: "قبول",
-    reject: "رفض",
-    cancel: "إلغاء الطلب",
-    processFailed: "تعذر معالجة الطلب.",
+    title: "الرسائل",
+    incoming: "الوارد",
+    outgoing: "الصادر",
+    loading: "جارٍ تحميل البيانات...",
+    loadFailed: "تعذر تحميل البيانات.",
+    authRequired: "يجب تسجيل الدخول.",
   },
   en: {
-    title: "Chat Requests",
+    title: "Messages",
     incoming: "Incoming",
     outgoing: "Outgoing",
-    loading: "Loading requests...",
-    loadFailed: "Failed to load chat requests.",
-    authRequired: "You need to sign in to view chat requests.",
-    incomingEmpty: "No incoming requests.",
-    outgoingEmpty: "No outgoing requests.",
-    accept: "Accept",
-    reject: "Reject",
-    cancel: "Cancel Request",
-    processFailed: "Failed to process request.",
+    loading: "Loading...",
+    loadFailed: "Failed to load data.",
+    authRequired: "You need to sign in.",
   },
 } as const;
 
 export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProps) {
   const t = copy[locale];
-  const router = useRouter();
 
-  const [incomingRows, setIncomingRows] = useState<RequestRow[]>([]);
-  const [outgoingRows, setOutgoingRows] = useState<RequestRow[]>([]);
-  const [activeTab, setActiveTab] = useState<"incoming" | "outgoing">("incoming");
+  const [activeFilter, setActiveFilter] = useState<MessagesFilter>("all");
+  const [incomingUnreadCount, setIncomingUnreadCount] = useState(0);
+  const [outgoingPendingCount, setOutgoingPendingCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
 
-  async function fetchRequestsBox(box: "incoming" | "outgoing") {
-    const res = await fetch(`/api/messages/requests?box=${box}&status=PENDING`, {
+  function emitFilter(filter: MessagesFilter) {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new CustomEvent("messages:filter-changed", { detail: { filter } }));
+  }
+
+  function toggleFilter(next: MessagesFilter) {
+    const finalFilter = activeFilter === next ? "all" : next;
+    setActiveFilter(finalFilter);
+    emitFilter(finalFilter);
+  }
+
+  async function fetchIncomingUnreadCount() {
+    const res = await fetch("/api/messages", {
+      method: "GET",
       credentials: "include",
       cache: "no-store",
     });
@@ -75,91 +73,58 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
     const payload = await res.json().catch(() => null);
 
     if (res.status === 401) {
-      return { unauthorized: true as const, rows: [] as RequestRow[] };
+      return { unauthorized: true as const, count: 0 };
     }
 
     if (!res.ok || !payload?.success) {
       throw new Error(payload?.error?.message ?? t.loadFailed);
     }
 
-    return {
-      unauthorized: false as const,
-      rows: Array.isArray(payload?.data?.requests) ? (payload.data.requests as RequestRow[]) : [],
-    };
+    const rows = Array.isArray(payload?.data?.threads)
+      ? (payload.data.threads as InboxThread[])
+      : [];
+
+    const count = rows.reduce((sum, row) => sum + Math.max(0, Number(row.unreadCount || 0)), 0);
+    return { unauthorized: false as const, count };
   }
 
-  async function refreshAll() {
-    try {
-      const [incoming, outgoing] = await Promise.all([
-        fetchRequestsBox("incoming"),
-        fetchRequestsBox("outgoing"),
-      ]);
+  async function fetchOutgoingPendingCount() {
+    const res = await fetch("/api/messages/requests?box=outgoing&status=PENDING", {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    });
 
-      if (incoming.unauthorized || outgoing.unauthorized) {
-        setIsUnauthorized(true);
-        setError(t.authRequired);
-        return;
-      }
+    const payload = await res.json().catch(() => null);
 
-      setIncomingRows(incoming.rows);
-      setOutgoingRows(outgoing.rows);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : t.loadFailed);
+    if (res.status === 401) {
+      return { unauthorized: true as const, count: 0 };
     }
-  }
 
-  async function respond(requestId: string, action: "accept" | "reject" | "cancel") {
-    setPendingId(requestId);
-    setError(null);
-
-    try {
-      const res = await fetch(`/api/messages/requests/${requestId}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
-
-      const payload = await res.json().catch(() => null);
-
-      if (res.status === 401) {
-        setIsUnauthorized(true);
-        setError(t.authRequired);
-        return;
-      }
-
-      if (!res.ok || !payload?.success) {
-        setError(payload?.error?.message ?? t.processFailed);
-        return;
-      }
-
-      if (action === "accept" && payload?.data?.thread?.id) {
-        router.push(`/messages/${payload.data.thread.id}`);
-        return;
-      }
-
-      await refreshAll();
-    } finally {
-      setPendingId(null);
+    if (!res.ok || !payload?.success) {
+      throw new Error(payload?.error?.message ?? t.loadFailed);
     }
+
+    const rows = Array.isArray(payload?.data?.requests)
+      ? (payload.data.requests as RequestRow[])
+      : [];
+
+    return { unauthorized: false as const, count: rows.length };
   }
 
   useEffect(() => {
-    if (isUnauthorized) {
-      setLoading(false);
-      return;
-    }
+    if (isUnauthorized) return;
 
     let cancelled = false;
 
-    async function loadAll() {
+    async function loadCounts() {
       setLoading(true);
       setError(null);
 
       try {
         const [incoming, outgoing] = await Promise.all([
-          fetchRequestsBox("incoming"),
-          fetchRequestsBox("outgoing"),
+          fetchIncomingUnreadCount(),
+          fetchOutgoingPendingCount(),
         ]);
 
         if (cancelled) return;
@@ -170,8 +135,12 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
           return;
         }
 
-        setIncomingRows(incoming.rows);
-        setOutgoingRows(outgoing.rows);
+        setIncomingUnreadCount(incoming.count);
+        setOutgoingPendingCount(outgoing.count);
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("messages:changed"));
+        }
       } catch (loadError) {
         if (cancelled) return;
         setError(loadError instanceof Error ? loadError.message : t.loadFailed);
@@ -180,21 +149,28 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
       }
     }
 
-    void loadAll();
-    const id = setInterval(() => {
-      void loadAll();
-    }, 20000);
+    void loadCounts();
+
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void loadCounts();
+    }, 5000);
+
+    const onFocus = () => void loadCounts();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void loadCounts();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       cancelled = true;
-      clearInterval(id);
+      window.clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [isUnauthorized, t.authRequired, t.loadFailed]);
-
-  const rows = useMemo(
-    () => (activeTab === "incoming" ? incomingRows : outgoingRows),
-    [activeTab, incomingRows, outgoingRows]
-  );
 
   return (
     <section className="state-card" style={{ display: "grid", gap: 10 }}>
@@ -203,75 +179,23 @@ export function MessageRequestsPanel({ locale = "ar" }: MessageRequestsPanelProp
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button
           type="button"
-          className={`btn small ${activeTab === "incoming" ? "primary" : ""}`}
-          onClick={() => setActiveTab("incoming")}
+          className={`btn small ${activeFilter === "incoming_unread" ? "primary" : ""}`}
+          onClick={() => toggleFilter("incoming_unread")}
         >
-          {t.incoming} ({incomingRows.length})
+          {t.incoming} ({incomingUnreadCount})
         </button>
+
         <button
           type="button"
-          className={`btn small ${activeTab === "outgoing" ? "primary" : ""}`}
-          onClick={() => setActiveTab("outgoing")}
+          className={`btn small ${activeFilter === "outgoing_pending" ? "primary" : ""}`}
+          onClick={() => toggleFilter("outgoing_pending")}
         >
-          {t.outgoing} ({outgoingRows.length})
+          {t.outgoing} ({outgoingPendingCount})
         </button>
       </div>
 
       {loading ? <p style={{ margin: 0, color: "var(--muted)" }}>{t.loading}</p> : null}
       {error ? <p style={{ margin: 0, color: "var(--danger)" }}>{error}</p> : null}
-
-      {rows.length === 0 ? (
-        <p style={{ margin: 0, color: "var(--muted)" }}>
-          {activeTab === "incoming" ? t.incomingEmpty : t.outgoingEmpty}
-        </p>
-      ) : (
-        <div style={{ display: "grid", gap: 8 }}>
-          {rows.map((r) => {
-            const peer = activeTab === "incoming" ? r.requester : r.target;
-
-            return (
-              <div key={r.id} className="dashboard-list-item" style={{ display: "grid", gap: 8 }}>
-                <div style={{ display: "grid", gap: 2 }}>
-                  <strong>{peer.displayName}</strong>
-                  <span style={{ color: "var(--muted)", fontSize: "13px" }}>@{peer.username}</span>
-                </div>
-
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {activeTab === "incoming" ? (
-                    <>
-                      <button
-                        type="button"
-                        className="btn small"
-                        disabled={pendingId === r.id}
-                        onClick={() => respond(r.id, "accept")}
-                      >
-                        {t.accept}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn small"
-                        disabled={pendingId === r.id}
-                        onClick={() => respond(r.id, "reject")}
-                      >
-                        {t.reject}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn small"
-                      disabled={pendingId === r.id}
-                      onClick={() => respond(r.id, "cancel")}
-                    >
-                      {t.cancel}
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </section>
   );
 }

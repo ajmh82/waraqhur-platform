@@ -7,7 +7,7 @@ export function normalizeUiLocale(locale?: string | null): UiLocale {
 
 export const uiCopy = {
   ar: {
-    appName: "وراق حر",
+    appName: "ورق حر",
     login: "الدخول",
     register: "إنشاء حساب",
     compose: "إنشاء منشور",
@@ -30,7 +30,7 @@ export const uiCopy = {
     latestSort: "الأحدث أولًا",
     homeTitle: "الرئيسية",
     timelineTitle: "التايملاين",
-    homeEyebrow: "وراق حر",
+    homeEyebrow: "ورق حر",
     timelineEyebrow: "التايم لاين",
     homeDescription:
       "تعرض الصفحة الرئيسية التايملاين مباشرة بتحميل أولي أخف، ثم يتم جلب المزيد أثناء السحب لأسفل.",

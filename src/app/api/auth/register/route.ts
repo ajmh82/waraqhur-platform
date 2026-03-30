@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { buildRateLimitKey, checkRateLimit } from "@/lib/rate-limit";
 import { registerSchema } from "@/services/auth-schemas";
 import { registerUser } from "@/services/auth-service";
+import { sendEmailVerification } from "@/services/auth-recovery-service";
 
 const REGISTER_RATE_LIMIT = {
   limit: 5,
@@ -37,9 +38,18 @@ export async function POST(request: Request) {
     const input = registerSchema.parse(body);
     const user = await registerUser(input);
 
+    let verificationDispatched = false;
+    try {
+      const verificationResult = await sendEmailVerification({ email: user.email });
+      verificationDispatched = Boolean(verificationResult?.dispatched);
+    } catch {
+      verificationDispatched = false;
+    }
+
     return apiSuccess(
       {
         user,
+        verificationDispatched,
       },
       { status: 201 }
     );

@@ -4,7 +4,8 @@ import { env } from "@/lib/env";
 
 export const SESSION_COOKIE_NAME = "waraqhur_session";
 
-const SESSION_TTL_DAYS = 30;
+// عمليًا: إبقاء المستخدم مسجل الدخول حتى يسجل خروج بنفسه (100 سنة)
+const SESSION_TTL_DAYS = 36500;
 
 function getSessionSecretKey(): Uint8Array {
   return new TextEncoder().encode(env.appSessionSecret);

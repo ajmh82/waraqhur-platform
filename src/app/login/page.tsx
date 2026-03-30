@@ -21,7 +21,7 @@ export default function LoginPage() {
           <div className="state-card">
             <p className="section-heading__eyebrow">الدخول إلى الحساب</p>
             <h1 style={{ marginTop: 0, marginBottom: "14px" }}>
-              ادخل إلى وراق حر وابدأ من حيث توقفت
+              ادخل إلى ورق حر وابدأ من حيث توقفت
             </h1>
             <p style={{ color: "var(--muted)", lineHeight: 1.8 }}>
               هذه الصفحة مخصصة للعودة السريعة إلى الموجز، التفاعل مع المنشورات،
