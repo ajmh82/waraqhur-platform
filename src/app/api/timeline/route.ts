@@ -82,8 +82,11 @@ export async function GET(request: Request) {
 
     const filteredPosts = allPosts.filter((post) => {
       const social = getSocialMetadata(post.metadata);
-      const isTweet = social?.postKind === "tweet";
       const hasSource = Boolean(post.sourceId);
+
+      const isTweetByMetadata = social?.postKind === "tweet";
+      const isTweetBySlug = typeof post.slug === "string" && post.slug.startsWith("tweet-");
+      const isTweet = isTweetByMetadata || isTweetBySlug;
 
       if (mode === "people") {
         return isTweet || !hasSource;
