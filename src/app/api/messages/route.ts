@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 import { prisma } from "@/lib/prisma";
+import { userHasPermission } from "@/services/authorization-service";
 
 async function requireSessionUser() {
   const cookieStore = await cookies();
@@ -47,7 +48,6 @@ async function requireSessionUser() {
   }
 }
 
-
 async function hasBlockRelation(userAId: string, userBId: string) {
   const row = await prisma.userBlock.findFirst({
     where: {
@@ -71,11 +71,14 @@ export async function GET() {
 
   try {
     const userId = auth.current.user.id;
+    const canReadAllMessages = await userHasPermission(userId, "messages.read_all");
 
     const threads = await prisma.directThread.findMany({
-      where: {
-        OR: [{ participantAUserId: userId }, { participantBUserId: userId }],
-      },
+      where: canReadAllMessages
+        ? undefined
+        : {
+            OR: [{ participantAUserId: userId }, { participantBUserId: userId }],
+          },
       include: {
         participantA: {
           include: {
@@ -102,7 +105,7 @@ export async function GET() {
     const threadIds = threads.map((thread) => thread.id);
 
     const unreadGrouped =
-      threadIds.length > 0
+      !canReadAllMessages && threadIds.length > 0
         ? await prisma.directMessage.groupBy({
             by: ["threadId"],
             where: {
@@ -128,20 +131,23 @@ export async function GET() {
       success: true,
       data: {
         threads: threads.map((thread) => {
-          const otherUser =
-            thread.participantAUserId === userId
-              ? thread.participantB
-              : thread.participantA;
+          const isParticipantA = thread.participantAUserId === userId;
+          const isParticipantB = thread.participantBUserId === userId;
+
+          const otherUser = isParticipantA
+            ? thread.participantB
+            : isParticipantB
+              ? thread.participantA
+              : thread.participantB;
 
           return {
             id: thread.id,
             updatedAt: thread.updatedAt.toISOString(),
-            unreadCount: unreadMap.get(thread.id) ?? 0,
+            unreadCount: canReadAllMessages ? 0 : unreadMap.get(thread.id) ?? 0,
             otherUser: {
               id: otherUser.id,
               username: otherUser.username,
-              displayName:
-                otherUser.profile?.displayName ?? otherUser.username,
+              displayName: otherUser.profile?.displayName ?? otherUser.username,
               avatarUrl: otherUser.profile?.avatarUrl ?? null,
             },
             lastMessage: thread.messages[0]
@@ -227,7 +233,6 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
-
 
     const blocked = await hasBlockRelation(currentUserId, targetUserId);
 

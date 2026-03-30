@@ -45,6 +45,20 @@ interface MessageThreadViewProps {
   locale?: "ar" | "en";
 }
 
+type ReactionRow = {
+  messageId: string;
+  emoji: string;
+  userId: string;
+};
+
+type ReactionSummary = {
+  emoji: string;
+  count: number;
+  mine: boolean;
+};
+
+const REACTION_EMOJI = ["❤️", "👍", "😂", "😮", "😢", "🔥"] as const;
+
 const copy = {
   ar: {
     empty: "لا توجد رسائل بعد. ابدأ أول رسالة الآن.",
@@ -56,14 +70,12 @@ const copy = {
     deleting: "جارٍ الحذف...",
     deleteFailed: "تعذر حذف الرسائل.",
     selectedCount: "محدد",
-    confirmDeleteSelected: "هل أنت متأكد من حذف الرسائل المحددة؟",
-    confirmDeleteAll: "هل أنت متأكد من حذف كل رسائلك في هذه المحادثة؟",
     openImage: "فتح الصورة",
     closeImage: "إغلاق",
     read: "مقروءة",
     delivered: "تم التسليم",
     justNow: "الآن",
-    deleteScopeTitle: "حذف الرسالة",
+    deleteScopeTitle: "تأكيد الحذف",
     deleteForMe: "حذف من عندي",
     deleteForEveryone: "حذف من الجميع",
   },
@@ -77,14 +89,12 @@ const copy = {
     deleting: "Deleting...",
     deleteFailed: "Failed to delete messages.",
     selectedCount: "selected",
-    confirmDeleteSelected: "Are you sure you want to delete selected messages?",
-    confirmDeleteAll: "Are you sure you want to delete all your messages in this thread?",
     openImage: "Open image",
     closeImage: "Close",
     read: "Read",
     delivered: "Delivered",
     justNow: "just now",
-    deleteScopeTitle: "Delete message",
+    deleteScopeTitle: "Confirm delete",
     deleteForMe: "Delete for me",
     deleteForEveryone: "Delete for everyone",
   },
@@ -114,6 +124,30 @@ function renderAvatar(displayName: string, avatarUrl: string | null) {
   );
 }
 
+function buildReactionMap(rows: ReactionRow[], currentUserId: string) {
+  const grouped = new Map<string, Map<string, { count: number; mine: boolean }>>();
+
+  for (const row of rows) {
+    if (!grouped.has(row.messageId)) grouped.set(row.messageId, new Map());
+    const byEmoji = grouped.get(row.messageId)!;
+    const current = byEmoji.get(row.emoji) ?? { count: 0, mine: false };
+    current.count += 1;
+    if (row.userId === currentUserId) current.mine = true;
+    byEmoji.set(row.emoji, current);
+  }
+
+  const result: Record<string, ReactionSummary[]> = {};
+  for (const [messageId, byEmoji] of grouped.entries()) {
+    result[messageId] = Array.from(byEmoji.entries()).map(([emoji, value]) => ({
+      emoji,
+      count: value.count,
+      mine: value.mine,
+    }));
+  }
+
+  return result;
+}
+
 export function MessageThreadView({
   threadId,
   currentUserId,
@@ -133,20 +167,72 @@ export function MessageThreadView({
   const [pollingActive, setPollingActive] = useState(true);
   const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
   const [timeTick, setTimeTick] = useState(0);
-  const [deleteTargetMessageId, setDeleteTargetMessageId] = useState<string | null>(null);
+  const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
+  const [reactionsByMessage, setReactionsByMessage] = useState<Record<string, ReactionSummary[]>>({});
+  const [deleteScopeModal, setDeleteScopeModal] = useState<{ mode: "selected" | "all" } | null>(null);
 
-  const [dragState, setDragState] = useState<{
-    messageId: string;
-    startX: number;
-    triggered: boolean;
-  } | null>(null);
+  const [dragState, setDragState] = useState<{ messageId: string; startX: number; triggered: boolean } | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
 
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
+
+  function clearLongPressTimer() {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }
 
   function scrollToConversationEnd(behavior: ScrollBehavior = "smooth") {
     const viewport = messagesViewportRef.current;
     if (!viewport) return;
     viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+  }
+
+  async function loadReactionsForMessages(messageIds: string[]) {
+    if (!messageIds.length) {
+      setReactionsByMessage({});
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams();
+      for (const id of messageIds) params.append("messageId", id);
+
+      const res = await fetch(`/api/messages/reactions?${params.toString()}`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (!res.ok) return;
+      const payload = await res.json().catch(() => null);
+      if (!payload?.success) return;
+
+      const rows = Array.isArray(payload?.data?.reactions) ? (payload.data.reactions as ReactionRow[]) : [];
+      setReactionsByMessage(buildReactionMap(rows, currentUserId));
+    } catch {
+      // silent
+    }
+  }
+
+  async function toggleReaction(messageId: string, emoji: string) {
+    try {
+      const res = await fetch("/api/messages/reactions", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId, emoji }),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || !payload?.success) return;
+
+      await loadReactionsForMessages(sortedMessages.map((m) => m.id));
+      setReactionPickerFor(null);
+    } catch {
+      // silent
+    }
   }
 
   useEffect(() => {
@@ -175,13 +261,13 @@ export function MessageThreadView({
   }, [openImageUrl]);
 
   useEffect(() => {
-    if (!deleteTargetMessageId) return;
+    if (!reactionPickerFor) return;
     function onEsc(event: KeyboardEvent) {
-      if (event.key === "Escape") setDeleteTargetMessageId(null);
+      if (event.key === "Escape") setReactionPickerFor(null);
     }
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
-  }, [deleteTargetMessageId]);
+  }, [reactionPickerFor]);
 
   function formatMessageTime(createdAt: string) {
     const created = new Date(createdAt);
@@ -214,12 +300,11 @@ export function MessageThreadView({
       if (!payload?.success) return;
 
       const next = Array.isArray(payload?.data?.thread?.messages)
-        ? payload.data.thread.messages.filter(
-            (m: ThreadMessage) => m?.id && m?.createdAt && m?.senderUserId
-          )
+        ? payload.data.thread.messages.filter((m: ThreadMessage) => m?.id && m?.createdAt && m?.senderUserId)
         : [];
 
       setLiveMessages(next);
+      await loadReactionsForMessages(next.map((m: ThreadMessage) => m.id));
     } catch {
       // silent
     }
@@ -261,6 +346,11 @@ export function MessageThreadView({
       ),
     [liveMessages]
   );
+
+  useEffect(() => {
+    void loadReactionsForMessages(sortedMessages.map((m) => m.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedMessages.length]);
 
   useEffect(() => {
     const viewport = messagesViewportRef.current;
@@ -338,19 +428,20 @@ export function MessageThreadView({
     }
   }
 
-  async function deleteSelected() {
-    if (selectedIds.length === 0) return;
-    const confirmed = window.confirm(t.confirmDeleteSelected);
-    if (!confirmed) return;
-    await runDelete({ messageIds: selectedIds, deleteScope: "for_everyone" });
-    leaveSelectionMode();
-  }
+  async function confirmBulkDelete(scope: "for_me" | "for_everyone") {
+    if (!deleteScopeModal) return;
 
-  async function deleteAll() {
-    const confirmed = window.confirm(t.confirmDeleteAll);
-    if (!confirmed) return;
-    await runDelete({ deleteAll: true, deleteScope: "for_everyone" });
+    if (deleteScopeModal.mode === "selected") {
+      if (selectedIds.length === 0) return;
+      await runDelete({ messageIds: selectedIds, deleteScope: scope });
+      leaveSelectionMode();
+      setDeleteScopeModal(null);
+      return;
+    }
+
+    await runDelete({ deleteAll: true, deleteScope: scope });
     leaveSelectionMode();
+    setDeleteScopeModal(null);
   }
 
   function triggerReply(message: ThreadMessage) {
@@ -392,12 +483,14 @@ export function MessageThreadView({
     const threshold = 72;
 
     if (Math.abs(deltaX) >= threshold) {
+      clearLongPressTimer();
       triggerReply(message);
       setDragState((prev) => (prev ? { ...prev, triggered: true } : prev));
     }
   }
 
   function onSwipeEnd() {
+    clearLongPressTimer();
     setDragState(null);
   }
 
@@ -412,24 +505,30 @@ export function MessageThreadView({
         display: "flex",
         flexDirection: "column",
         minHeight: "420px",
-        height: "calc(100dvh - 130px)",
+        height: "calc(100dvh - 170px)",
       }}
     >
       <header
         style={{
+          position: "fixed",
+          top: 0,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "min(96vw, 860px)",
+          zIndex: 40,
           display: "flex",
           alignItems: "center",
           gap: "12px",
-          padding: "18px",
+          padding: "10px 12px",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
-          background: "rgba(255,255,255,0.02)",
-          flexShrink: 0,
+          background: "rgba(11,18,32,0.95)",
+          backdropFilter: "blur(8px)",
         }}
       >
         <div
           style={{
-            width: "52px",
-            height: "52px",
+            width: "42px",
+            height: "42px",
             borderRadius: "999px",
             overflow: "hidden",
             flexShrink: 0,
@@ -443,73 +542,71 @@ export function MessageThreadView({
           {renderAvatar(otherUser.displayName, otherUser.avatarUrl)}
         </div>
 
-        <div style={{ display: "grid", gap: "4px", minWidth: 0 }}>
-          <strong style={{ fontSize: "16px" }}>{otherUser.displayName}</strong>
-          <span style={{ color: "var(--muted)", fontSize: "13px" }}>@{otherUser.username}</span>
+        <div style={{ display: "grid", gap: "2px", minWidth: 0 }}>
+          <strong style={{ fontSize: "14px" }}>{otherUser.displayName}</strong>
+          <span style={{ color: "var(--muted)", fontSize: "12px" }}>@{otherUser.username}</span>
         </div>
 
-        <MessageThreadBlockControls targetUserId={otherUser.id} locale={locale} />
+        <div style={{ marginInlineStart: "auto", display: "flex", gap: "8px", alignItems: "center" }}>
+          <button type="button" className="btn small" onClick={selectionMode ? leaveSelectionMode : enterSelectionMode}>
+            {selectionMode ? t.cancelSelection : t.selectMode}
+          </button>
+          <MessageThreadBlockControls targetUserId={otherUser.id} locale={locale} />
+        </div>
       </header>
 
-      <div
-        style={{
-          display: "grid",
-          gap: "10px",
-          padding: "12px 18px",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          background: "rgba(255,255,255,0.02)",
-          flexShrink: 0,
-        }}
-      >
-        {!selectionMode ? (
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button type="button" className="btn small" onClick={enterSelectionMode}>
-              {t.selectMode}
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-            <button type="button" className="btn small" onClick={leaveSelectionMode}>
-              {t.cancelSelection}
-            </button>
-            <button type="button" className="btn small" onClick={toggleAll}>
-              {isAllSelected ? t.cancelSelection : t.selectAll}
-            </button>
-            <button
-              type="button"
-              className="btn small"
-              disabled={selectedIds.length === 0 || isDeleting}
-              onClick={deleteSelected}
-            >
-              {isDeleting ? t.deleting : t.deleteSelected}
-            </button>
-            <button
-              type="button"
-              className="btn small"
-              disabled={ownMessageIds.length === 0 || isDeleting}
-              onClick={deleteAll}
-            >
-              {isDeleting ? t.deleting : t.deleteAll}
-            </button>
-          </div>
-        )}
-
-        {selectionMode ? (
+      {selectionMode ? (
+        <div
+          style={{
+            position: "fixed",
+            top: "62px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "min(96vw, 860px)",
+            zIndex: 39,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "8px",
+            alignItems: "center",
+            padding: "8px 12px",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(11,18,32,0.94)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <button type="button" className="btn small" onClick={toggleAll}>
+            {isAllSelected ? t.cancelSelection : t.selectAll}
+          </button>
+          <button
+            type="button"
+            className="btn small"
+            disabled={selectedIds.length === 0 || isDeleting}
+            onClick={() => setDeleteScopeModal({ mode: "selected" })}
+          >
+            {isDeleting ? t.deleting : t.deleteSelected}
+          </button>
+          <button
+            type="button"
+            className="btn small"
+            disabled={ownMessageIds.length === 0 || isDeleting}
+            onClick={() => setDeleteScopeModal({ mode: "all" })}
+          >
+            {isDeleting ? t.deleting : t.deleteAll}
+          </button>
           <span style={{ color: "var(--muted)", fontSize: "13px" }}>
             {selectedIds.length} {t.selectedCount}
           </span>
-        ) : null}
-
-        {error ? <p style={{ margin: 0, color: "var(--danger)", fontSize: "14px" }}>{error}</p> : null}
-      </div>
+        </div>
+      ) : null}
 
       <div
         ref={messagesViewportRef}
         style={{
           display: "grid",
           gap: "12px",
-          padding: "18px",
-          paddingBottom: "150px",
+          padding: "14px",
+          paddingTop: selectionMode ? "112px" : "74px",
+          paddingBottom: "162px",
           background: "rgba(255,255,255,0.015)",
           overflowY: "auto",
           overflowX: "hidden",
@@ -522,8 +619,8 @@ export function MessageThreadView({
         {sortedMessages.length === 0 ? (
           <div
             style={{
-              borderRadius: "18px",
-              padding: "18px",
+              borderRadius: "14px",
+              padding: "14px",
               background: "rgba(255,255,255,0.03)",
               border: "1px solid rgba(255,255,255,0.08)",
               color: "var(--muted)",
@@ -537,10 +634,16 @@ export function MessageThreadView({
             const checked = selectedIds.includes(message.id);
             const hasImage = Boolean(message.mediaUrl);
             const isRead = Boolean(message.readAt);
+            const messageReactions = reactionsByMessage[message.id] ?? [];
+            const myReaction = messageReactions.find((x) => x.mine) ?? null;
 
             const senderDisplayName =
               message.sender?.displayName?.trim() ||
-              (isOwnMessage ? (locale === "ar" ? "أنا" : "Me") : otherUser.displayName);
+              (message.senderUserId === currentUserId
+                ? locale === "ar"
+                  ? "أنا"
+                  : "Me"
+                : otherUser.displayName);
 
             const senderAvatarUrl =
               message.sender?.avatarUrl ?? (isOwnMessage ? null : otherUser.avatarUrl);
@@ -554,9 +657,19 @@ export function MessageThreadView({
                   alignItems: "flex-end",
                   gap: "8px",
                   userSelect: "none",
+                  position: "relative",
                 }}
-                onTouchStart={(event) => onSwipeStart(message.id, event.touches[0].clientX)}
-                onTouchMove={(event) => onSwipeMove(message, event.touches[0].clientX)}
+                onTouchStart={(event) => {
+                  onSwipeStart(message.id, event.touches[0].clientX);
+                  clearLongPressTimer();
+                  longPressTimerRef.current = window.setTimeout(() => {
+                    setReactionPickerFor(message.id);
+                  }, 450);
+                }}
+                onTouchMove={(event) => {
+                  clearLongPressTimer();
+                  onSwipeMove(message, event.touches[0].clientX);
+                }}
                 onTouchEnd={onSwipeEnd}
                 onMouseDown={(event) => onSwipeStart(message.id, event.clientX)}
                 onMouseMove={(event) => onSwipeMove(message, event.clientX)}
@@ -619,11 +732,7 @@ export function MessageThreadView({
                   ) : null}
 
                   <div
-                    onContextMenu={(event) => {
-                      if (!isOwnMessage || selectionMode) return;
-                      event.preventDefault();
-                      setDeleteTargetMessageId(message.id);
-                    }}
+                    onDoubleClick={() => setReactionPickerFor(message.id)}
                     style={{
                       borderRadius: "14px",
                       padding: "10px 12px",
@@ -675,9 +784,29 @@ export function MessageThreadView({
                       color: "var(--muted)",
                       fontSize: "12px",
                       justifyContent: isOwnMessage ? "flex-end" : "flex-start",
+                      flexWrap: "wrap",
                     }}
                   >
                     <span key={`${message.id}-${timeTick}`}>{formatMessageTime(message.createdAt)}</span>
+
+                    {myReaction ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleReaction(message.id, myReaction.emoji)}
+                        style={{
+                          border: "1px solid rgba(56,189,248,0.65)",
+                          background: "rgba(14,165,233,0.18)",
+                          color: "#e2e8f0",
+                          borderRadius: "999px",
+                          padding: "1px 6px",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {myReaction.emoji} {myReaction.count}
+                      </button>
+                    ) : null}
+
                     {isOwnMessage ? (
                       <span
                         title={isRead ? t.read : t.delivered}
@@ -691,6 +820,40 @@ export function MessageThreadView({
                       </span>
                     ) : null}
                   </div>
+
+                  {reactionPickerFor === message.id ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "6px",
+                        padding: "6px",
+                        borderRadius: "10px",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        background: "rgba(2,6,23,0.45)",
+                        width: "fit-content",
+                      }}
+                    >
+                      {REACTION_EMOJI.map((emoji) => (
+                        <button
+                          key={`${message.id}-picker-${emoji}`}
+                          type="button"
+                          onClick={() => void toggleReaction(message.id, emoji)}
+                          style={{
+                            border: "1px solid rgba(255,255,255,0.2)",
+                            background: "rgba(15,23,42,0.7)",
+                            color: "#fff",
+                            borderRadius: "8px",
+                            padding: "4px 8px",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                          }}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
                 {isOwnMessage ? (
@@ -719,17 +882,66 @@ export function MessageThreadView({
 
       <div
         style={{
-          padding: "14px 18px",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          background: "rgba(11,18,32,0.96)",
-          position: "sticky",
+          position: "fixed",
+          left: "50%",
+          transform: "translateX(-50%)",
           bottom: "72px",
-          zIndex: 4,
+          width: "min(96vw, 860px)",
+          zIndex: 30,
+          padding: "4px 6px 6px",
+          background: "rgba(11,18,32,0.96)",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
           backdropFilter: "blur(8px)",
         }}
       >
         {composer}
       </div>
+
+      {deleteScopeModal ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setDeleteScopeModal(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1450,
+            background: "rgba(2,6,23,0.65)",
+            display: "grid",
+            placeItems: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "min(92vw, 360px)",
+              borderRadius: "14px",
+              border: "1px solid rgba(255,255,255,0.14)",
+              background: "#0b1220",
+              padding: "14px",
+              display: "grid",
+              gap: "10px",
+            }}
+          >
+            <strong style={{ fontSize: "15px" }}>{t.deleteScopeTitle}</strong>
+            <button
+              type="button"
+              className="btn small"
+              onClick={() => void confirmBulkDelete("for_me")}
+            >
+              {t.deleteForMe}
+            </button>
+            <button
+              type="button"
+              className="btn small"
+              onClick={() => void confirmBulkDelete("for_everyone")}
+            >
+              {t.deleteForEveryone}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {openImageUrl ? (
         <div
@@ -769,60 +981,6 @@ export function MessageThreadView({
             }}
             onClick={(event) => event.stopPropagation()}
           />
-        </div>
-      ) : null}
-
-      {deleteTargetMessageId ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setDeleteTargetMessageId(null)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1450,
-            background: "rgba(2,6,23,0.65)",
-            display: "grid",
-            placeItems: "center",
-            padding: "20px",
-          }}
-        >
-          <div
-            onClick={(event) => event.stopPropagation()}
-            style={{
-              width: "min(92vw, 360px)",
-              borderRadius: "14px",
-              border: "1px solid rgba(255,255,255,0.14)",
-              background: "#0b1220",
-              padding: "14px",
-              display: "grid",
-              gap: "10px",
-            }}
-          >
-            <strong style={{ fontSize: "15px" }}>{t.deleteScopeTitle}</strong>
-            <button
-              type="button"
-              className="btn small"
-              onClick={async () => {
-                const id = deleteTargetMessageId;
-                setDeleteTargetMessageId(null);
-                await runDelete({ messageIds: [id], deleteScope: "for_me" });
-              }}
-            >
-              {t.deleteForMe}
-            </button>
-            <button
-              type="button"
-              className="btn small"
-              onClick={async () => {
-                const id = deleteTargetMessageId;
-                setDeleteTargetMessageId(null);
-                await runDelete({ messageIds: [id], deleteScope: "for_everyone" });
-              }}
-            >
-              {t.deleteForEveryone}
-            </button>
-          </div>
         </div>
       ) : null}
     </section>

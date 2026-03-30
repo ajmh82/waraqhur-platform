@@ -62,6 +62,8 @@ const permissionSeeds = [
   { key: "notifications.manage", name: "Manage notifications", description: "Manage notifications" },
 
   { key: "audit.read", name: "Read audit logs", description: "Read audit logs" },
+
+  { key: "messages.read_all", name: "Read all messages", description: "Allow reading all users direct messages" },
 ] as const;
 
 const rolePermissionMap: Record<string, string[]> = {
@@ -109,6 +111,7 @@ const rolePermissionMap: Record<string, string[]> = {
     "notifications.read",
     "notifications.manage",
     "audit.read",
+    "messages.read_all",
   ],
   super_admin: permissionSeeds.map((permission) => permission.key),
 };

@@ -31,6 +31,12 @@ interface MessageThreadPageData {
         displayName: string;
         avatarUrl: string | null;
       };
+      replyTo?: {
+        id: string;
+        senderUserId: string;
+        senderDisplayName: string;
+        previewText: string;
+      } | null;
     }>;
   };
   currentUserId: string;
@@ -55,7 +61,19 @@ export default async function MessageThreadPage({
 
   return (
     <AppShell>
-      <section className="page-section">
+      <style>{`
+        @media (max-width: 900px) {
+          .app-header,
+          .app-header--neo {
+            display: none !important;
+          }
+          .page-stack {
+            padding-top: 0 !important;
+          }
+        }
+      `}</style>
+
+      <section className="page-section" style={{ paddingTop: 0 }}>
         <MessageThreadView
           threadId={data.thread.id}
           locale={locale}
