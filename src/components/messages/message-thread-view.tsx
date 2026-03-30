@@ -15,6 +15,10 @@ interface ThreadUser {
 interface ThreadMessage {
   id: string;
   body: string;
+  contentType?: string;
+  mediaUrl?: string | null;
+  mediaMimeType?: string | null;
+  mediaSizeBytes?: number | null;
   createdAt: string;
   senderUserId: string;
 }
@@ -42,6 +46,7 @@ const copy = {
     confirmDeleteOne: "هل أنت متأكد من حذف هذه الرسالة؟",
     confirmDeleteSelected: "هل أنت متأكد من حذف الرسائل المحددة؟",
     confirmDeleteAll: "هل أنت متأكد من حذف كل الرسائل في المحادثة؟",
+    openImage: "فتح الصورة",
   },
   en: {
     empty: "No messages yet. Send the first message now.",
@@ -56,6 +61,7 @@ const copy = {
     confirmDeleteOne: "Are you sure you want to delete this message?",
     confirmDeleteSelected: "Are you sure you want to delete selected messages?",
     confirmDeleteAll: "Are you sure you want to delete all messages in this thread?",
+    openImage: "Open image",
   },
 } as const;
 
@@ -97,12 +103,29 @@ export function MessageThreadView({
 
       const next = Array.isArray(payload?.data?.thread?.messages)
         ? payload.data.thread.messages
-            .map((m: { id?: unknown; body?: unknown; createdAt?: unknown; senderUserId?: unknown }) => ({
-              id: typeof m?.id === "string" ? m.id : "",
-              body: typeof m?.body === "string" ? m.body : "",
-              createdAt: typeof m?.createdAt === "string" ? m.createdAt : "",
-              senderUserId: typeof m?.senderUserId === "string" ? m.senderUserId : "",
-            }))
+            .map(
+              (m: {
+                id?: unknown;
+                body?: unknown;
+                contentType?: unknown;
+                mediaUrl?: unknown;
+                mediaMimeType?: unknown;
+                mediaSizeBytes?: unknown;
+                createdAt?: unknown;
+                senderUserId?: unknown;
+              }) => ({
+                id: typeof m?.id === "string" ? m.id : "",
+                body: typeof m?.body === "string" ? m.body : "",
+                contentType: typeof m?.contentType === "string" ? m.contentType : undefined,
+                mediaUrl: typeof m?.mediaUrl === "string" ? m.mediaUrl : null,
+                mediaMimeType:
+                  typeof m?.mediaMimeType === "string" ? m.mediaMimeType : null,
+                mediaSizeBytes:
+                  typeof m?.mediaSizeBytes === "number" ? m.mediaSizeBytes : null,
+                createdAt: typeof m?.createdAt === "string" ? m.createdAt : "",
+                senderUserId: typeof m?.senderUserId === "string" ? m.senderUserId : "",
+              })
+            )
             .filter((m: ThreadMessage) => m.id && m.createdAt && m.senderUserId)
         : [];
 
@@ -124,8 +147,12 @@ export function MessageThreadView({
     };
 
     const id = window.setInterval(run, 1500);
-    const onFocus = () => { void run(); };
-    const onSent = () => { void run(); };
+    const onFocus = () => {
+      void run();
+    };
+    const onSent = () => {
+      void run();
+    };
 
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
@@ -152,7 +179,6 @@ export function MessageThreadView({
   const messageIds = sortedMessages.map((m) => m.id);
   const isAllSelected =
     messageIds.length > 0 && messageIds.every((id) => selectedIds.includes(id));
-  const isSelectionMode = selectedIds.length > 0;
 
   function toggleOne(id: string) {
     setSelectedIds((prev) =>
@@ -342,6 +368,7 @@ export function MessageThreadView({
           sortedMessages.map((message) => {
             const isOwnMessage = message.senderUserId === currentUserId;
             const checked = selectedIds.includes(message.id);
+            const hasImage = Boolean(message.mediaUrl);
 
             return (
               <div
@@ -360,68 +387,102 @@ export function MessageThreadView({
                   style={{ marginTop: "8px" }}
                 />
 
-                <article
+                <div
                   style={{
-                    maxWidth: "min(78%, 520px)",
                     display: "grid",
                     gap: "8px",
-                    padding: "12px 14px",
-                    borderRadius: "18px",
-                    background: isOwnMessage
-                      ? "linear-gradient(135deg, rgba(14,165,233,0.22), rgba(37,99,235,0.22))"
-                      : "rgba(255,255,255,0.05)",
-                    border: isOwnMessage
-                      ? "1px solid rgba(14,165,233,0.2)"
-                      : "1px solid rgba(255,255,255,0.08)",
-                    boxShadow: "0 10px 24px rgba(2, 6, 23, 0.12)",
+                    maxWidth: "min(560px, 78vw)",
                   }}
                 >
-                  <p style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.8 }}>
-                    {message.body}
-                  </p>
+                  <div
+                    style={{
+                      borderRadius: "14px",
+                      padding: "10px 12px",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      background: isOwnMessage
+                        ? "rgba(14,165,233,0.15)"
+                        : "rgba(255,255,255,0.04)",
+                      color: "#e5e7eb",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {hasImage ? (
+                      <div style={{ display: "grid", gap: "8px" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={message.mediaUrl ?? ""}
+                          alt="dm-image"
+                          style={{
+                            display: "block",
+                            maxWidth: "100%",
+                            borderRadius: "10px",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            background: "#020617",
+                          }}
+                        />
+                        <a
+                          href={message.mediaUrl ?? "#"}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            color: "#7dd3fc",
+                            textDecoration: "none",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            width: "fit-content",
+                          }}
+                        >
+                          {t.openImage}
+                        </a>
+                      </div>
+                    ) : null}
+
+                    {message.body && message.body !== "[image]" ? (
+                      <div>{message.body}</div>
+                    ) : null}
+                  </div>
 
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      gap: "10px",
+                      gap: "8px",
                     }}
                   >
-                    <span style={{ fontSize: "12px", color: "var(--muted)" }}>
+                    <span style={{ color: "var(--muted)", fontSize: "12px" }}>
                       {formatDateTimeInMakkah(
                         message.createdAt,
                         locale === "en" ? "en-US" : "ar-BH"
                       )}
                     </span>
 
-                    {!isSelectionMode ? (
-                      <button
-                        type="button"
-                        className="btn small"
-                        disabled={isDeleting}
-                        onClick={() => deleteSingle(message.id)}
-                      >
-                        {isDeleting ? t.deleting : t.deleteOne}
-                      </button>
-                    ) : null}
+                    <button
+                      type="button"
+                      className="btn small"
+                      onClick={() => deleteSingle(message.id)}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? t.deleting : t.deleteOne}
+                    </button>
                   </div>
-                </article>
+                </div>
               </div>
             );
           })
         )}
       </div>
 
-      <div
+      <footer
         style={{
-          padding: "18px",
           borderTop: "1px solid rgba(255,255,255,0.08)",
-          background: "rgba(255,255,255,0.02)",
+          padding: "16px",
+          background: "rgba(255,255,255,0.01)",
         }}
       >
         {composer}
-      </div>
+      </footer>
     </section>
   );
 }

@@ -178,6 +178,10 @@ export async function GET(
           messages: refreshedThread.messages.map((message) => ({
             id: message.id,
             body: message.body,
+            contentType: message.contentType,
+            mediaUrl: message.mediaUrl ?? null,
+            mediaMimeType: message.mediaMimeType ?? null,
+            mediaSizeBytes: message.mediaSizeBytes ?? null,
             createdAt: message.createdAt.toISOString(),
             readAt: message.readAt?.toISOString() ?? null,
             senderUserId: message.senderUserId,
@@ -222,15 +226,61 @@ export async function POST(
     const userId = auth.current.user.id;
     const senderUsername = auth.current.user.username;
     const body = await request.json();
-    const messageBody = typeof body.body === "string" ? body.body : "";
 
-    if (!messageBody.trim()) {
+    const messageBody = typeof body.body === "string" ? body.body : "";
+    const trimmedBody = messageBody.trim();
+
+    const mediaUrl =
+      typeof body.mediaUrl === "string" && body.mediaUrl.trim().length > 0
+        ? body.mediaUrl.trim()
+        : null;
+
+    const mediaMimeType =
+      typeof body.mediaMimeType === "string" && body.mediaMimeType.trim().length > 0
+        ? body.mediaMimeType.trim()
+        : null;
+
+    const mediaSizeBytes =
+      Number.isFinite(Number(body.mediaSizeBytes)) && Number(body.mediaSizeBytes) >= 0
+        ? Math.floor(Number(body.mediaSizeBytes))
+        : null;
+
+    const hasText = trimmedBody.length > 0;
+    const hasImage = Boolean(mediaUrl);
+
+    if (!hasText && !hasImage) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: "INVALID_MESSAGE_BODY",
-            message: "Message body is required",
+            message: "Message text or image is required",
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    if (hasImage && !mediaUrl!.startsWith("/uploads/")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "INVALID_MEDIA_URL",
+            message: "Media URL must be an uploaded file path",
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    if (mediaMimeType && !mediaMimeType.startsWith("image/")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "INVALID_MEDIA_TYPE",
+            message: "Only image media is allowed in direct messages currently",
           },
         },
         { status: 400 }
@@ -287,17 +337,14 @@ export async function POST(
       );
     }
 
-
-    const otherUserId =
-      thread.participantAUserId === userId
-        ? thread.participantBUserId
-        : thread.participantAUserId;
-
     const message = await prisma.directMessage.create({
       data: {
         threadId: thread.id,
         senderUserId: userId,
-        body: messageBody,
+        body: hasText ? messageBody : "[image]",
+        mediaUrl,
+        mediaMimeType,
+        mediaSizeBytes,
       },
     });
 
@@ -309,7 +356,9 @@ export async function POST(
     await createInAppNotification({
       userId: receiverUserId,
       title: "رسالة جديدة",
-      body: `لديك رسالة جديدة من @${senderUsername}`,
+      body: hasImage && !hasText
+        ? `لديك صورة جديدة من @${senderUsername}`
+        : `لديك رسالة جديدة من @${senderUsername}`,
       payload: {
         event: "dm.message.received",
         actionUrl: `/messages/${thread.id}`,
@@ -319,6 +368,7 @@ export async function POST(
           threadId: thread.id,
           senderUserId: userId,
           receiverUserId,
+          hasImage,
         },
       },
     });
@@ -329,6 +379,10 @@ export async function POST(
         message: {
           id: message.id,
           body: message.body,
+          contentType: message.contentType,
+          mediaUrl: message.mediaUrl ?? null,
+          mediaMimeType: message.mediaMimeType ?? null,
+          mediaSizeBytes: message.mediaSizeBytes ?? null,
           createdAt: message.createdAt.toISOString(),
         },
       },
