@@ -25,6 +25,7 @@ export function MobileBottomNav() {
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -62,6 +63,7 @@ export function MobileBottomNav() {
   useEffect(() => {
     if (isAuthenticated === false) {
       setHasUnreadMessages(false);
+      setHasUnreadNotifications(false);
       return;
     }
 
@@ -69,23 +71,39 @@ export function MobileBottomNav() {
 
     async function loadUnread() {
       try {
-        const response = await fetch("/api/messages/unread-count", {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-          headers: { Accept: "application/json" },
-        });
+        const [messagesResponse, notificationsResponse] = await Promise.all([
+          fetch("/api/messages/unread-count", {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+            headers: { Accept: "application/json" },
+          }),
+          fetch("/api/notifications/unread-count", {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+            headers: { Accept: "application/json" },
+          }),
+        ]);
 
-        const payload = await response.json().catch(() => null);
+        const [messagesPayload, notificationsPayload] = await Promise.all([
+          messagesResponse.json().catch(() => null),
+          notificationsResponse.json().catch(() => null),
+        ]);
 
-        if (!response.ok) {
-          if (active) setHasUnreadMessages(false);
-          return;
+        if (active) {
+          setHasUnreadMessages(
+            messagesResponse.ok ? extractHasUnread(messagesPayload) : false
+          );
+          setHasUnreadNotifications(
+            notificationsResponse.ok ? extractHasUnread(notificationsPayload) : false
+          );
         }
-
-        if (active) setHasUnreadMessages(extractHasUnread(payload));
       } catch {
-        if (active) setHasUnreadMessages(false);
+        if (active) {
+          setHasUnreadMessages(false);
+          setHasUnreadNotifications(false);
+        }
       }
     }
 
@@ -118,6 +136,8 @@ export function MobileBottomNav() {
 
   const messagesHref =
     isAuthenticated === false ? `/login?next=%2Fmessages` : "/messages";
+  const notificationsHref =
+    isAuthenticated === false ? `/login?next=%2Fnotifications` : "/notifications";
 
   const navItems = [
     {
@@ -128,11 +148,11 @@ export function MobileBottomNav() {
       icon: "⌂",
     },
     {
-      key: "media",
-      route: "/media",
-      href: "/media",
-      label: isArabic ? "الوسائط" : "Media",
-      icon: "▣",
+      key: "notifications",
+      route: "/notifications",
+      href: notificationsHref,
+      label: isArabic ? "الإشعارات" : "Notifications",
+      icon: "🔔",
     },
     {
       key: "compose",
@@ -178,7 +198,8 @@ export function MobileBottomNav() {
               {item.icon}
             </span>
 
-            {item.key === "messages" && hasUnreadMessages ? (
+            {(item.key === "messages" && hasUnreadMessages) ||
+            (item.key === "notifications" && hasUnreadNotifications) ? (
               <span
                 aria-hidden="true"
                 style={{
@@ -194,6 +215,7 @@ export function MobileBottomNav() {
                 }}
               />
             ) : null}
+
           </span>
 
           <span className="mobile-bottom-nav__label">{item.label}</span>

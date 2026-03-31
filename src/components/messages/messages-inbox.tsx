@@ -187,8 +187,11 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
       return false;
     }
 
-    setThreads((prev) => prev.filter((thread) => thread.id !== threadId));
-    setSelectedThreadIds((prev) => prev.filter((id) => id !== threadId));
+    const hiddenForViewer = Boolean(payload?.data?.hiddenForViewer);
+    if (hiddenForViewer) {
+      setThreads((prev) => prev.filter((thread) => thread.id !== threadId));
+      setSelectedThreadIds((prev) => prev.filter((id) => id !== threadId));
+    }
     return true;
   }
 

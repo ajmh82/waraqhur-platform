@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { apiGet } from "@/lib/web-api";
@@ -67,19 +65,8 @@ export default async function TimelinePage({
       <PullToRefresh locale={locale}>
         <section className="page-section" style={{ display: "grid", gap: 12 }}>
           <div className="state-card" style={{ padding: 12, display: "grid", gap: 10 }}>
-            <div className="timeline-sort-tabs" style={{ minHeight: 0 }}>
-              <Link
-                href={`/timeline?mode=people&sort=${encodeURIComponent(sort)}`}
-                className={`btn small ${mode === "people" ? "btn-action" : ""}`}
-              >
-                {locale === "en" ? "Waraq" : "ورق"}
-              </Link>
-              <Link
-                href={`/timeline?mode=sources&sort=${encodeURIComponent(sort)}`}
-                className={`btn small ${mode === "sources" ? "btn-action" : ""}`}
-              >
-                {locale === "en" ? "My Sources" : "مصادري"}
-              </Link>
+            <div style={{ color: "var(--muted)", fontSize: "13px" }}>
+              {locale === "en" ? "Latest feed" : "آخر المنشورات"}
             </div>
           </div>
 

@@ -28,6 +28,7 @@ interface SearchUser {
 interface ThreadLite {
   id: string;
   otherUser: SearchUser;
+  lastMessageText?: string | null;
 }
 
 const copy = {
@@ -36,8 +37,8 @@ const copy = {
     shareCopied: "تم نسخ رابط التغريدة.",
     shareExternal: "مشاركة خارجية",
     shareToDm: "إرسال عبر الرسائل",
-    shareTitle: "إرسال التغريدة",
-    conversations: "المحادثات المفتوحة",
+    shareTitle: "مشاركة عبر الرسائل",
+    conversations: "المحادثات",
     users: "المستخدمون",
     searchUsersPlaceholder: "ابحث باسم المستخدم أو الاسم المعروض...",
     searchLoading: "جارٍ البحث...",
@@ -46,6 +47,7 @@ const copy = {
     sentToConversation: "تم إرسال التغريدة للمحادثة.",
     sendFailed: "تعذر الإرسال.",
     closeShare: "إغلاق",
+    sending: "جارٍ الإرسال...",
     dmSearching: "جارٍ تجهيز الإرسال...",
     dmRequestSent: "تم إرسال طلب محادثة. بعد القبول يمكنك إرسال الرابط.",
     dmFailed: "تعذر الإرسال للخاص.",
@@ -55,8 +57,8 @@ const copy = {
     shareCopied: "Post link copied.",
     shareExternal: "External Share",
     shareToDm: "Send in Messages",
-    shareTitle: "Share post",
-    conversations: "Open conversations",
+    shareTitle: "Share in Direct",
+    conversations: "Conversations",
     users: "Users",
     searchUsersPlaceholder: "Search username or display name...",
     searchLoading: "Searching...",
@@ -65,6 +67,7 @@ const copy = {
     sentToConversation: "Post sent to conversation.",
     sendFailed: "Failed to send.",
     closeShare: "Close",
+    sending: "Sending...",
     dmSearching: "Preparing send...",
     dmRequestSent: "Chat request sent. You can send the link after acceptance.",
     dmFailed: "Failed to send in DM.",
@@ -101,6 +104,7 @@ export function TweetActionBar({
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
   const searchRequestIdRef = useRef(0);
+  const shareRootRef = useRef<HTMLDivElement | null>(null);
   const t = copy[locale];
 
   function getTargetUrl() {
@@ -255,14 +259,21 @@ export function TweetActionBar({
         const t = thread as {
           id?: string;
           otherUser?: SearchUser;
+          lastMessage?: { body?: string | null } | null;
         };
         if (!t?.id || !t?.otherUser?.id) return null;
         return {
           id: t.id,
           otherUser: t.otherUser,
+          lastMessageText:
+            typeof t.lastMessage?.body === "string" ? t.lastMessage.body : null,
         };
       })
-      .filter(Boolean) as Array<{ id: string; otherUser: SearchUser }>;
+      .filter(Boolean) as Array<{
+        id: string;
+        otherUser: SearchUser;
+        lastMessageText?: string | null;
+      }>;
     setThreads(mapped);
   }
 
@@ -302,15 +313,28 @@ export function TweetActionBar({
     void loadOpenConversations();
   }, [shareOpen]);
 
+  useEffect(() => {
+    if (!shareOpen) return;
+    function onDocumentClick(event: MouseEvent) {
+      if (!shareRootRef.current) return;
+      if (!shareRootRef.current.contains(event.target as Node)) {
+        setShareOpen(false);
+      }
+    }
+    document.addEventListener("click", onDocumentClick);
+    return () => document.removeEventListener("click", onDocumentClick);
+  }, [shareOpen]);
+
   return (
     <div
+      ref={shareRootRef}
       className={`tweet-action-bar ${
         compact ? "tweet-action-bar--compact" : ""
       }`}
       style={{ position: "relative" }}
     >
       <Link href={href} className="tweet-action-bar__item tweet-action-bar__item--comment">
-        <span className="tweet-action-bar__icon">💬</span>
+        <span className="tweet-action-bar__icon">◦</span>
         <span className="tweet-action-bar__count">{commentsCount}</span>
       </Link>
 
@@ -321,7 +345,7 @@ export function TweetActionBar({
           isReposted ? "tweet-action-bar__item--active" : ""
         }`}
       >
-        <span className="tweet-action-bar__icon">🔁</span>
+        <span className="tweet-action-bar__icon">↺</span>
         <span className="tweet-action-bar__count">{repostsCount}</span>
       </button>
 
@@ -332,7 +356,7 @@ export function TweetActionBar({
           isLiked ? "tweet-action-bar__item--active" : ""
         }`}
       >
-        <span className="tweet-action-bar__icon">❤️</span>
+        <span className="tweet-action-bar__icon">♡</span>
         <span className="tweet-action-bar__count">{likesCount}</span>
       </button>
 
@@ -343,7 +367,7 @@ export function TweetActionBar({
           isBookmarked ? "tweet-action-bar__item--active" : ""
         }`}
       >
-        <span className="tweet-action-bar__icon">🔖</span>
+        <span className="tweet-action-bar__icon">⌁</span>
         <span className="tweet-action-bar__count">{bookmarksCount}</span>
       </button>
 
@@ -360,7 +384,7 @@ export function TweetActionBar({
         }}
         className="tweet-action-bar__item tweet-action-bar__item--share"
       >
-        <span className="tweet-action-bar__icon">📤</span>
+        <span className="tweet-action-bar__icon">⇱</span>
         {sharesCount > 0 ? (
           <span className="tweet-action-bar__count">{sharesCount}</span>
         ) : null}
@@ -368,22 +392,34 @@ export function TweetActionBar({
 
       {shareOpen ? (
         <div
+          className="tweet-share-panel"
           style={{
             position: "absolute",
             insetInlineEnd: 0,
             top: "calc(100% + 8px)",
             zIndex: 50,
-            minWidth: "220px",
+            minWidth: "280px",
+            width: "min(92vw, 420px)",
             display: "grid",
-            gap: "8px",
-            padding: "10px",
-            borderRadius: "14px",
+            gap: "10px",
+            padding: "12px",
+            borderRadius: "16px",
             border: "1px solid rgba(255,255,255,0.12)",
             background: "rgba(2,6,23,0.96)",
             boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
           }}
         >
-          <strong style={{ fontSize: "14px" }}>{t.shareTitle}</strong>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+            <strong style={{ fontSize: "15px" }}>{t.shareTitle}</strong>
+            <button
+              type="button"
+              className="btn small"
+              onClick={() => setShareOpen(false)}
+              disabled={shareBusy}
+            >
+              {t.closeShare}
+            </button>
+          </div>
 
           <div style={{ display: "grid", gap: "8px" }}>
             <span style={{ fontSize: "12px", color: "var(--muted)" }}>{t.conversations}</span>
@@ -392,7 +428,7 @@ export function TweetActionBar({
                 {t.noConversations}
               </p>
             ) : (
-              <div style={{ display: "grid", gap: "6px", maxHeight: "180px", overflowY: "auto" }}>
+              <div style={{ display: "grid", gap: "6px", maxHeight: "220px", overflowY: "auto" }}>
                 {threads.map((thread) => (
                   <button
                     key={thread.id}
@@ -409,10 +445,51 @@ export function TweetActionBar({
                         setShareBusy(false);
                       }
                     }}
-                    style={{ justifyContent: "space-between" }}
+                    style={{ justifyContent: "space-between", minHeight: "52px" }}
                   >
-                    <span>{thread.otherUser.displayName}</span>
-                    <span>@{thread.otherUser.username}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "999px",
+                          background: "linear-gradient(135deg, #0ea5e9, #6366f1)",
+                          display: "grid",
+                          placeItems: "center",
+                          fontSize: "11px",
+                          fontWeight: 900,
+                          color: "#fff",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {(thread.otherUser.displayName || thread.otherUser.username || "U")
+                          .slice(0, 1)
+                          .toUpperCase()}
+                      </span>
+                      <span style={{ display: "grid", gap: "2px", textAlign: "start", minWidth: 0 }}>
+                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {thread.otherUser.displayName}
+                        </span>
+                        <span style={{ fontSize: "11px", color: "var(--muted)" }}>
+                          @{thread.otherUser.username}
+                        </span>
+                        {thread.lastMessageText ? (
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              color: "var(--muted)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {thread.lastMessageText}
+                          </span>
+                        ) : null}
+                      </span>
+                    </span>
+                    {shareBusy ? <span style={{ fontSize: "11px" }}>{t.sending}</span> : null}
                   </button>
                 ))}
               </div>
@@ -449,7 +526,7 @@ export function TweetActionBar({
               </p>
             ) : null}
             {searchResults.length > 0 ? (
-              <div style={{ display: "grid", gap: "6px", maxHeight: "180px", overflowY: "auto" }}>
+              <div style={{ display: "grid", gap: "6px", maxHeight: "200px", overflowY: "auto" }}>
                 {searchResults.map((user) => (
                   <button
                     key={user.id}
@@ -475,10 +552,36 @@ export function TweetActionBar({
                         setShareBusy(false);
                       }
                     }}
-                    style={{ justifyContent: "space-between" }}
+                    style={{ justifyContent: "space-between", minHeight: "52px" }}
                   >
-                    <span>{user.displayName}</span>
-                    <span>@{user.username}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "999px",
+                          background: "linear-gradient(135deg, #0ea5e9, #6366f1)",
+                          display: "grid",
+                          placeItems: "center",
+                          fontSize: "11px",
+                          fontWeight: 900,
+                          color: "#fff",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {(user.displayName || user.username || "U").slice(0, 1).toUpperCase()}
+                      </span>
+                      <span style={{ display: "grid", gap: "2px", textAlign: "start", minWidth: 0 }}>
+                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {user.displayName}
+                        </span>
+                        <span style={{ fontSize: "11px", color: "var(--muted)" }}>
+                          @{user.username}
+                        </span>
+                      </span>
+                    </span>
+                    {shareBusy ? <span style={{ fontSize: "11px" }}>{t.sending}</span> : null}
                   </button>
                 ))}
               </div>
@@ -501,15 +604,6 @@ export function TweetActionBar({
             disabled={shareBusy}
           >
             {t.shareExternal}
-          </button>
-
-          <button
-            type="button"
-            className="btn small"
-            onClick={() => setShareOpen(false)}
-            disabled={shareBusy}
-          >
-            {t.closeShare}
           </button>
 
           {shareNotice ? (

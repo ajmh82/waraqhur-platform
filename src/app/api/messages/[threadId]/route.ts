@@ -83,11 +83,16 @@ export async function GET(
       );
     }
 
+    const viewerIsParticipantA = thread.participantAUserId === userId;
+
     await prisma.directMessage.updateMany({
       where: {
         threadId: thread.id,
         senderUserId: { not: userId },
         readAt: null,
+        ...(viewerIsParticipantA
+          ? { deletedForViewerAAt: null }
+          : { deletedForViewerBAt: null }),
       },
       data: { readAt: new Date() },
     });
@@ -163,6 +168,12 @@ export async function GET(
       })
     );
 
+    const visibleMessages = refreshedThread.messages.filter((message) =>
+      viewerIsParticipantA
+        ? message.deletedForViewerAAt === null
+        : message.deletedForViewerBAt === null
+    );
+
     return NextResponse.json({
       success: true,
       data: {
@@ -175,7 +186,7 @@ export async function GET(
             displayName: otherUser.profile?.displayName ?? otherUser.username,
             avatarUrl: otherUser.profile?.avatarUrl ?? null,
           },
-          messages: refreshedThread.messages.map((message) => ({
+          messages: visibleMessages.map((message) => ({
             id: message.id,
             body: message.body,
             contentType: message.contentType,
@@ -185,6 +196,10 @@ export async function GET(
             createdAt: message.createdAt.toISOString(),
             readAt: message.readAt?.toISOString() ?? null,
             senderUserId: message.senderUserId,
+            seenByRecipient:
+              message.senderUserId === userId
+                ? false
+                : message.readAt !== null,
             isMine: message.senderUserId === userId,
             sender: {
               id: message.sender.id,
@@ -454,18 +469,51 @@ export async function DELETE(
       );
     }
 
+    const isParticipantA = await prisma.directThread.findFirst({
+      where: { id: thread.id, participantAUserId: userId },
+      select: { id: true },
+    });
+    const viewerField = isParticipantA ? "deletedForViewerAAt" : "deletedForViewerBAt";
+    const otherViewerField = isParticipantA ? "deletedForViewerBAt" : "deletedForViewerAAt";
+    const now = new Date();
+
     const result = await prisma.$transaction(async (tx) => {
-      const deleted = await tx.directMessage.deleteMany({
+      const markResult = await tx.directMessage.updateMany({
         where: deleteAll
-          ? { threadId: thread.id }
-          : { threadId: thread.id, id: { in: messageIds } },
+          ? {
+              threadId: thread.id,
+              [viewerField]: null,
+            }
+          : {
+              threadId: thread.id,
+              id: { in: messageIds },
+              [viewerField]: null,
+            },
+        data: {
+          [viewerField]: now,
+        },
       });
 
-      const remainingCount = await tx.directMessage.count({
+      const purgeResult = await tx.directMessage.deleteMany({
+        where: {
+          threadId: thread.id,
+          [viewerField]: { not: null },
+          [otherViewerField]: { not: null },
+        },
+      });
+
+      const remainingVisibleCount = await tx.directMessage.count({
+        where: {
+          threadId: thread.id,
+          [viewerField]: null,
+        },
+      });
+
+      const remainingAnyCount = await tx.directMessage.count({
         where: { threadId: thread.id },
       });
 
-      if (remainingCount === 0) {
+      if (remainingAnyCount === 0) {
         await tx.directThread.delete({
           where: { id: thread.id },
         });
@@ -477,8 +525,10 @@ export async function DELETE(
       }
 
       return {
-        deletedCount: deleted.count,
-        threadDeleted: remainingCount === 0,
+        deletedCount: markResult.count,
+        purgedCount: purgeResult.count,
+        threadDeleted: remainingAnyCount === 0,
+        hiddenForViewer: remainingVisibleCount === 0,
       };
     });
 
@@ -486,8 +536,10 @@ export async function DELETE(
       success: true,
       data: {
         deletedCount: result.deletedCount,
+        purgedCount: result.purgedCount,
         deleteAll,
         threadDeleted: result.threadDeleted,
+        hiddenForViewer: result.hiddenForViewer,
       },
     });
   } catch (error) {

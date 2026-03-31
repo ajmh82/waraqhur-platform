@@ -93,7 +93,6 @@ interface PostPageData {
 const copy = {
   ar: {
     unknownAuthor: "كاتب غير معروف",
-    noText: "لا يوجد نص ظاهر لهذا المنشور.",
     directMessage: "مراسلة خاصة",
     editProfile: "تعديل الملف",
     settings: "الإعدادات",
@@ -107,7 +106,6 @@ const copy = {
   },
   en: {
     unknownAuthor: "Unknown author",
-    noText: "There is no visible text for this post.",
     directMessage: "Direct Message",
     editProfile: "Edit Profile",
     settings: "Settings",
@@ -291,6 +289,7 @@ export default async function PostPage({
                     userId={post.author.id}
                     initialIsFollowing={Boolean(post.author.isFollowing)}
                     locale={locale}
+                    hideWhenFollowing
                   />
                 ) : null}
               </div>
@@ -327,9 +326,7 @@ export default async function PostPage({
                 >
                   {renderTextWithHashtags(mainText)}
                 </div>
-              ) : (
-                <p dir="auto" style={{ margin: 0, color: "var(--muted)" }}>{t.noText}</p>
-              )}
+              ) : null}
 
               {mediaUrl && mediaType === "image" ? (
                 <div

@@ -53,7 +53,7 @@ export function MessageThreadBlockControls({
       }
 
       const list = Array.isArray(payload?.data?.blockedUsers) ? payload.data.blockedUsers : [];
-      const found = list.some((row: { blockedUser?: { id?: string } }) => row?.blockedUser?.id === targetUserId);
+      const found = list.some((row: { userId?: string }) => row?.userId === targetUserId);
       setIsBlocked(found);
     } catch {
       setError(t.failed);
@@ -91,7 +91,7 @@ export function MessageThreadBlockControls({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetUserId }),
+        body: JSON.stringify({ blockedUserId: targetUserId }),
       });
       const payload = await res.json().catch(() => null);
       if (!res.ok || !payload?.success) {
@@ -100,6 +100,11 @@ export function MessageThreadBlockControls({
       }
 
       setIsBlocked(true);
+      alert(
+        locale === "en"
+          ? "User has been blocked. They can no longer send you new messages."
+          : "تم حظر المستخدم. لن تصلك منه رسائل جديدة."
+      );
       router.push("/messages");
     } catch {
       setError(t.failed);

@@ -122,7 +122,6 @@ const copy = {
   ar: {
     repost: "إعادة نشر",
     unknownAuthor: "كاتب غير معروف",
-    noVisibleText: "لا يوجد نص ظاهر لهذا المنشور حتى الآن.",
     source: "المصدر",
     close: "إغلاق",
     download: "تنزيل",
@@ -131,7 +130,6 @@ const copy = {
   en: {
     repost: "Repost",
     unknownAuthor: "Unknown author",
-    noVisibleText: "There is no visible text for this post yet.",
     source: "Source",
     close: "Close",
     download: "Download",
@@ -294,6 +292,7 @@ export function PostCard({
                   userId={targetPost.author.id}
                   initialIsFollowing={Boolean(targetPost.author.isFollowing)}
                   locale={locale}
+                  hideWhenFollowing
                 />
               ) : null}
             </div>
@@ -326,14 +325,7 @@ export function PostCard({
               >
                 {renderTextWithHashtags(mainText)}
               </p>
-            ) : (
-              <p dir="auto"
-                className="tweet-card__excerpt"
-                style={{ color: "rgba(255,255,255,0.52)" }}
-              >
-                {t.noVisibleText}
-              </p>
-            )}
+            ) : null}
 
             {mediaUrl && mediaType === "image" ? (
               <button
@@ -426,16 +418,18 @@ export function PostCard({
               </div>
             ) : null}
 
-            {post.author?.isOwnProfile ? (
-              <TweetOwnerControls
-                postId={post.id}
-                initialContent={post.content?.trim() || post.excerpt?.trim() || post.title?.trim() || ""}
-                initialMediaUrl={mediaUrl}
-                initialMediaType={mediaType}
-                initialIsPinned={Boolean(post.isPinned)}
-                compact
-                locale={locale}
-              />
+            {targetPost.author?.isOwnProfile ? (
+              <div className="tweet-card__owner-controls">
+                <TweetOwnerControls
+                  postId={post.id}
+                  initialContent={post.content?.trim() || post.excerpt?.trim() || post.title?.trim() || ""}
+                  initialMediaUrl={mediaUrl}
+                  initialMediaType={mediaType}
+                  initialIsPinned={Boolean(post.isPinned)}
+                  compact
+                  locale={locale}
+                />
+              </div>
             ) : null}
 
             {wasEdited ? (

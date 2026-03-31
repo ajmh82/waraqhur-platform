@@ -6,6 +6,7 @@ interface FollowUserButtonProps {
   userId: string;
   initialIsFollowing: boolean;
   locale?: "ar" | "en";
+  hideWhenFollowing?: boolean;
 }
 
 const copy = {
@@ -25,6 +26,7 @@ export function FollowUserButton({
   userId,
   initialIsFollowing,
   locale = "ar",
+  hideWhenFollowing = false,
 }: FollowUserButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [isPending, setIsPending] = useState(false);
@@ -56,6 +58,10 @@ export function FollowUserButton({
   }
 
   const following = isFollowing;
+
+  if (hideWhenFollowing && following) {
+    return null;
+  }
 
   return (
     <button data-follow-button="true" type="button"

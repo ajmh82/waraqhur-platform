@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { TimelineList } from "@/components/content/timeline-list";
+import { ProfileActions } from "@/components/social/profile-actions";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
 type TimelinePost = {
@@ -159,11 +160,25 @@ export default async function PublicUserPage({
   const postsCount = posts.length;
   const repliesCount = replies.length;
   const repostsCount = reposts.length;
+  const isOwnProfile = Boolean(user?.isOwnProfile);
+  const isFollowing = Boolean(user?.isFollowing);
+  const userId = asString(user?.id, "");
 
   return (
     <AppShell>
       <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <div
+          className="profile-hero"
+          style={{
+            display: "grid",
+            gap: 12,
+            border: "1px solid rgba(255,255,255,0.09)",
+            borderRadius: 18,
+            padding: 14,
+            background: "rgba(255,255,255,0.03)",
+          }}
+        >
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <div
             style={{
               width: 72,
@@ -199,6 +214,15 @@ export default async function PublicUserPage({
               {isEn ? "Joined" : "تاريخ التسجيل"}: {createdAt}
             </p>
           </div>
+        </div>
+
+          {!isOwnProfile && userId ? (
+            <ProfileActions
+              targetUserId={userId}
+              initialIsFollowing={isFollowing}
+              locale={locale}
+            />
+          ) : null}
         </div>
 
         {bio ? (

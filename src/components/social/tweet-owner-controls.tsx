@@ -92,6 +92,8 @@ export function TweetOwnerControls({
   const [error, setError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const t = copy[locale];
+  const inlineMenuAnchorStyle =
+    locale === "ar" ? ({ insetInlineStart: 0 } as const) : ({ insetInlineEnd: 0 } as const);
 
   useEffect(() => {
     if (!selectedFile) {
@@ -293,7 +295,14 @@ export function TweetOwnerControls({
   }
 
   return (
-    <div ref={rootRef} style={{ display: "grid", gap: "10px", justifyItems: "end" }}>
+    <div
+      ref={rootRef}
+      style={{
+        display: "grid",
+        gap: "10px",
+        justifyItems: locale === "ar" ? "start" : "end",
+      }}
+    >
       <div style={{ position: "relative" }}>
         <button
           type="button"
@@ -317,7 +326,6 @@ export function TweetOwnerControls({
             style={{
               position: "absolute",
               top: "calc(100% + 6px)",
-              insetInlineEnd: 0,
               zIndex: 25,
               display: "grid",
               gap: "6px",
@@ -327,6 +335,7 @@ export function TweetOwnerControls({
               background: "rgba(2,6,23,0.96)",
               border: "1px solid rgba(255,255,255,0.12)",
               boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+              ...inlineMenuAnchorStyle,
             }}
           >
             <button

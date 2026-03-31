@@ -20,6 +20,7 @@ interface ThreadMessage {
   mediaMimeType?: string | null;
   mediaSizeBytes?: number | null;
   createdAt: string;
+  readAt?: string | null;
   senderUserId: string;
 }
 
@@ -47,6 +48,9 @@ const copy = {
     confirmDeleteSelected: "هل أنت متأكد من حذف الرسائل المحددة؟",
     confirmDeleteAll: "هل أنت متأكد من حذف كل الرسائل في المحادثة؟",
     openImage: "فتح الصورة",
+    sent: "تم الإرسال",
+    delivered: "تم التسليم",
+    read: "تمت القراءة",
   },
   en: {
     empty: "No messages yet. Send the first message now.",
@@ -62,6 +66,9 @@ const copy = {
     confirmDeleteSelected: "Are you sure you want to delete selected messages?",
     confirmDeleteAll: "Are you sure you want to delete all messages in this thread?",
     openImage: "Open image",
+    sent: "Sent",
+    delivered: "Delivered",
+    read: "Read",
   },
 } as const;
 
@@ -112,6 +119,7 @@ export function MessageThreadView({
                 mediaMimeType?: unknown;
                 mediaSizeBytes?: unknown;
                 createdAt?: unknown;
+                readAt?: unknown;
                 senderUserId?: unknown;
               }) => ({
                 id: typeof m?.id === "string" ? m.id : "",
@@ -123,6 +131,7 @@ export function MessageThreadView({
                 mediaSizeBytes:
                   typeof m?.mediaSizeBytes === "number" ? m.mediaSizeBytes : null,
                 createdAt: typeof m?.createdAt === "string" ? m.createdAt : "",
+                readAt: typeof m?.readAt === "string" ? m.readAt : null,
                 senderUserId: typeof m?.senderUserId === "string" ? m.senderUserId : "",
               })
             )
@@ -213,7 +222,7 @@ export function MessageThreadView({
 
       setSelectedIds([]);
 
-      if (apiPayload?.data?.threadDeleted) {
+      if (apiPayload?.data?.threadDeleted || apiPayload?.data?.hiddenForViewer) {
         router.push("/messages");
         return;
       }
@@ -369,6 +378,11 @@ export function MessageThreadView({
             const isOwnMessage = message.senderUserId === currentUserId;
             const checked = selectedIds.includes(message.id);
             const hasImage = Boolean(message.mediaUrl);
+            const messageStatus = isOwnMessage
+              ? message.readAt
+                ? t.read
+                : t.delivered
+              : t.sent;
 
             return (
               <div
@@ -394,6 +408,19 @@ export function MessageThreadView({
                     maxWidth: "min(560px, 78vw)",
                   }}
                 >
+                  {isOwnMessage ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "flex-start",
+                        color: "var(--muted)",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {message.readAt ? `✓✓ ${t.read}` : `✓ ${t.delivered}`}
+                    </div>
+                  ) : null}
                   <div
                     style={{
                       borderRadius: "14px",
@@ -451,12 +478,22 @@ export function MessageThreadView({
                       gap: "8px",
                     }}
                   >
-                    <span style={{ color: "var(--muted)", fontSize: "12px" }}>
-                      {formatDateTimeInMakkah(
-                        message.createdAt,
-                        locale === "en" ? "en-US" : "ar-BH"
-                      )}
-                    </span>
+                    <div style={{ display: "grid", gap: "3px" }}>
+                      <span style={{ color: "var(--muted)", fontSize: "12px" }}>
+                        {formatDateTimeInMakkah(
+                          message.createdAt,
+                          locale === "en" ? "en-US" : "ar-BH"
+                        )}
+                      </span>
+                      <span style={{ color: "var(--muted)", fontSize: "11px" }}>
+                        {isOwnMessage
+                          ? message.readAt
+                            ? "✓✓"
+                            : "✓"
+                          : "•"}{" "}
+                        {messageStatus}
+                      </span>
+                    </div>
 
                     <button
                       type="button"

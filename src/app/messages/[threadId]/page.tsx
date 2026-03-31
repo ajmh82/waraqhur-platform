@@ -20,6 +20,11 @@ interface MessageThreadPageData {
       body: string;
       createdAt: string;
       senderUserId: string;
+      readAt?: string | null;
+      contentType?: string;
+      mediaUrl?: string | null;
+      mediaMimeType?: string | null;
+      mediaSizeBytes?: number | null;
     }>;
   };
   currentUserId: string;
