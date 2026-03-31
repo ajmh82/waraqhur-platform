@@ -2,13 +2,16 @@ import { dashboardApiGet } from "@/lib/dashboard-api";
 
 type ActivityItem = {
   id: string;
-  at: string;
+  createdAt: string;
+  lastUsedAt: string | null;
   country: string | null;
-  client: string | null;
-  source: "current" | "audit";
+  deviceType: string | null;
+  browserName: string | null;
+  platformName: string | null;
+  userAgent: string | null;
 };
 
-type ActivityData = { items: ActivityItem[] };
+type ActivityData = { activity: ActivityItem[] };
 
 export default async function DashboardActivityPage() {
   const isAr = true;
@@ -16,7 +19,7 @@ export default async function DashboardActivityPage() {
 
   try {
     const data = await dashboardApiGet<ActivityData>("/api/dashboard/activity");
-    items = Array.isArray(data.items) ? data.items : [];
+    items = Array.isArray(data.activity) ? data.activity : [];
   } catch {
     items = [];
   }
@@ -26,8 +29,8 @@ export default async function DashboardActivityPage() {
         <h1 style={{ margin: 0 }}>{isAr ? "النشاط" : "Activity"}</h1>
         <p style={{ margin: 0, color: "var(--muted)" }}>
           {isAr
-            ? "آخر تسجيلات الدخول خلال 7 أيام (الدولة والعميل حسب البيانات المتاحة)."
-            : "Last sign-ins for 7 days (country/client when available)."}
+            ? "آخر تسجيلات الدخول مع الجهاز والمتصفح والدولة (إن توفرت)."
+            : "Recent sign-ins with device, browser, and country (when available)."}
         </p>
 
         <div className="dashboard-list-nav">
@@ -48,12 +51,16 @@ export default async function DashboardActivityPage() {
                     : isAr
                     ? "دخول سابق"
                     : "Previous sign-in"}{" "}
-                  • {new Date(x.at).toLocaleString()}
+                  • {new Date(x.lastUsedAt ?? x.createdAt).toLocaleString()}
                 </span>
                 <span className="dashboard-list-item__body">
                   {(x.country ?? (isAr ? "غير متاح" : "Unavailable")) +
                     " • " +
-                    (x.client ?? (isAr ? "غير متاح" : "Unavailable"))}
+                    (x.deviceType ?? (isAr ? "جهاز غير معروف" : "Unknown device")) +
+                    " • " +
+                    ((x.browserName || x.platformName)
+                      ? `${x.browserName ?? ""}${x.platformName ? ` (${x.platformName})` : ""}`.trim()
+                      : (isAr ? "متصفح غير معروف" : "Unknown browser"))}
                 </span>
               </div>
             ))

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { formatRelativeTime } from "@/lib/date-time";
 
 interface InboxThread {
   id: string;
@@ -37,7 +38,7 @@ const copy = {
     deleting: "جارٍ الحذف...",
     deleteFailed: "تعذر حذف المحادثة.",
     confirmDeleteThread: "هل أنت متأكد من حذف هذه المحادثة بالكامل؟",
-    selectAll: "تحديد الكل",
+    selectAll: "تحديد",
     clearSelection: "إلغاء التحديد",
     deleteSelected: "حذف المحدد",
     deleteAll: "حذف الكل",
@@ -57,7 +58,7 @@ const copy = {
     deleting: "Deleting...",
     deleteFailed: "Failed to delete conversation.",
     confirmDeleteThread: "Are you sure you want to delete this conversation?",
-    selectAll: "Select all",
+    selectAll: "Select",
     clearSelection: "Clear selection",
     deleteSelected: "Delete selected",
     deleteAll: "Delete all",
@@ -78,12 +79,13 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
   const [error, setError] = useState<string | null>(null);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
 
+  const [selectionMode, setSelectionMode] = useState(false);
   const [selectedThreadIds, setSelectedThreadIds] = useState<string[]>([]);
   const [deletingThreadId, setDeletingThreadId] = useState<string | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const isBusy = Boolean(deletingThreadId) || isBulkDeleting;
-  const isSelectionMode = selectedThreadIds.length > 0;
+  const isSelectionMode = selectionMode;
 
   useEffect(() => {
     if (isUnauthorized) {
@@ -156,6 +158,7 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
     sortedIds.length > 0 && sortedIds.every((id) => selectedThreadIds.includes(id));
 
   function toggleThread(threadId: string) {
+    if (!selectionMode) return;
     setSelectedThreadIds((prev) =>
       prev.includes(threadId)
         ? prev.filter((id) => id !== threadId)
@@ -164,6 +167,7 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
   }
 
   function toggleAllThreads() {
+    if (!selectionMode) return;
     setSelectedThreadIds(isAllSelected ? [] : sortedIds);
   }
 
@@ -277,30 +281,46 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
   return (
     <div className="state-card" style={{ display: "grid", gap: 10 }}>
       <div style={{ display: "grid", gap: 8 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          <button type="button" className="btn small" onClick={toggleAllThreads}>
-            {isAllSelected ? t.clearSelection : t.selectAll}
-          </button>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
           <button
             type="button"
             className="btn small"
-            disabled={selectedThreadIds.length === 0 || isBusy}
-            onClick={() => bulkDelete(selectedThreadIds, t.confirmDeleteSelected)}
+            onClick={() => {
+              setSelectionMode((v) => !v);
+              setSelectedThreadIds([]);
+            }}
           >
-            {isBusy ? t.deleting : t.deleteSelected}
+            {selectionMode ? t.clearSelection : t.selectAll}
           </button>
-          <button
-            type="button"
-            className="btn small"
-            disabled={sorted.length === 0 || isBusy}
-            onClick={() => bulkDelete(sortedIds, t.confirmDeleteAll)}
-          >
-            {isBusy ? t.deleting : t.deleteAll}
-          </button>
+          {selectionMode ? (
+            <>
+              <button type="button" className="btn small" onClick={toggleAllThreads}>
+                {isAllSelected ? t.clearSelection : t.selectAll}
+              </button>
+              <button
+                type="button"
+                className="btn small"
+                disabled={selectedThreadIds.length === 0 || isBusy}
+                onClick={() => bulkDelete(selectedThreadIds, t.confirmDeleteSelected)}
+              >
+                {isBusy ? t.deleting : t.deleteSelected}
+              </button>
+              <button
+                type="button"
+                className="btn small"
+                disabled={sorted.length === 0 || isBusy}
+                onClick={() => bulkDelete(sortedIds, t.confirmDeleteAll)}
+              >
+                {isBusy ? t.deleting : t.deleteAll}
+              </button>
+            </>
+          ) : null}
         </div>
-        <span style={{ color: "var(--muted)", fontSize: "13px" }}>
-          {selectedThreadIds.length} {t.selectedCount}
-        </span>
+        {selectionMode ? (
+          <span style={{ color: "var(--muted)", fontSize: "13px" }}>
+            {selectedThreadIds.length} {t.selectedCount}
+          </span>
+        ) : null}
       </div>
 
       {sorted.map((thread) => (
@@ -309,26 +329,23 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
           className="messages-inbox__item"
           style={{
             display: "grid",
-            gridTemplateColumns: "auto 1fr auto",
+            gridTemplateColumns: isSelectionMode ? "auto 1fr auto" : "1fr auto",
             gap: "10px",
             alignItems: "center",
           }}
         >
-          <input
-            type="checkbox"
-            checked={selectedThreadIds.includes(thread.id)}
-            onChange={() => toggleThread(thread.id)}
-            disabled={isBusy}
-          />
+          {isSelectionMode ? (
+            <input
+              type="checkbox"
+              checked={selectedThreadIds.includes(thread.id)}
+              onChange={() => toggleThread(thread.id)}
+              disabled={isBusy}
+            />
+          ) : null}
 
           <Link href={`/messages/${thread.id}`} className="messages-inbox__main" style={{ minWidth: 0 }}>
             <div className="messages-inbox__name-row">
               <strong>{thread.otherUser.displayName}</strong>
-              {thread.unreadCount > 0 ? (
-                <span className="messages-inbox__badge">
-                  {thread.unreadCount > 99 ? "99+" : thread.unreadCount}
-                </span>
-              ) : null}
             </div>
             <span className="messages-inbox__handle">@{thread.otherUser.username}</span>
             <p className="messages-inbox__last">
@@ -338,11 +355,11 @@ export function MessagesInbox({ locale = "ar", threads: initialThreads = [] }: M
 
           <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
             <time className="messages-inbox__time">
-              {new Date(thread.updatedAt).toLocaleString(
-                locale === "ar" ? "ar-BH" : "en-US",
-                { hour12: locale !== "ar" }
-              )}
+              {formatRelativeTime(thread.updatedAt, locale === "en" ? "en-US" : "ar-BH")}
             </time>
+            {thread.unreadCount > 0 ? (
+              <span className="messages-inbox__badge" aria-hidden="true" />
+            ) : null}
             {!isSelectionMode ? (
               <button
                 type="button"

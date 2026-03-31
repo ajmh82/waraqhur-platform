@@ -298,15 +298,14 @@ export function NotificationsManager({
                 key={n.id}
                 className="dashboard-card"
                 style={{
-                  padding: "16px",
+                  padding: "14px 0",
                   display: "grid",
                   gap: "8px",
-                  border: n.readAt
-                    ? "1px solid rgba(255,255,255,0.08)"
-                    : "1px solid rgba(125,211,252,0.28)",
-                  background: n.readAt
-                    ? "rgba(255,255,255,0.03)"
-                    : "rgba(56,189,248,0.08)",
+                  border: 0,
+                  borderBottom: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 0,
+                  background: "transparent",
+                  boxShadow: "none",
                 }}
               >
                 <div
@@ -392,25 +391,6 @@ export function NotificationsManager({
                       </>
                     ) : null}
 
-                    {targetUrl ? (
-                      <button
-                        type="button"
-                        className="btn small"
-                        onClick={() => void openNotification(n)}
-                      >
-                        {t.open}
-                      </button>
-                    ) : null}
-
-                    {!n.readAt ? (
-                      <button
-                        type="button"
-                        className="btn small"
-                        onClick={() => void markOneAsRead(n.id)}
-                      >
-                        {t.markRead}
-                      </button>
-                    ) : null}
                   </div>
                 </div>
               </article>

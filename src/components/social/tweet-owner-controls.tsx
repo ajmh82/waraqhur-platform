@@ -92,8 +92,10 @@ export function TweetOwnerControls({
   const [error, setError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const t = copy[locale];
-  const inlineMenuAnchorStyle =
-    locale === "ar" ? ({ insetInlineStart: 0 } as const) : ({ insetInlineEnd: 0 } as const);
+  const inlineMenuPopupStyle =
+    locale === "ar"
+      ? ({ left: 0, right: "auto" } as const)
+      : ({ right: 0, left: "auto" } as const);
 
   useEffect(() => {
     if (!selectedFile) {
@@ -312,10 +314,13 @@ export function TweetOwnerControls({
           aria-label={t.actions}
           disabled={isPending}
           style={{
-            minWidth: "38px",
-            minHeight: "34px",
-            padding: "0 10px",
+            minWidth: "28px",
+            minHeight: "28px",
+            padding: 0,
             borderRadius: "999px",
+            border: 0,
+            background: "transparent",
+            boxShadow: "none",
           }}
         >
           ⋯
@@ -325,7 +330,8 @@ export function TweetOwnerControls({
           <div
             style={{
               position: "absolute",
-              top: "calc(100% + 6px)",
+              top: "auto",
+              bottom: "calc(100% + 6px)",
               zIndex: 25,
               display: "grid",
               gap: "6px",
@@ -335,7 +341,7 @@ export function TweetOwnerControls({
               background: "rgba(2,6,23,0.96)",
               border: "1px solid rgba(255,255,255,0.12)",
               boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
-              ...inlineMenuAnchorStyle,
+              ...inlineMenuPopupStyle,
             }}
           >
             <button

@@ -289,13 +289,17 @@ export async function POST(
       );
     }
 
-    if (mediaMimeType && !mediaMimeType.startsWith("image/")) {
+    if (
+      mediaMimeType &&
+      !mediaMimeType.startsWith("image/") &&
+      !mediaMimeType.startsWith("audio/")
+    ) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: "INVALID_MEDIA_TYPE",
-            message: "Only image media is allowed in direct messages currently",
+            message: "Only image and audio media are allowed in direct messages currently",
           },
         },
         { status: 400 }
@@ -432,6 +436,8 @@ export async function DELETE(
     const body = await request.json().catch(() => ({} as Record<string, unknown>));
 
     const deleteAll = Boolean(body.deleteAll);
+    const deleteModeRaw = typeof body.deleteMode === "string" ? body.deleteMode : "me";
+    const deleteMode = deleteModeRaw === "everyone" ? "everyone" : "me";
     const rawIds: unknown[] = Array.isArray(body.messageIds) ? body.messageIds : [];
     const messageIds = rawIds
       .filter((v): v is string => typeof v === "string")
@@ -469,10 +475,11 @@ export async function DELETE(
       );
     }
 
-    const isParticipantA = await prisma.directThread.findFirst({
+    const threadWithParticipants = await prisma.directThread.findFirst({
       where: { id: thread.id, participantAUserId: userId },
-      select: { id: true },
+      select: { id: true, participantAUserId: true, participantBUserId: true },
     });
+    const isParticipantA = Boolean(threadWithParticipants);
     const viewerField = isParticipantA ? "deletedForViewerAAt" : "deletedForViewerBAt";
     const otherViewerField = isParticipantA ? "deletedForViewerBAt" : "deletedForViewerAAt";
     const now = new Date();
@@ -482,16 +489,26 @@ export async function DELETE(
         where: deleteAll
           ? {
               threadId: thread.id,
-              [viewerField]: null,
+              ...(deleteMode === "everyone"
+                ? { senderUserId: userId }
+                : { [viewerField]: null }),
             }
           : {
               threadId: thread.id,
               id: { in: messageIds },
-              [viewerField]: null,
+              ...(deleteMode === "everyone"
+                ? { senderUserId: userId }
+                : { [viewerField]: null }),
             },
-        data: {
-          [viewerField]: now,
-        },
+        data:
+          deleteMode === "everyone"
+            ? {
+                deletedForViewerAAt: now,
+                deletedForViewerBAt: now,
+              }
+            : {
+                [viewerField]: now,
+              },
       });
 
       const purgeResult = await tx.directMessage.deleteMany({
@@ -538,6 +555,7 @@ export async function DELETE(
         deletedCount: result.deletedCount,
         purgedCount: result.purgedCount,
         deleteAll,
+        deleteMode,
         threadDeleted: result.threadDeleted,
         hiddenForViewer: result.hiddenForViewer,
       },

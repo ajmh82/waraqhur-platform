@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatDateTimeInMakkah } from "@/lib/date-time";
+import { formatRelativeTime } from "@/lib/date-time";
 import { MessageThreadBlockControls } from "@/components/messages/message-thread-block-controls";
 
 interface ThreadUser {
@@ -36,11 +36,12 @@ interface MessageThreadViewProps {
 const copy = {
   ar: {
     empty: "لا توجد رسائل بعد. ابدأ أول رسالة الآن.",
-    selectAll: "تحديد الكل",
+    selectAll: "تحديد",
     clearSelection: "إلغاء التحديد",
     deleteSelected: "حذف المحدد",
     deleteAll: "حذف كل الرسائل",
-    deleteOne: "حذف",
+    deleteOne: "حذف للجميع",
+    deleteForMe: "حذف مني فقط",
     deleting: "جارٍ الحذف...",
     deleteFailed: "تعذر حذف الرسائل.",
     selectedCount: "محدد",
@@ -54,11 +55,12 @@ const copy = {
   },
   en: {
     empty: "No messages yet. Send the first message now.",
-    selectAll: "Select all",
+    selectAll: "Select",
     clearSelection: "Clear selection",
     deleteSelected: "Delete selected",
     deleteAll: "Delete all",
-    deleteOne: "Delete",
+    deleteOne: "Delete for everyone",
+    deleteForMe: "Delete for me",
     deleting: "Deleting...",
     deleteFailed: "Failed to delete messages.",
     selectedCount: "selected",
@@ -83,10 +85,12 @@ export function MessageThreadView({
   const t = copy[locale];
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveMessages, setLiveMessages] = useState<ThreadMessage[]>(messages);
   const [pollingActive, setPollingActive] = useState(true);
+  const [messageReactions, setMessageReactions] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setLiveMessages(messages);
@@ -185,21 +189,30 @@ export function MessageThreadView({
     [liveMessages]
   );
 
-  const messageIds = sortedMessages.map((m) => m.id);
+  const ownMessageIds = sortedMessages
+    .filter((m) => m.senderUserId === currentUserId)
+    .map((m) => m.id);
+  const messageIds = ownMessageIds;
   const isAllSelected =
     messageIds.length > 0 && messageIds.every((id) => selectedIds.includes(id));
 
   function toggleOne(id: string) {
+    if (!selectionMode) return;
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
     );
   }
 
   function toggleAll() {
+    if (!selectionMode) return;
     setSelectedIds(isAllSelected ? [] : messageIds);
   }
 
-  async function runDelete(payload: { deleteAll?: boolean; messageIds?: string[] }) {
+  async function runDelete(payload: {
+    deleteAll?: boolean;
+    messageIds?: string[];
+    deleteMode?: "me" | "everyone";
+  }) {
     if (isDeleting) return;
 
     setIsDeleting(true);
@@ -242,14 +255,45 @@ export function MessageThreadView({
 
     if (!confirmed) return;
 
-    await runDelete(deleteAll ? { deleteAll: true } : { messageIds: selectedIds });
+    const deleteMode: "me" | "everyone" =
+      window.confirm(locale === "en" ? "Delete for everyone?" : "حذف من الجميع؟")
+        ? "everyone"
+        : "me";
+    await runDelete(
+      deleteAll
+        ? { deleteAll: true, deleteMode }
+        : { messageIds: selectedIds, deleteMode }
+    );
   }
 
-  async function deleteSingle(messageId: string) {
-    const confirmed = window.confirm(t.confirmDeleteOne);
-    if (!confirmed) return;
-    await runDelete({ messageIds: [messageId] });
-  }
+  useEffect(() => {
+    function onContextMenu(event: MouseEvent) {
+      const target = event.target as HTMLElement | null;
+      const bubble = target?.closest("[data-message-id]") as HTMLElement | null;
+      if (!bubble) return;
+
+      event.preventDefault();
+      const messageId = bubble.dataset.messageId ?? "";
+      const isOwn = bubble.dataset.own === "true";
+      if (!messageId) return;
+
+      const reaction = window.prompt(
+        locale === "en" ? "Add reaction (single emoji):" : "أضف ردة فعل (إيموجي واحد):",
+        "👍"
+      );
+      if (!reaction) return;
+      const one = Array.from(reaction.trim())[0];
+      if (!one) return;
+      setMessageReactions((prev) => ({ ...prev, [messageId]: one }));
+
+      if (isOwn && selectionMode) {
+        setSelectedIds((prev) => (prev.includes(messageId) ? prev : [...prev, messageId]));
+      }
+    }
+
+    document.addEventListener("contextmenu", onContextMenu);
+    return () => document.removeEventListener("contextmenu", onContextMenu);
+  }, [locale, selectionMode]);
 
   return (
     <section
@@ -260,6 +304,8 @@ export function MessageThreadView({
         padding: "0",
         overflow: "hidden",
         display: "grid",
+        gridTemplateRows: "auto auto 1fr auto",
+        maxHeight: "calc(100dvh - 96px)",
       }}
     >
       <header
@@ -319,31 +365,47 @@ export function MessageThreadView({
           background: "rgba(255,255,255,0.02)",
         }}
       >
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-          <button type="button" className="btn small" onClick={toggleAll}>
-            {isAllSelected ? t.clearSelection : t.selectAll}
-          </button>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
           <button
             type="button"
             className="btn small"
-            disabled={selectedIds.length === 0 || isDeleting}
-            onClick={() => deleteMessages(false)}
+            onClick={() => {
+              setSelectionMode((v) => !v);
+              setSelectedIds([]);
+            }}
           >
-            {isDeleting ? t.deleting : t.deleteSelected}
+            {selectionMode ? t.clearSelection : t.selectAll}
           </button>
-          <button
-            type="button"
-            className="btn small"
-            disabled={sortedMessages.length === 0 || isDeleting}
-            onClick={() => deleteMessages(true)}
-          >
-            {isDeleting ? t.deleting : t.deleteAll}
-          </button>
+          {selectionMode ? (
+            <>
+              <button type="button" className="btn small" onClick={toggleAll}>
+                {isAllSelected ? t.clearSelection : t.selectAll}
+              </button>
+              <button
+                type="button"
+                className="btn small"
+                disabled={selectedIds.length === 0 || isDeleting}
+                onClick={() => deleteMessages(false)}
+              >
+                {isDeleting ? t.deleting : t.deleteSelected}
+              </button>
+              <button
+                type="button"
+                className="btn small"
+                disabled={sortedMessages.length === 0 || isDeleting}
+                onClick={() => deleteMessages(true)}
+              >
+                {isDeleting ? t.deleting : t.deleteAll}
+              </button>
+            </>
+          ) : null}
         </div>
 
-        <span style={{ color: "var(--muted)", fontSize: "13px" }}>
-          {selectedIds.length} {t.selectedCount}
-        </span>
+        {selectionMode ? (
+          <span style={{ color: "var(--muted)", fontSize: "13px" }}>
+            {selectedIds.length} {t.selectedCount}
+          </span>
+        ) : null}
 
         {error ? (
           <p style={{ margin: 0, color: "var(--danger)", fontSize: "14px" }}>
@@ -357,7 +419,8 @@ export function MessageThreadView({
           display: "grid",
           gap: "12px",
           padding: "18px",
-          minHeight: "320px",
+          minHeight: 0,
+          overflowY: "auto",
           background: "rgba(255,255,255,0.015)",
         }}
       >
@@ -377,7 +440,10 @@ export function MessageThreadView({
           sortedMessages.map((message) => {
             const isOwnMessage = message.senderUserId === currentUserId;
             const checked = selectedIds.includes(message.id);
-            const hasImage = Boolean(message.mediaUrl);
+            const hasAudio = Boolean(
+              message.mediaUrl && message.mediaMimeType?.startsWith("audio/")
+            );
+            const hasImage = Boolean(message.mediaUrl && !hasAudio);
             const messageStatus = isOwnMessage
               ? message.readAt
                 ? t.read
@@ -387,19 +453,54 @@ export function MessageThreadView({
             return (
               <div
                 key={message.id}
+                data-message-id={message.id}
+                data-own={isOwnMessage ? "true" : "false"}
                 style={{
                   display: "flex",
-                  justifyContent: isOwnMessage ? "flex-start" : "flex-end",
+                  justifyContent: isOwnMessage ? "flex-end" : "flex-start",
                   gap: "8px",
                   alignItems: "flex-start",
                 }}
               >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleOne(message.id)}
-                  style={{ marginTop: "8px" }}
-                />
+                {!isOwnMessage ? (
+                  <div
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "999px",
+                      overflow: "hidden",
+                      flexShrink: 0,
+                      background: otherUser.avatarUrl
+                        ? "transparent"
+                        : "linear-gradient(135deg, #0ea5e9, #2563eb)",
+                      color: "#fff",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: "12px",
+                      fontWeight: 900,
+                      marginTop: "8px",
+                    }}
+                  >
+                    {otherUser.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={otherUser.avatarUrl}
+                        alt={otherUser.displayName}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      otherUser.displayName.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                ) : null}
+                {selectionMode && isOwnMessage ? (
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleOne(message.id)}
+                    style={{ marginTop: "8px" }}
+                  />
+                ) : null}
 
                 <div
                   style={{
@@ -464,9 +565,21 @@ export function MessageThreadView({
                         </a>
                       </div>
                     ) : null}
+                    {hasAudio ? (
+                      <audio
+                        controls
+                        src={message.mediaUrl ?? ""}
+                        style={{ width: "100%", maxWidth: 280 }}
+                      />
+                    ) : null}
 
                     {message.body && message.body !== "[image]" ? (
                       <div>{message.body}</div>
+                    ) : null}
+                    {messageReactions[message.id] ? (
+                      <div style={{ marginTop: 6, fontSize: 20 }}>
+                        {messageReactions[message.id]}
+                      </div>
                     ) : null}
                   </div>
 
@@ -480,12 +593,17 @@ export function MessageThreadView({
                   >
                     <div style={{ display: "grid", gap: "3px" }}>
                       <span style={{ color: "var(--muted)", fontSize: "12px" }}>
-                        {formatDateTimeInMakkah(
+                        {formatRelativeTime(
                           message.createdAt,
                           locale === "en" ? "en-US" : "ar-BH"
                         )}
                       </span>
-                      <span style={{ color: "var(--muted)", fontSize: "11px" }}>
+                      <span
+                        style={{
+                          color: isOwnMessage && message.readAt ? "#22c55e" : "var(--muted)",
+                          fontSize: "11px",
+                        }}
+                      >
                         {isOwnMessage
                           ? message.readAt
                             ? "✓✓"
@@ -494,15 +612,6 @@ export function MessageThreadView({
                         {messageStatus}
                       </span>
                     </div>
-
-                    <button
-                      type="button"
-                      className="btn small"
-                      onClick={() => deleteSingle(message.id)}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? t.deleting : t.deleteOne}
-                    </button>
                   </div>
                 </div>
               </div>
@@ -513,9 +622,12 @@ export function MessageThreadView({
 
       <footer
         style={{
+          position: "sticky",
+          bottom: "calc(68px + env(safe-area-inset-bottom))",
           borderTop: "1px solid rgba(255,255,255,0.08)",
           padding: "16px",
-          background: "rgba(255,255,255,0.01)",
+          background: "rgba(2,6,23,0.96)",
+          zIndex: 8,
         }}
       >
         {composer}

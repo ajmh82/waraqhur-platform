@@ -24,8 +24,9 @@ export async function POST(request: Request) {
   }
 
   const form = await request.formData();
-  const enabledRaw = String(form.get("directMessagesEnabled") ?? "on");
-  const directMessagesEnabled = enabledRaw === "on" || enabledRaw === "true" || enabledRaw === "1";
+  const enabledRaw = form.get("directMessagesEnabled");
+  const directMessagesEnabled =
+    enabledRaw === "on" || enabledRaw === "true" || enabledRaw === "1";
 
   try {
     await prisma.user.update({

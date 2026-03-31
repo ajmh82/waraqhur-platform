@@ -106,6 +106,10 @@ export function TweetActionBar({
   const searchRequestIdRef = useRef(0);
   const shareRootRef = useRef<HTMLDivElement | null>(null);
   const t = copy[locale];
+  const shareAnchorStyle =
+    locale === "ar"
+      ? ({ insetInlineStart: 0 } as const)
+      : ({ insetInlineEnd: 0 } as const);
 
   function getTargetUrl() {
     return typeof window !== "undefined"
@@ -334,7 +338,11 @@ export function TweetActionBar({
       style={{ position: "relative" }}
     >
       <Link href={href} className="tweet-action-bar__item tweet-action-bar__item--comment">
-        <span className="tweet-action-bar__icon">◦</span>
+        <span className="tweet-action-bar__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+            <path d="M20 11.2c0 4.5-4.1 8.1-9.2 8.1-1.1 0-2.2-.2-3.2-.6L4 20l1.4-3c-2.3-1.5-3.8-3.6-3.8-5.8C1.6 6.7 5.7 3 10.8 3S20 6.7 20 11.2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
         <span className="tweet-action-bar__count">{commentsCount}</span>
       </Link>
 
@@ -345,7 +353,13 @@ export function TweetActionBar({
           isReposted ? "tweet-action-bar__item--active" : ""
         }`}
       >
-        <span className="tweet-action-bar__icon">↺</span>
+        <span className="tweet-action-bar__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+            <path d="M7 6h10v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="m7 6 4-3M7 6l4 3M17 18l-4 3m4-3-4-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M17 18H7V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </span>
         <span className="tweet-action-bar__count">{repostsCount}</span>
       </button>
 
@@ -356,7 +370,11 @@ export function TweetActionBar({
           isLiked ? "tweet-action-bar__item--active" : ""
         }`}
       >
-        <span className="tweet-action-bar__icon">♡</span>
+        <span className="tweet-action-bar__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+            <path d="M12 20.4s-7-4.3-9.3-8.6C1.2 9 2.7 5.9 6 5.5c2-.2 3.3.9 4 2 1-1.4 2.5-2.2 4.3-2 3.2.4 4.7 3.4 3.3 6.3-2.3 4.3-9.6 8.6-9.6 8.6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
         <span className="tweet-action-bar__count">{likesCount}</span>
       </button>
 
@@ -367,7 +385,11 @@ export function TweetActionBar({
           isBookmarked ? "tweet-action-bar__item--active" : ""
         }`}
       >
-        <span className="tweet-action-bar__icon">⌁</span>
+        <span className="tweet-action-bar__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+            <path d="M6 4.5h12A1.5 1.5 0 0 1 19.5 6v14l-7.5-3.8L4.5 20V6A1.5 1.5 0 0 1 6 4.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
         <span className="tweet-action-bar__count">{bookmarksCount}</span>
       </button>
 
@@ -384,7 +406,13 @@ export function TweetActionBar({
         }}
         className="tweet-action-bar__item tweet-action-bar__item--share"
       >
-        <span className="tweet-action-bar__icon">⇱</span>
+        <span className="tweet-action-bar__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+            <path d="M12 4v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="m8 8 4-4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M5 14.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </span>
         {sharesCount > 0 ? (
           <span className="tweet-action-bar__count">{sharesCount}</span>
         ) : null}
@@ -395,8 +423,8 @@ export function TweetActionBar({
           className="tweet-share-panel"
           style={{
             position: "absolute",
-            insetInlineEnd: 0,
-            top: "calc(100% + 8px)",
+            top: "auto",
+            bottom: "calc(100% + 8px)",
             zIndex: 50,
             minWidth: "280px",
             width: "min(92vw, 420px)",
@@ -407,6 +435,7 @@ export function TweetActionBar({
             border: "1px solid rgba(255,255,255,0.12)",
             background: "rgba(2,6,23,0.96)",
             boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+            ...shareAnchorStyle,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>

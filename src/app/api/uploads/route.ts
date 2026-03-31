@@ -19,8 +19,17 @@ const VIDEO_MIME_TYPES: Record<string, string> = {
   "video/quicktime": "mov",
 };
 
+const AUDIO_MIME_TYPES: Record<string, string> = {
+  "audio/webm": "webm",
+  "audio/webm;codecs=opus": "webm",
+  "audio/mp4": "m4a",
+  "audio/mpeg": "mp3",
+  "audio/ogg": "ogg",
+};
+
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 20 * 1024 * 1024;
+const MAX_AUDIO_SIZE = 12 * 1024 * 1024;
 
 async function requireSessionUser() {
   const cookieStore = await cookies();
@@ -91,22 +100,33 @@ export async function POST(request: Request) {
 
     const imageExtension = IMAGE_MIME_TYPES[fileEntry.type];
     const videoExtension = VIDEO_MIME_TYPES[fileEntry.type];
+    const audioExtension = AUDIO_MIME_TYPES[fileEntry.type];
 
-    if (!imageExtension && !videoExtension) {
+    if (!imageExtension && !videoExtension && !audioExtension) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: "UNSUPPORTED_FILE_TYPE",
-            message: "Only JPG, PNG, WEBP, GIF, MP4, WEBM, and MOV are supported",
+            message:
+              "Only JPG, PNG, WEBP, GIF, MP4, WEBM, MOV, WEBM audio, MP3, M4A, and OGG are supported",
           },
         },
         { status: 400 }
       );
     }
 
-    const mediaType = imageExtension ? "image" : "video";
-    const maxAllowedSize = mediaType === "image" ? MAX_IMAGE_SIZE : MAX_VIDEO_SIZE;
+    const mediaType = imageExtension
+      ? "image"
+      : videoExtension
+        ? "video"
+        : "audio";
+    const maxAllowedSize =
+      mediaType === "image"
+        ? MAX_IMAGE_SIZE
+        : mediaType === "video"
+          ? MAX_VIDEO_SIZE
+          : MAX_AUDIO_SIZE;
 
     if (fileEntry.size > maxAllowedSize) {
       return NextResponse.json(
@@ -117,14 +137,16 @@ export async function POST(request: Request) {
             message:
               mediaType === "image"
                 ? "Image size must not exceed 5MB"
-                : "Video size must not exceed 20MB",
+                : mediaType === "video"
+                  ? "Video size must not exceed 20MB"
+                  : "Audio size must not exceed 12MB",
           },
         },
         { status: 400 }
       );
     }
 
-    const extension = imageExtension ?? videoExtension;
+    const extension = imageExtension ?? videoExtension ?? audioExtension;
     const uploadsDir = path.join(process.cwd(), "public", "uploads");
 
     await mkdir(uploadsDir, { recursive: true });

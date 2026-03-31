@@ -20,15 +20,15 @@ export function AppHeader() {
   const isMessagesRoute = pathname?.startsWith("/messages");
   const isTimelineRoute = pathname === "/" || pathname?.startsWith("/timeline");
 
-  if (isMessagesRoute) {
-    return null;
-  }
-
   const mode = searchParams?.get("mode") === "sources" ? "sources" : "people";
   const sort = searchParams?.get("sort") ?? "latest";
 
   return (
-    <header className="app-header app-header--neo app-header--constrained">
+    <header
+      className={`app-header app-header--neo app-header--constrained ${
+        isMessagesRoute ? "app-header--hide-on-mobile" : ""
+      }`}
+    >
       <div className="app-header__inner app-header__inner--social">
         <div className="app-header__side app-header__side--left" />
         <div className="app-header__center">
@@ -40,8 +40,9 @@ export function AppHeader() {
             <Image
               src="/waraqhur-logo.svg"
               alt="Waraqhur"
-              width={44}
-              height={44}
+              width={48}
+              height={48}
+              className="app-header__brand-logo"
               priority
             />
           </Link>

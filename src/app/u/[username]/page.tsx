@@ -166,33 +166,38 @@ export default async function PublicUserPage({
 
   return (
     <AppShell>
-      <section className="dashboard-panel" style={{ display: "grid", gap: 14 }}>
+      <section className="dashboard-panel" style={{ display: "grid", gap: 0 }}>
         <div
-          className="profile-hero"
           style={{
+            height: 150,
+            background:
+              "linear-gradient(135deg, rgba(185,28,28,0.95) 0%, rgba(153,27,27,0.95) 100%)",
+            borderBottom: "1px solid rgba(255,255,255,0.12)",
+          }}
+        />
+        <section
+          style={{
+            marginTop: -34,
+            paddingInline: 14,
+            paddingBottom: 12,
+            borderBottom: "1px solid rgba(255,255,255,0.1)",
+            background: "var(--background)",
             display: "grid",
-            gap: 12,
-            border: "1px solid rgba(255,255,255,0.09)",
-            borderRadius: 18,
-            padding: 14,
-            background: "rgba(255,255,255,0.03)",
+            gap: 10,
           }}
         >
-          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <div
             style={{
-              width: 72,
-              height: 72,
+              width: 88,
+              height: 88,
               borderRadius: "999px",
               overflow: "hidden",
-              flexShrink: 0,
-              background: avatarUrl
-                ? "transparent"
-                : "linear-gradient(135deg, #0ea5e9, #2563eb)",
+              border: "4px solid var(--background)",
+              background: avatarUrl ? "transparent" : "linear-gradient(135deg, #0ea5e9, #2563eb)",
               color: "#fff",
               display: "grid",
               placeItems: "center",
-              fontSize: "24px",
+              fontSize: "26px",
               fontWeight: 900,
             }}
           >
@@ -207,114 +212,62 @@ export default async function PublicUserPage({
             )}
           </div>
 
-          <div style={{ minWidth: 0 }}>
-            <h1 style={{ margin: 0 }}>{displayName}</h1>
-            <p style={{ margin: 0, color: "var(--muted)" }}>@{viewUsername}</p>
-            <p style={{ margin: "6px 0 0", color: "var(--muted)", fontSize: "13px" }}>
-              {isEn ? "Joined" : "تاريخ التسجيل"}: {createdAt}
-            </p>
-          </div>
-        </div>
-
-          {!isOwnProfile && userId ? (
-            <ProfileActions
-              targetUserId={userId}
-              initialIsFollowing={isFollowing}
-              locale={locale}
-            />
-          ) : null}
-        </div>
-
-        {bio ? (
-          <div className="dashboard-list-item">
-            <span className="dashboard-list-item__title">{isEn ? "Bio" : "النبذة المختصرة"}</span>
-            <span className="dashboard-list-item__body">{bio}</span>
-          </div>
-        ) : null}
-
-        <div className="dashboard-list-nav">
-          <Link
-            href={`/u/${encodeURIComponent(viewUsername)}/followers`}
-            className="dashboard-list-item"
-          >
-            <span className="dashboard-list-item__title">{isEn ? "Followers" : "المتابعون"}</span>
-            <span className="dashboard-list-item__body">{followersCount}</span>
-          </Link>
-
-          <Link
-            href={`/u/${encodeURIComponent(viewUsername)}/following`}
-            className="dashboard-list-item"
-          >
-            <span className="dashboard-list-item__title">{isEn ? "Following" : "يتابع"}</span>
-            <span className="dashboard-list-item__body">{followingCount}</span>
-          </Link>
-
-          <Link
-            href={`/u/${encodeURIComponent(viewUsername)}/posts`}
-            className="dashboard-list-item"
-          >
-            <span className="dashboard-list-item__title">
-              {isEn ? "Tweets count" : "عدد التغريدات"}
-            </span>
-            <span className="dashboard-list-item__body">{postsCount}</span>
-          </Link>
-
-          <Link
-            href={`/u/${encodeURIComponent(viewUsername)}/replies`}
-            className="dashboard-list-item"
-          >
-            <span className="dashboard-list-item__title">{isEn ? "Replies count" : "عدد الردود"}</span>
-            <span className="dashboard-list-item__body">{repliesCount}</span>
-          </Link>
-
-          <Link
-            href={`/u/${encodeURIComponent(viewUsername)}/reposts`}
-            className="dashboard-list-item"
-          >
-            <span className="dashboard-list-item__title">
-              {isEn ? "Reposts count" : "عدد إعادة النشر"}
-            </span>
-            <span className="dashboard-list-item__body">{repostsCount}</span>
-          </Link>
-        </div>
-
-        <section className="dashboard-list-item" style={{ gap: 10 }}>
-          <span className="dashboard-list-item__title">{isEn ? "Replies" : "الردود"}</span>
-          {replies.length === 0 ? (
-            <span className="dashboard-list-item__body">
-              {isEn ? "No replies yet." : "لا توجد ردود حتى الآن."}
-            </span>
-          ) : (
-            <div style={{ display: "grid", gap: 8 }}>
-              {replies.slice(0, 5).map((reply) => {
-                const href = reply.post?.slug
-                  ? `/posts/${reply.post.slug}#comment-${reply.id}`
-                  : "/timeline";
-                return (
-                  <Link key={reply.id} href={href} className="dashboard-list-item" style={{ padding: 10 }}>
-                    <span className="dashboard-list-item__body">
-                      {(reply.content || "").trim() ||
-                        (isEn ? "Reply without content" : "رد بدون نص")}
-                    </span>
-                  </Link>
-                );
-              })}
-              {replies.length > 5 ? (
-                <Link
-                  href={`/u/${encodeURIComponent(viewUsername)}/replies`}
-                  className="btn small"
-                >
-                  {isEn ? "View all replies" : "عرض جميع الردود"}
-                </Link>
-              ) : null}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ minWidth: 0 }}>
+              <h1 style={{ margin: 0, fontSize: 34, lineHeight: 1.15 }}>{displayName}</h1>
+              <p style={{ margin: "2px 0 0", color: "var(--muted)", fontSize: 18 }}>@{viewUsername}</p>
             </div>
-          )}
+            {!isOwnProfile && userId ? (
+              <ProfileActions
+                targetUserId={userId}
+                initialIsFollowing={isFollowing}
+                locale={locale}
+              />
+            ) : null}
+          </div>
+
+          {bio ? (
+            <p style={{ margin: 0, fontSize: 16, color: "rgba(255,255,255,0.95)", lineHeight: 1.6 }}>
+              {bio}
+            </p>
+          ) : null}
+
+          <p style={{ margin: 0, color: "var(--muted)", fontSize: 14 }}>
+            {isEn ? "Joined" : "انضم"}: {createdAt}
+          </p>
+
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", color: "var(--muted)" }}>
+            <Link href={`/u/${encodeURIComponent(viewUsername)}/following`} style={{ textDecoration: "none" }}>
+              <strong style={{ color: "#fff" }}>{followingCount}</strong> {isEn ? "Following" : "يتابع"}
+            </Link>
+            <Link href={`/u/${encodeURIComponent(viewUsername)}/followers`} style={{ textDecoration: "none" }}>
+              <strong style={{ color: "#fff" }}>{followersCount}</strong> {isEn ? "Followers" : "متابعون"}
+            </Link>
+          </div>
         </section>
 
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            borderBottom: "1px solid rgba(255,255,255,0.1)",
+          }}
+        >
+          <Link href={`/u/${encodeURIComponent(viewUsername)}/posts`} className="app-header__timeline-tab is-active">
+            {isEn ? "Posts" : "التغريدات"} ({postsCount})
+          </Link>
+          <Link href={`/u/${encodeURIComponent(viewUsername)}/replies`} className="app-header__timeline-tab">
+            {isEn ? "Replies" : "الردود"} ({repliesCount})
+          </Link>
+          <Link href={`/u/${encodeURIComponent(viewUsername)}/reposts`} className="app-header__timeline-tab">
+            {isEn ? "Reposts" : "إعادة النشر"} ({repostsCount})
+          </Link>
+          <Link href={`/u/${encodeURIComponent(viewUsername)}/followers`} className="app-header__timeline-tab">
+            {isEn ? "Followers" : "المتابعون"}
+          </Link>
+        </div>
+
         <section style={{ display: "grid", gap: 10 }}>
-          <h2 style={{ margin: 0, fontSize: "20px" }}>
-            {isEn ? "Timeline (tweets + reposts)" : "التايملاين (تغريدات + إعادة نشر)"}
-          </h2>
           {mergedTimeline.length === 0 ? (
             <div className="dashboard-list-item">
               <span className="dashboard-list-item__body">

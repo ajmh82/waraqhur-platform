@@ -10,12 +10,12 @@ interface MessageThreadBlockControlsProps {
 
 const copy = {
   ar: {
-    block: "بلوك",
-    unblock: "فك البلوك",
+    block: "حظر",
+    unblock: "فك الحظر",
     blocking: "جارٍ التنفيذ...",
     failed: "تعذر تحديث حالة البلوك.",
-    confirmBlock: "هل تريد عمل بلوك لهذا المستخدم؟",
-    confirmUnblock: "هل تريد فك البلوك عن هذا المستخدم؟",
+    confirmBlock: "هل تريد حظر هذا المستخدم؟",
+    confirmUnblock: "هل تريد فك الحظر عن هذا المستخدم؟",
   },
   en: {
     block: "Block",

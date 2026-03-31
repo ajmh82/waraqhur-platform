@@ -8,7 +8,7 @@ import { SourceBadge } from "@/components/content/source-badge";
 import { TweetActionBar } from "@/components/social/tweet-action-bar";
 import { FollowUserButton } from "@/components/social/follow-user-button";
 import { TweetOwnerControls } from "@/components/social/tweet-owner-controls";
-import { formatRelativeTime, formatDateTimeInMakkah } from "@/lib/date-time";
+import { formatRelativeTime } from "@/lib/date-time";
 
 interface PostCardProps {
   post: {
@@ -249,24 +249,34 @@ export function PostCard({
                 }}
               >
                 <div style={{ display: "grid", gap: "4px" }}>
-                  <strong style={{ fontSize: "16px", lineHeight: 1.2 }}>
-                    {targetPost.author ? (
-                      <Link href={`/u/${encodeURIComponent(targetPost.author.username)}`}>
-                        {displayName}
-                      </Link>
-                    ) : (
-                      t.unknownAuthor
-                    )}
-                  </strong>
-
-                  <span
+                  <div
                     style={{
-                      color: "rgba(255,255,255,0.58)",
-                      fontSize: "13px",
+                      display: "flex",
+                      alignItems: "baseline",
+                      gap: "8px",
+                      flexWrap: "wrap",
                     }}
                   >
-                    @{username}
-                  </span>
+                    <strong style={{ fontSize: "16px", lineHeight: 1.2 }}>
+                      {targetPost.author ? (
+                        <Link href={`/u/${encodeURIComponent(targetPost.author.username)}`}>
+                          {displayName}
+                        </Link>
+                      ) : (
+                        t.unknownAuthor
+                      )}
+                    </strong>
+                    <span
+                      dir="ltr"
+                      style={{
+                        color: "rgba(255,255,255,0.58)",
+                        fontSize: "13px",
+                        unicodeBidi: "plaintext",
+                      }}
+                    >
+                      @{username}
+                    </span>
+                  </div>
 
                   <div
                     style={{
@@ -278,23 +288,44 @@ export function PostCard({
                       fontSize: "13px",
                     }}
                   >
-                    <span className="tweet-card__time">
-                      {formatRelativeTime(post.createdAt)}
+                    <span>
+                      {formatRelativeTime(post.createdAt)} • {(post.viewsCount ?? 0).toLocaleString()}{" "}
+                      {locale === "en" ? "Views" : "مشاهدة"}
                     </span>
                     {provider ? <span>• {provider}</span> : null}
-                    <span>• 👁 {post.viewsCount ?? 0}</span>
                   </div>
                 </div>
               </div>
 
-              {targetPost.author && !targetPost.author.isOwnProfile ? (
-                <FollowUserButton
-                  userId={targetPost.author.id}
-                  initialIsFollowing={Boolean(targetPost.author.isFollowing)}
-                  locale={locale}
-                  hideWhenFollowing
-                />
-              ) : null}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "8px",
+                }}
+              >
+                {targetPost.author && !targetPost.author.isOwnProfile ? (
+                  <FollowUserButton
+                    userId={targetPost.author.id}
+                    initialIsFollowing={Boolean(targetPost.author.isFollowing)}
+                    locale={locale}
+                    hideWhenFollowing
+                  />
+                ) : null}
+                {targetPost.author?.isOwnProfile ? (
+                  <div className="tweet-card__owner-controls">
+                    <TweetOwnerControls
+                      postId={post.id}
+                      initialContent={post.content?.trim() || post.excerpt?.trim() || post.title?.trim() || ""}
+                      initialMediaUrl={mediaUrl}
+                      initialMediaType={mediaType}
+                      initialIsPinned={Boolean(post.isPinned)}
+                      compact
+                      locale={locale}
+                    />
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <div className="tweet-card__badges">
@@ -415,20 +446,6 @@ export function PostCard({
                     #{tag}
                   </Link>
                 ))}
-              </div>
-            ) : null}
-
-            {targetPost.author?.isOwnProfile ? (
-              <div className="tweet-card__owner-controls">
-                <TweetOwnerControls
-                  postId={post.id}
-                  initialContent={post.content?.trim() || post.excerpt?.trim() || post.title?.trim() || ""}
-                  initialMediaUrl={mediaUrl}
-                  initialMediaType={mediaType}
-                  initialIsPinned={Boolean(post.isPinned)}
-                  compact
-                  locale={locale}
-                />
               </div>
             ) : null}
 
