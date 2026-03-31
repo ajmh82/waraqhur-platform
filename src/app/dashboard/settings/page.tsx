@@ -1,6 +1,20 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { dashboardCopy } from "@/lib/dashboard-copy";
+import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
+import { getCurrentUserFromSession } from "@/services/auth-service";
+import { userHasAnyPermission } from "@/services/authorization-service";
+
+const ADMIN_ACCESS_PERMISSIONS = [
+  "users.manage",
+  "invites.read",
+  "roles.read",
+  "sources.manage",
+  "comments.moderate",
+  "audit.read",
+  "categories.manage",
+  "posts.update",
+] as const;
 
 const pageCopy = {
   ar: {
@@ -12,6 +26,11 @@ const pageCopy = {
       { href: "/dashboard/security", title: "الأمان", body: "إدارة إعدادات الأمان." },
       { href: "/timeline", title: "الصفحة الرئيسية", body: "الرجوع إلى التايم لاين." }
     ],
+    adminItem: {
+      href: "/admin",
+      title: "لوحة الإدارة",
+      body: "الدخول المباشر إلى صفحات الأدمن للمستخدمين المخوّلين.",
+    },
     open: "فتح",
   },
   en: {
@@ -23,15 +42,36 @@ const pageCopy = {
       { href: "/dashboard/security", title: "Security", body: "Check security settings and sessions." },
       { href: "/timeline", title: "Timeline", body: "Go back to timeline." },
     ],
+    adminItem: {
+      href: "/admin",
+      title: "Admin Dashboard",
+      body: "Direct access to admin pages for authorized users.",
+    },
     open: "Open",
   },
 } as const;
 
+async function canAccessAdminDashboard(sessionValue?: string) {
+  if (!sessionValue) {
+    return false;
+  }
+
+  try {
+    const current = await getCurrentUserFromSession(sessionValue);
+    return await userHasAnyPermission(current.user.id, [...ADMIN_ACCESS_PERMISSIONS]);
+  } catch {
+    return false;
+  }
+}
+
 export default async function DashboardSettingsPage() {
   const cookieStore = await cookies();
+  const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const canAccessAdmin = await canAccessAdminDashboard(sessionValue);
   const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
   const t = dashboardCopy[locale];
   const p = pageCopy[locale];
+  const items = canAccessAdmin ? [...p.items, p.adminItem] : p.items;
 
   return (
     <section className="dashboard-panel" style={{ display: "grid", gap: "18px" }}>
@@ -53,7 +93,7 @@ export default async function DashboardSettingsPage() {
         </div>
 
         <nav className="dashboard-list-nav" aria-label="Settings navigation">
-          {p.items.map((item) => (
+          {items.map((item) => (
             <Link key={item.href} href={item.href} className="dashboard-list-item">
               <span className="dashboard-list-item__title">{item.title}</span>
               <span className="dashboard-list-item__body">{item.body}</span>
