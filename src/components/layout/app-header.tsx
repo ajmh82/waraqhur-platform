@@ -40,8 +40,8 @@ export function AppHeader() {
             <Image
               src="/waraqhur-logo.svg"
               alt="Waraqhur"
-              width={36}
-              height={36}
+              width={44}
+              height={44}
               priority
             />
           </Link>
