@@ -3,6 +3,7 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AccountMenu } from "@/components/layout/account-menu";
 
@@ -34,10 +35,15 @@ export function AppHeader() {
           <Link
             href="/timeline"
             className="app-header__brand"
-            style={{ fontWeight: 900, letterSpacing: "0.02em", fontSize: "20px" }}
             aria-label="Waraqhur Home"
           >
-            ورق حر
+            <Image
+              src="/waraqhur-logo.svg"
+              alt="Waraqhur"
+              width={36}
+              height={36}
+              priority
+            />
           </Link>
         </div>
         <div className="app-header__side app-header__side--right">

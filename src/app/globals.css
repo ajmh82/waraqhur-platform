@@ -97,6 +97,12 @@ a {
   text-decoration: none;
 }
 
+.app-header__brand-logo {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+
 .app-header__brand-mark {
   display: grid;
   place-items: center;
