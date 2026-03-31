@@ -773,6 +773,20 @@ export function MessageThreadView({
                       </button>
                     ) : null}
 
+                    {message.mediaUrl && message.mediaMimeType?.startsWith("audio/") ? (
+                      <audio
+                        controls
+                        src={message.mediaUrl}
+                        style={{
+                          width: "100%",
+                          maxWidth: "280px",
+                          borderRadius: "8px",
+                          display: "block",
+                          marginBottom: message.body && message.body !== "[image]" ? "6px" : "0",
+                        }}
+                      />
+                    ) : null}
+
                     {message.body && message.body !== "[image]" ? <div>{message.body}</div> : null}
                   </div>
 

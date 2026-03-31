@@ -185,6 +185,7 @@ export async function GET(
         thread: {
           id: refreshedThread.id,
           isBlocked,
+          canReply: isParticipant,
           otherUser: {
             id: otherUser.id,
             username: otherUser.username,
@@ -242,6 +243,7 @@ export async function POST(
     const { threadId } = await context.params;
     const userId = auth.current.user.id;
     const senderUsername = auth.current.user.username;
+    const canReadAllMessages = await userHasPermission(userId, "messages.read_all");
     const body = await request.json();
 
     const messageBody = typeof body.body === "string" ? body.body : "";
@@ -305,10 +307,7 @@ export async function POST(
     }
 
     const thread = await prisma.directThread.findFirst({
-      where: {
-        id: threadId,
-        OR: [{ participantAUserId: userId }, { participantBUserId: userId }],
-      },
+      where: { id: threadId },
       select: {
         id: true,
         participantAUserId: true,
@@ -317,6 +316,33 @@ export async function POST(
     });
 
     if (!thread) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: "THREAD_NOT_FOUND", message: "Thread not found" },
+        },
+        { status: 404 }
+      );
+    }
+
+    const isParticipant =
+      thread.participantAUserId === userId || thread.participantBUserId === userId;
+
+    if (!isParticipant) {
+      if (canReadAllMessages) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "AUDIT_READ_ONLY_THREAD",
+              message:
+                "This conversation is in read-only audit mode. Sending is allowed only for participants.",
+            },
+          },
+          { status: 403 }
+        );
+      }
+
       return NextResponse.json(
         {
           success: false,
@@ -411,116 +437,6 @@ export async function POST(
         error: {
           code: "SEND_MESSAGE_FAILED",
           message: error instanceof Error ? error.message : "Failed to send message",
-        },
-      },
-      { status: 400 }
-    );
-  }
-}
-
-export async function DELETE(
-  request: Request,
-  context: { params: Promise<{ threadId: string }> }
-) {
-  const auth = await requireSessionUser();
-
-  if (!auth.ok) {
-    return auth.response;
-  }
-
-  try {
-    const { threadId } = await context.params;
-    const userId = auth.current.user.id;
-    const body = await request.json().catch(() => ({} as Record<string, unknown>));
-
-    const deleteAll = Boolean(body.deleteAll);
-    const rawIds: unknown[] = Array.isArray(body.messageIds) ? body.messageIds : [];
-    const messageIds = rawIds
-      .filter((v): v is string => typeof v === "string")
-      .map((v) => v.trim())
-      .filter(Boolean);
-
-    if (!deleteAll && messageIds.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "MESSAGE_IDS_REQUIRED",
-            message: "Provide messageIds or set deleteAll=true",
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    const thread = await prisma.directThread.findFirst({
-      where: {
-        id: threadId,
-        OR: [{ participantAUserId: userId }, { participantBUserId: userId }],
-      },
-      select: { id: true },
-    });
-
-    if (!thread) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: "THREAD_NOT_FOUND", message: "Thread not found" },
-        },
-        { status: 404 }
-      );
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      const deleted = await tx.directMessage.deleteMany({
-        where: deleteAll
-          ? {
-              threadId: thread.id,
-              senderUserId: userId,
-            }
-          : {
-              threadId: thread.id,
-              senderUserId: userId,
-              id: { in: messageIds },
-            },
-      });
-
-      const remainingCount = await tx.directMessage.count({
-        where: { threadId: thread.id },
-      });
-
-      if (remainingCount === 0) {
-        await tx.directThread.delete({
-          where: { id: thread.id },
-        });
-      } else {
-        await tx.directThread.update({
-          where: { id: thread.id },
-          data: { updatedAt: new Date() },
-        });
-      }
-
-      return {
-        deletedCount: deleted.count,
-        threadDeleted: remainingCount === 0,
-      };
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        deletedCount: result.deletedCount,
-        deleteAll,
-        threadDeleted: result.threadDeleted,
-      },
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "DELETE_MESSAGES_FAILED",
-          message: error instanceof Error ? error.message : "Failed to delete messages",
         },
       },
       { status: 400 }

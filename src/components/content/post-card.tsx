@@ -112,8 +112,8 @@ function renderTextWithHashtags(text: string) {
           key={`${part}-${index}`}
           href={`/tag/${encodeURIComponent(tag)}`}
           style={{
-            color: "#7dd3fc",
-            fontWeight: 700,
+            color: "#1d9bf0",
+            fontWeight: 400,
           }}
         >
           {part}
@@ -156,7 +156,17 @@ export function PostCard({
 
   return (
     <>
-      <article className="tweet-card">
+      <article
+        className="tweet-card"
+        onClick={(e) => {
+          const tag = (e.target as HTMLElement).tagName;
+          const closest = (e.target as HTMLElement).closest("a, button, input, textarea, video, audio, [role=\"dialog\"]");
+          if (closest) return;
+          if (tag === "A" || tag === "BUTTON" || tag === "INPUT" || tag === "TEXTAREA" || tag === "VIDEO") return;
+          window.location.href = href;
+        }}
+        style={{ cursor: "pointer" }}
+      >
         {post.repostOfPost ? (
           <div className="tweet-card__repost-bar">
             🔁 {t.repost}
@@ -196,54 +206,48 @@ export function PostCard({
               <div
                 style={{
                   display: "flex",
-                  gap: "12px",
-                  alignItems: "flex-start",
+                  alignItems: "center",
+                  gap: "4px",
+                  minWidth: 0,
                   flex: 1,
+                  overflow: "hidden",
                 }}
               >
-                <div style={{ display: "grid", gap: "4px" }}>
-                  <strong style={{ fontSize: "16px", lineHeight: 1.2 }}>
-                    {post.author ? (
-                      <Link href={`/u/${post.author.username}`}>
-                        {displayName}
-                      </Link>
-                    ) : (
-                      t.unknownAuthor
-                    )}
-                  </strong>
-
-                  <span
+                {post.author ? (
+                  <Link
+                    href={`/u/${post.author.username}`}
                     style={{
-                      color: "rgba(255,255,255,0.58)",
-                      fontSize: "13px",
+                      fontWeight: 700,
+                      fontSize: "15px",
+                      color: "#e7e9ea",
+                      textDecoration: "none",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    @{username}
+                    {displayName}
+                  </Link>
+                ) : (
+                  <span style={{ fontWeight: 700, fontSize: "15px", color: "#e7e9ea" }}>
+                    {t.unknownAuthor}
                   </span>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      color: "rgba(255,255,255,0.58)",
-                      fontSize: "13px",
-                    }}
-                  >
-                    <span className="tweet-card__time">
-                      {formatRelativeTime(post.createdAt)}
-                    </span>
-                    {provider ? <span>• {provider}</span> : null}
-                    <span>• 👁 {post.viewsCount ?? 0}</span>
-                  </div>
-                </div>
+                )}
+                <span style={{ color: "#71767b", fontSize: "15px", whiteSpace: "nowrap" }}>
+                  @{username}
+                </span>
+                <span style={{ color: "#71767b", fontSize: "15px" }}>{"·"}</span>
+                <span style={{ color: "#71767b", fontSize: "15px", whiteSpace: "nowrap" }}>
+                  {formatRelativeTime(post.createdAt)}
+                </span>
               </div>
 
-              {post.author && !post.author.isOwnProfile ? (
-                <FollowUserButton
-                  userId={post.author.id}
-                  initialIsFollowing={Boolean(post.author.isFollowing)}
+              {post.author?.isOwnProfile ? (
+                <TweetOwnerControls
+                  postId={post.id}
+                  initialContent={mainText}
+                  initialMediaUrl={mediaUrl}
+                  initialMediaType={mediaType}
+                  initialIsPinned={Boolean(post.isPinned)}
+                  compact
                   locale={locale}
                 />
               ) : null}
@@ -293,10 +297,9 @@ export function PostCard({
                 style={{
                   marginTop: "12px",
                   overflow: "hidden",
-                  borderRadius: "22px",
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  background: "rgba(255,255,255,0.025)",
-                  boxShadow: "0 10px 24px rgba(15, 23, 42, 0.16)",
+                  borderRadius: "16px",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "transparent",
                   padding: 0,
                   width: "100%",
                   cursor: "pointer",
@@ -358,17 +361,9 @@ export function PostCard({
                     key={tag}
                     href={`/tag/${encodeURIComponent(tag)}`}
                     style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      minHeight: "34px",
-                      padding: "0 12px",
-                      borderRadius: "999px",
-                      background: "rgba(125, 211, 252, 0.12)",
-                      color: "#bae6fd",
+                      color: "#1d9bf0",
                       textDecoration: "none",
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      border: "1px solid rgba(125, 211, 252, 0.14)",
+                      fontSize: "15px",
                     }}
                   >
                     #{tag}
@@ -377,30 +372,13 @@ export function PostCard({
               </div>
             ) : null}
 
-            {post.author?.isOwnProfile ? (
-              <TweetOwnerControls
-                postId={post.id}
-                initialContent={mainText}
-                initialMediaUrl={mediaUrl}
-                initialMediaType={mediaType}
-                initialIsPinned={Boolean(post.isPinned)}
-                compact
-                locale={locale}
-              />
-            ) : null}
-
             {wasEdited ? (
-              <div
-                style={{
-                  color: "var(--muted)",
-                  fontSize: "13px",
-                }}
-              >
-                {t.edited} • <span suppressHydrationWarning>{formatDateTimeInMakkah(post.updatedAt!, locale === "en" ? "en-US" : "ar-BH")}</span>
+              <div style={{ color: "#71767b", fontSize: "13px" }}>
+                {t.edited} {"·"} <span suppressHydrationWarning>{formatDateTimeInMakkah(post.updatedAt!, locale === "en" ? "en-US" : "ar-BH")}</span>
               </div>
             ) : null}
 
-            <div style={{ marginTop: "14px" }}>
+            <div style={{ paddingTop: "2px" }}>
               <TweetActionBar
                 postId={post.id}
                 href={href}

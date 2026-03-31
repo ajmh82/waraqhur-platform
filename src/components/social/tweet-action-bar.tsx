@@ -54,6 +54,93 @@ const copy = {
   },
 } as const;
 
+/* ── SVG Icons (Twitter / X style) ── */
+
+function CommentIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M1.751 10c0-4.42 3.58-8 8-8h4.5c4.42 0 8 3.58 8 8s-3.58 8-8 8h-1.14l-4.2 3.71a.75.75 0 01-1.26-.56V18.2A8.01 8.01 0 011.751 10z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function RepostIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M23.77 15.67a.749.749 0 00-1.06 0l-2.22 2.22V7.65a3.755 3.755 0 00-3.75-3.75h-5.85a.75.75 0 000 1.5h5.85a2.25 2.25 0 012.25 2.25v10.24l-2.22-2.22a.749.749 0 10-1.06 1.06l3.5 3.5c.14.14.33.22.53.22s.38-.08.53-.22l3.5-3.5a.747.747 0 000-1.06zM13.11 18.6H7.26a2.25 2.25 0 01-2.25-2.25V6.11l2.22 2.22a.749.749 0 101.06-1.06l-3.5-3.5a.75.75 0 00-1.06 0l-3.5 3.5a.749.749 0 101.06 1.06l2.22-2.22v10.24a3.755 3.755 0 003.75 3.75h5.85a.75.75 0 000-1.5z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function HeartIcon({ size = 18, filled = false }: { size?: number; filled?: boolean }) {
+  if (filled) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z" />
+      </svg>
+    );
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function BookmarkIcon({ size = 18, filled = false }: { size?: number; filled?: boolean }) {
+  if (filled) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+      </svg>
+    );
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ShareIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 3v12M12 3l4 4M12 3L8 7"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function TweetActionBar({
   postId,
   href,
@@ -272,18 +359,27 @@ export function TweetActionBar({
     }
   }
 
+  function formatCount(n: number): string {
+    if (n === 0) return "";
+    if (n >= 1000000) return `${(n / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+    if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+    return String(n);
+  }
+
   return (
     <div
-      className={`tweet-action-bar ${
-        compact ? "tweet-action-bar--compact" : ""
-      }`}
+      className={`tweet-action-bar ${compact ? "tweet-action-bar--compact" : ""}`}
       style={{ position: "relative" }}
     >
+      {/* Comment */}
       <Link href={href} className="tweet-action-bar__item tweet-action-bar__item--comment">
-        <span className="tweet-action-bar__icon">💬</span>
-        <span className="tweet-action-bar__count">{commentsCount}</span>
+        <CommentIcon />
+        {commentsCount > 0 ? (
+          <span className="tweet-action-bar__count">{formatCount(commentsCount)}</span>
+        ) : null}
       </Link>
 
+      {/* Repost */}
       <button
         type="button"
         onClick={handleRepost}
@@ -291,10 +387,13 @@ export function TweetActionBar({
           isReposted ? "tweet-action-bar__item--active" : ""
         }`}
       >
-        <span className="tweet-action-bar__icon">🔁</span>
-        <span className="tweet-action-bar__count">{repostsCount}</span>
+        <RepostIcon />
+        {repostsCount > 0 ? (
+          <span className="tweet-action-bar__count">{formatCount(repostsCount)}</span>
+        ) : null}
       </button>
 
+      {/* Like */}
       <button
         type="button"
         onClick={handleLike}
@@ -302,21 +401,27 @@ export function TweetActionBar({
           isLiked ? "tweet-action-bar__item--active" : ""
         }`}
       >
-        <span className="tweet-action-bar__icon">❤️</span>
-        <span className="tweet-action-bar__count">{likesCount}</span>
+        <HeartIcon filled={isLiked} />
+        {likesCount > 0 ? (
+          <span className="tweet-action-bar__count">{formatCount(likesCount)}</span>
+        ) : null}
       </button>
 
+      {/* Bookmark */}
       <button
         type="button"
         onClick={handleBookmark}
-        className={`tweet-action-bar__item tweet-action-bar__item--share ${
+        className={`tweet-action-bar__item tweet-action-bar__item--bookmark ${
           isBookmarked ? "tweet-action-bar__item--active" : ""
         }`}
       >
-        <span className="tweet-action-bar__icon">🔖</span>
-        <span className="tweet-action-bar__count">{bookmarksCount}</span>
+        <BookmarkIcon filled={isBookmarked} />
+        {bookmarksCount > 0 ? (
+          <span className="tweet-action-bar__count">{formatCount(bookmarksCount)}</span>
+        ) : null}
       </button>
 
+      {/* Share */}
       <button
         type="button"
         onClick={() => {
@@ -326,9 +431,9 @@ export function TweetActionBar({
         }}
         className="tweet-action-bar__item tweet-action-bar__item--share"
       >
-        <span className="tweet-action-bar__icon">📤</span>
+        <ShareIcon />
         {sharesCount > 0 ? (
-          <span className="tweet-action-bar__count">{sharesCount}</span>
+          <span className="tweet-action-bar__count">{formatCount(sharesCount)}</span>
         ) : null}
       </button>
 
@@ -337,7 +442,8 @@ export function TweetActionBar({
           style={{
             position: "absolute",
             insetInlineEnd: 0,
-            top: "calc(100% + 8px)",
+            bottom: "calc(100% + 8px)",
+            top: "auto",
             zIndex: 50,
             minWidth: "220px",
             display: "grid",

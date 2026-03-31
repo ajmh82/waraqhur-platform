@@ -331,12 +331,40 @@ export function TweetOwnerControls({
           style={{
             display: "grid",
             gap: "10px",
-            padding: "14px",
-            borderRadius: "18px",
+            padding: "12px",
+            borderRadius: "14px",
             border: "1px solid rgba(255,255,255,0.08)",
-            background: "rgba(255,255,255,0.03)",
+            background: "rgba(15,23,42,0.95)",
+            position: "fixed",
+            inset: "0",
+            zIndex: 200,
+            overflowY: "auto",
+            maxHeight: "100dvh",
           }}
         >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <strong style={{ fontSize: "16px" }}>{t.edit}</strong>
+            <button
+              type="button"
+              onClick={resetEditor}
+              style={{
+                border: "1px solid rgba(255,255,255,0.15)",
+                background: "rgba(255,255,255,0.06)",
+                color: "#e7e9ea",
+                width: "32px",
+                height: "32px",
+                borderRadius: "999px",
+                cursor: "pointer",
+                fontSize: "16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {"×"}
+            </button>
+          </div>
+
           <textarea
             value={content}
             onChange={(event) => setContent(event.target.value.slice(0, 280))}

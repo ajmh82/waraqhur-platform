@@ -68,6 +68,7 @@ a {
   width: min(100%, 760px);
   margin: 0 auto;
   padding: 12px 16px;
+  cursor: pointer;
 }
 
 .app-header__inner--social {
@@ -219,44 +220,62 @@ a {
   box-shadow: var(--shadow);
 }
 
+.timeline-list .tweet-card {
+  padding: 12px 0;
+}
+
+@media (max-width: 600px) {
+  .timeline-list .tweet-card {
+    padding: 10px 0;
+  }
+  .tweet-card__body {
+    gap: 8px;
+  }
+}
+
 .timeline-list {
   display: grid;
-  gap: 16px;
+  gap: 0;
 }
 
 .tweet-card {
-  background: var(--card);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 20px;
-  padding: 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0;
+  padding: 12px 16px;
+  cursor: pointer;
   display: grid;
-  gap: 16px;
-  box-shadow: var(--shadow);
-  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  gap: 0;
+  box-shadow: none;
+  transition: background 0.15s ease;
 }
 
 .tweet-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 24px 44px rgba(2,6,23,0.32);
-  border-color: rgba(125,211,252,0.18);
+  transform: none;
+  box-shadow: none;
+  border-color: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
 }
 
 .tweet-card__repost-bar {
-  color: var(--muted);
+  color: #71767b;
   font-size: 13px;
   font-weight: 700;
+  padding-bottom: 4px;
+  padding-inline-start: 56px;
 }
 
 .tweet-card__body {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 16px;
+  grid-template-columns: 40px 1fr;
+  gap: 12px;
   align-items: flex-start;
 }
 
 .tweet-card__avatar {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   background: var(--primary);
   color: #fff;
@@ -264,17 +283,17 @@ a {
   place-items: center;
   font-weight: 900;
   overflow: hidden;
-  box-shadow: 0 10px 24px rgba(2,6,23,0.24);
+  box-shadow: none;
 }
 
 .tweet-card__avatar--lg {
-  width: 58px;
-  height: 58px;
+  width: 40px;
+  height: 40px;
 }
 
 .tweet-card__content {
   display: grid;
-  gap: 13px;
+  gap: 2px;
 }
 
 .tweet-card__header {
@@ -286,7 +305,8 @@ a {
 .tweet-card__badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  padding-top: 2px;
 }
 
 .tweet-card__title-link {
@@ -295,12 +315,14 @@ a {
 
 .tweet-card__title-link h3 {
   margin: 0;
+  font-size: 15px;
 }
 
 .tweet-card__excerpt {
   margin: 0;
-  color: rgba(255,255,255,0.94);
+  color: #e7e9ea;
   font-size: 15px;
+  line-height: 1.5;
 }
 
 .section-heading {
@@ -424,61 +446,65 @@ a {
 .tweet-action-bar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 0;
 }
 
 .tweet-action-bar--compact {
-  gap: 8px;
+  padding: 2px 0;
 }
 
 .tweet-action-bar__item {
-  min-width: 48px;
-  min-height: 48px;
-  padding: 0 14px;
   border: 0;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.045);
-  color: rgba(255,255,255,0.62);
+  background: transparent;
+  color: #71767b;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 9px;
+  gap: 6px;
   text-decoration: none;
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
-  transition: transform 0.18s ease, color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  padding: 8px;
+  margin: -8px;
+  border-radius: 999px;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
 .tweet-action-bar__item:hover {
-  transform: scale(1.03);
+  background: transparent;
 }
 
 .tweet-action-bar__item:active {
-  transform: scale(0.98);
+  transform: none;
 }
 
 .tweet-action-bar__item--comment:hover {
-  color: #7dd3fc;
-  background: rgba(56,189,248,0.12);
-}
-
-.tweet-action-bar__item--like:hover,
-.tweet-action-bar__item--like.tweet-action-bar__item--active {
-  color: #fb7185;
-  background: rgba(244,63,94,0.14);
+  color: #1d9bf0;
 }
 
 .tweet-action-bar__item--repost:hover,
 .tweet-action-bar__item--repost.tweet-action-bar__item--active {
-  color: #4ade80;
-  background: rgba(34,197,94,0.14);
+  color: #00ba7c;
 }
 
-.tweet-action-bar__item--share:hover,
-.tweet-action-bar__item--share.tweet-action-bar__item--active {
-  color: #a78bfa;
-  background: rgba(139,92,246,0.14);
+.tweet-action-bar__item--like:hover {
+  color: #f91880;
+}
+
+.tweet-action-bar__item--like.tweet-action-bar__item--active {
+  color: #f91880;
+}
+
+.tweet-action-bar__item--bookmark:hover {
+  color: #1d9bf0;
+}
+
+.tweet-action-bar__item--bookmark.tweet-action-bar__item--active {
+  color: #1d9bf0;
+}
+
+.tweet-action-bar__item--share:hover {
+  color: #1d9bf0;
 }
 
 .tweet-action-bar__icon {
@@ -488,60 +514,42 @@ a {
 
 .tweet-action-bar__count {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 400;
   line-height: 1;
+  color: inherit;
 }
 
 .mobile-bottom-nav {
   position: fixed;
-  inset-inline: 16px;
-  bottom: 14px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 55;
-  margin: 0 auto;
-  width: auto;
-  max-width: 760px;
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 24px;
-  background: rgba(15,23,42,0.72);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 -10px 28px rgba(2,6,23,0.24);
+  background: rgba(15,23,42,0.97);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255,255,255,0.08);
   display: none;
-  grid-template-columns: repeat(4, 1fr);
-  padding: 10px 8px;
-  gap: 6px;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 0;
+  margin: 0;
 }
 
 .mobile-bottom-nav__item {
-  display: grid;
-  place-items: center;
-  gap: 4px;
-  min-height: 58px;
-  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
   color: rgba(255,255,255,0.5);
   text-decoration: none;
-  transition: transform 0.18s ease, color 0.18s ease, background 0.18s ease;
+  transition: color 0.15s ease;
 }
 
 .mobile-bottom-nav__item:hover {
-  color: rgba(255,255,255,0.86);
-  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.85);
 }
 
 .mobile-bottom-nav__item--active {
-  color: #c4b5fd;
-  background: rgba(139,92,246,0.12);
-  transform: translateY(-2px);
-  box-shadow: 0 0 18px rgba(139,92,246,0.18);
-}
-
-.mobile-bottom-nav__icon {
-  font-size: 18px;
-  line-height: 1;
-}
-
-.mobile-bottom-nav__label {
-  font-size: 11px;
-  font-weight: 700;
+  color: #e7e9ea;
 }
 
 @media (max-width: 860px) {
@@ -572,6 +580,7 @@ a {
   width: min(100%, 760px);
   margin: 0 auto;
   padding: 12px 16px;
+  cursor: pointer;
 }
 
 .app-header__inner--social {

@@ -7,8 +7,6 @@ import { MessageRequestComposer } from "@/components/messages/message-request-co
 import { MessageRequestsPanel } from "@/components/messages/message-requests-panel";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiGet } from "@/lib/web-api";
-import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
-import { getCurrentUserFromSession } from "@/services/auth-service";
 
 interface MessagesPageData {
   threads: Array<{
@@ -32,18 +30,6 @@ interface MessagesPageData {
 export default async function MessagesPage() {
   const cookieStore = await cookies();
   const locale = cookieStore.get("locale")?.value === "en" ? "en" : "ar";
-  const sessionValue = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-  let canViewAuditPage = false;
-
-  if (sessionValue) {
-    try {
-      const current = await getCurrentUserFromSession(sessionValue);
-      canViewAuditPage = current.user.username === "sayed";
-    } catch {
-      canViewAuditPage = false;
-    }
-  }
 
   let data: MessagesPageData | null = null;
   let error: string | null = null;
@@ -71,12 +57,6 @@ export default async function MessagesPage() {
             >
               {locale === "en" ? "Create Group" : "إنشاء مجموعة"}
             </a>
-
-            {canViewAuditPage ? (
-              <Link href="/audit/messages" className="btn small">
-                {locale === "en" ? "Messages Audit" : "مراقبة الرسائل"}
-              </Link>
-            ) : null}
           </div>
 
           <ErrorState
@@ -100,11 +80,6 @@ export default async function MessagesPage() {
           <Link href="/messages" className="btn small">
             {locale === "en" ? "Messages" : "الرسائل الخاصة"}
           </Link>
-          {canViewAuditPage ? (
-            <Link href="/audit/messages" className="btn small">
-              {locale === "en" ? "Messages Audit" : "مراقبة الرسائل"}
-            </Link>
-          ) : null}
         </div>
 
         <MessageRequestComposer locale={locale} />

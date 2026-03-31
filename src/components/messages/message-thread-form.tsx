@@ -37,13 +37,15 @@ const copy = {
     replyingTo: "رد على",
     closeReply: "إغلاق الرد",
     me: "أنا",
-    startRecord: "تسجيل",
-    stopRecord: "إيقاف",
+    startRecord: "تسجيل صوتي",
+    stopRecord: "إيقاف التسجيل",
     recording: "جارٍ التسجيل...",
-    recordTooLong: "تم إيقاف التسجيل بعد دقيقة واحدة",
-    noMic: "الميكروفون غير متاح في هذا المتصفح",
+    recordTooLong: "تم إيقاف التسجيل — الحد الأقصى دقيقة واحدة",
+    noMicHttp: "التسجيل المباشر يتطلب HTTPS. اختر ملف صوتي من جهازك بدلاً من ذلك.",
+    noMic: "الميكروفون غير متاح. تأكد من السماح بالوصول للميكروفون في إعدادات المتصفح.",
     removeAudio: "حذف الصوت",
-    pickAudio: "اختيار صوت",
+    pickAudio: "اختيار ملف صوتي",
+    audioTooLong: "مدة الصوت يجب ألا تتجاوز دقيقة واحدة.",
   },
   en: {
     placeholder: "Write your message...",
@@ -61,13 +63,15 @@ const copy = {
     replyingTo: "Replying to",
     closeReply: "Close reply",
     me: "Me",
-    startRecord: "Record",
-    stopRecord: "Stop",
+    startRecord: "Voice record",
+    stopRecord: "Stop recording",
     recording: "Recording...",
-    recordTooLong: "Recording stopped after 60 seconds",
-    noMic: "Microphone is unavailable in this browser",
+    recordTooLong: "Recording stopped — max 1 minute",
+    noMicHttp: "Live recording requires HTTPS. Pick an audio file from your device instead.",
+    noMic: "Microphone unavailable. Make sure you allow microphone access in browser settings.",
     removeAudio: "Remove audio",
-    pickAudio: "Pick audio",
+    pickAudio: "Pick audio file",
+    audioTooLong: "Audio must not exceed 1 minute.",
   },
 } as const;
 
@@ -89,6 +93,13 @@ function isMobileLikeDevice() {
   );
 }
 
+function isSecureContext() {
+  if (typeof window === "undefined") return false;
+  if (window.isSecureContext) return true;
+  const hostname = window.location.hostname;
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
 export function MessageThreadForm({
   threadId,
   locale = "ar",
@@ -101,6 +112,7 @@ export function MessageThreadForm({
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordTimerRef = useRef<number | null>(null);
+  const countdownRef = useRef<number | null>(null);
   const recordChunksRef = useRef<BlobPart[]>([]);
 
   const [body, setBody] = useState("");
@@ -109,6 +121,7 @@ export function MessageThreadForm({
   const [recordedAudio, setRecordedAudio] = useState<File | null>(null);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordSecondsLeft, setRecordSecondsLeft] = useState(MAX_AUDIO_SECONDS);
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -202,26 +215,72 @@ export function MessageThreadForm({
       window.clearTimeout(recordTimerRef.current);
       recordTimerRef.current = null;
     }
+    if (countdownRef.current) {
+      window.clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
   }
 
-  async function startRecording() {
+  function validateAudioDuration(file: File): Promise<boolean> {
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      audio.preload = "metadata";
+
+      audio.onloadedmetadata = () => {
+        URL.revokeObjectURL(audio.src);
+        if (audio.duration > MAX_AUDIO_SECONDS) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      };
+
+      audio.onerror = () => {
+        URL.revokeObjectURL(audio.src);
+        // If we can't read metadata, allow it (server can validate)
+        resolve(true);
+      };
+
+      audio.src = URL.createObjectURL(file);
+    });
+  }
+
+  async function handleMicButton() {
     setError(null);
     if (isSubmitting || isBlocked || isRecording) return;
 
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        audioInputRef.current?.click();
-        return;
-      }
+    // If not secure context (HTTP), go straight to file picker
+    if (!isSecureContext()) {
+      audioInputRef.current?.click();
+      return;
+    }
 
+    // If browser doesn't support getUserMedia, go to file picker
+    if (!navigator.mediaDevices?.getUserMedia) {
+      audioInputRef.current?.click();
+      return;
+    }
+
+    // Try live recording
+    try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType =
-        MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-          ? "audio/webm;codecs=opus"
-          : "audio/webm";
+
+      // Determine best supported mime type
+      let mimeType = "audio/webm";
+      if (typeof MediaRecorder !== "undefined") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          mimeType = "audio/webm;codecs=opus";
+        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+          mimeType = "audio/webm";
+        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          mimeType = "audio/mp4";
+        } else if (MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")) {
+          mimeType = "audio/ogg;codecs=opus";
+        }
+      }
 
       const recorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = recorder;
@@ -236,18 +295,35 @@ export function MessageThreadForm({
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
 
+        if (countdownRef.current) {
+          window.clearInterval(countdownRef.current);
+          countdownRef.current = null;
+        }
+
         const blob = new Blob(recordChunksRef.current, { type: mimeType });
-        const file = new File([blob], `dm-audio-${Date.now()}.webm`, { type: mimeType });
+        const ext = mimeType.includes("mp4") ? "m4a" : mimeType.includes("ogg") ? "ogg" : "webm";
+        const file = new File([blob], `dm-audio-${Date.now()}.${ext}`, { type: mimeType });
 
         clearRecordedAudio();
         setRecordedAudio(file);
         setRecordedAudioUrl(URL.createObjectURL(file));
         setIsRecording(false);
+        setRecordSecondsLeft(MAX_AUDIO_SECONDS);
       };
 
       recorder.start();
       setIsRecording(true);
+      setRecordSecondsLeft(MAX_AUDIO_SECONDS);
 
+      // Countdown timer (visual)
+      countdownRef.current = window.setInterval(() => {
+        setRecordSecondsLeft((prev) => {
+          if (prev <= 1) return 0;
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Hard stop at MAX_AUDIO_SECONDS
       recordTimerRef.current = window.setTimeout(() => {
         setError(t.recordTooLong);
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -255,6 +331,7 @@ export function MessageThreadForm({
         }
       }, MAX_AUDIO_SECONDS * 1000);
     } catch {
+      // Permission denied or any other error — fallback to file picker
       audioInputRef.current?.click();
     }
   }
@@ -293,9 +370,18 @@ export function MessageThreadForm({
     setPreviewUrl(URL.createObjectURL(file));
   }
 
-  function handleAudioInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleAudioInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setError(null);
     const file = event.target.files?.[0] ?? null;
     if (!file) return;
+
+    // Validate duration
+    const isValid = await validateAudioDuration(file);
+    if (!isValid) {
+      setError(t.audioTooLong);
+      event.target.value = "";
+      return;
+    }
 
     clearRecordedAudio();
     setRecordedAudio(file);
@@ -418,6 +504,12 @@ export function MessageThreadForm({
     fileInputRef.current?.click();
   }
 
+  function formatCountdown(seconds: number) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
+
   return (
     <form id="dm-composer-anchor" onSubmit={handleSubmit} style={{ display: "grid", gap: "6px", margin: 0 }}>
       {replyTarget ? (
@@ -486,7 +578,7 @@ export function MessageThreadForm({
           onKeyDown={handleKeyDown}
           rows={1}
           placeholder={t.placeholder}
-          disabled={isSubmitting || isBlocked}
+          disabled={isSubmitting || isBlocked || isRecording}
           enterKeyHint="enter"
           style={{
             width: "100%",
@@ -545,16 +637,15 @@ export function MessageThreadForm({
 
           <button
             type="button"
-            onClick={isRecording ? stopRecording : () => void startRecording()}
+            onClick={isRecording ? stopRecording : () => void handleMicButton()}
             disabled={isSubmitting || isBlocked}
             title={isRecording ? t.stopRecord : t.startRecord}
             style={{
-              width: "24px",
               height: "24px",
               borderRadius: "7px",
-              border: "1px solid rgba(255,255,255,0.2)",
+              border: isRecording ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(255,255,255,0.2)",
               background: isRecording ? "rgba(239,68,68,0.25)" : "rgba(15,23,42,0.75)",
-              color: "#e2e8f0",
+              color: isRecording ? "#fca5a5" : "#e2e8f0",
               fontSize: "11px",
               lineHeight: 1,
               cursor: isSubmitting || isBlocked ? "not-allowed" : "pointer",
@@ -563,9 +654,21 @@ export function MessageThreadForm({
               justifyContent: "center",
               textAlign: "center",
               fontWeight: 700,
+              padding: isRecording ? "0 8px" : "0",
+              width: isRecording ? "auto" : "24px",
+              minWidth: isRecording ? "60px" : "24px",
+              gap: "4px",
+              transition: "all 0.2s ease",
             }}
           >
-            {isRecording ? "■" : "🎤"}
+            {isRecording ? (
+              <>
+                <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "2px", background: "#ef4444", animation: "dm-rec-blink 1s infinite" }} />
+                <span>{formatCountdown(recordSecondsLeft)}</span>
+              </>
+            ) : (
+              "🎤"
+            )}
           </button>
 
           <button
@@ -595,7 +698,9 @@ export function MessageThreadForm({
       </div>
 
       {isRecording ? (
-        <p style={{ margin: 0, color: "#fda4af", fontSize: "12px" }}>{t.recording}</p>
+        <p style={{ margin: 0, color: "#fda4af", fontSize: "12px" }}>
+          {t.recording} — {formatCountdown(recordSecondsLeft)}
+        </p>
       ) : null}
 
       <input
@@ -675,6 +780,13 @@ export function MessageThreadForm({
       {isBlocked ? (
         <p style={{ margin: 0, color: "var(--muted)", fontSize: "13px" }}>{t.blocked}</p>
       ) : null}
+
+      <style>{`
+        @keyframes dm-rec-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+      `}</style>
     </form>
   );
 }
