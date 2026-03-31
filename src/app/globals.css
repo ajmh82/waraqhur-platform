@@ -2115,3 +2115,231 @@ img.account-menu__avatar,
 .ig-side-float input,.ig-side-float button{background:rgba(15,23,42,.7);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px 10px}
 .ig-colors{display:flex;gap:6px;flex-wrap:wrap}
 .ig-colors .dot{width:22px;height:22px;border-radius:999px;border:2px solid rgba(255,255,255,.55);padding:0}
+
+
+/* ============================================
+   TWITTER-STYLE REDESIGN
+   - Flat timeline (no card bubbles, just border lines)
+   - Borderless justified bottom nav with SVG icons
+   - Borderless justified tweet action bar with SVG icons
+   ============================================ */
+
+/* --- Timeline: flat, no bubbles, separator lines --- */
+.timeline-list {
+  display: grid !important;
+  gap: 0 !important;
+}
+
+.tweet-card {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 0 !important;
+  padding: 16px 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  transition: none !important;
+}
+
+.tweet-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  background: rgba(255,255,255,0.02) !important;
+}
+
+.tweet-card:last-child {
+  border-bottom: none !important;
+}
+
+/* --- Tweet action bar: flat, justified, no pill backgrounds --- */
+.tweet-action-bar {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 0 !important;
+  flex-wrap: nowrap !important;
+  padding: 4px 0 0 !important;
+}
+
+.tweet-action-bar--compact {
+  gap: 0 !important;
+}
+
+.tweet-action-bar__item {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: auto !important;
+  min-height: auto !important;
+  padding: 8px 2px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(255,255,255,0.45) !important;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease !important;
+}
+
+.tweet-action-bar__item:hover {
+  transform: none !important;
+}
+
+.tweet-action-bar__item--comment:hover {
+  color: #1d9bf0 !important;
+  background: transparent !important;
+}
+
+.tweet-action-bar__item--repost:hover,
+.tweet-action-bar__item--repost.tweet-action-bar__item--active {
+  color: #00ba7c !important;
+  background: transparent !important;
+}
+
+.tweet-action-bar__item--like:hover,
+.tweet-action-bar__item--like.tweet-action-bar__item--active {
+  color: #f91880 !important;
+  background: transparent !important;
+}
+
+.tweet-action-bar__item--bookmark:hover,
+.tweet-action-bar__item--bookmark.tweet-action-bar__item--active {
+  color: #1d9bf0 !important;
+  background: transparent !important;
+}
+
+.tweet-action-bar__item--share:hover,
+.tweet-action-bar__item--share.tweet-action-bar__item--active {
+  color: #1d9bf0 !important;
+  background: transparent !important;
+}
+
+.tweet-action-bar__svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.tweet-action-bar__icon {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.tweet-action-bar__count {
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1;
+  color: rgba(255,255,255,0.45) !important;
+}
+
+/* --- Bottom nav: Twitter-style, no frame, justified SVG icons --- */
+.mobile-bottom-nav {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  inset-inline: 0 !important;
+  z-index: 2000 !important;
+  display: flex !important;
+  justify-content: space-around !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  min-height: 53px !important;
+  border: none !important;
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 0 !important;
+  background: var(--background) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+.mobile-bottom-nav__item {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 53px !important;
+  padding: 0 !important;
+  color: rgba(255,255,255,0.55) !important;
+  text-decoration: none !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transition: color 0.15s ease !important;
+  transform: none !important;
+}
+
+.mobile-bottom-nav__item:hover {
+  color: rgba(255,255,255,0.85) !important;
+  background: transparent !important;
+  transform: none !important;
+}
+
+.mobile-bottom-nav__item.is-active {
+  color: #fff !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.mobile-bottom-nav__item--active {
+  color: #fff !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.mobile-bottom-nav__icon-wrap {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.mobile-bottom-nav__icon-wrap svg {
+  display: block;
+}
+
+.mobile-bottom-nav__label {
+  display: none !important;
+}
+
+.mobile-bottom-nav__unread-dot {
+  position: absolute;
+  top: -2px;
+  inset-inline-end: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #1d9bf0;
+  border: 2px solid var(--background);
+}
+
+.mobile-bottom-nav__compose {
+  display: none !important;
+}
+
+@media (min-width: 901px) {
+  .mobile-bottom-nav {
+    max-width: 760px !important;
+    margin-inline: auto !important;
+  }
+}
+
+/* safe area padding for mobile */
+body {
+  padding-bottom: 53px !important;
+}
+
+@media (max-width: 900px) {
+  body {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 53px) !important;
+  }
+}

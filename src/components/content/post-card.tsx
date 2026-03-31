@@ -235,7 +235,7 @@ export function PostCard({
                       {formatRelativeTime(post.createdAt)}
                     </span>
                     {provider ? <span>• {provider}</span> : null}
-                    <span>• 👁 {post.viewsCount ?? 0}</span>
+                    {(post.viewsCount ?? 0) > 0 ? <span>• {post.viewsCount}</span> : null}
                   </div>
                 </div>
               </div>
@@ -400,7 +400,7 @@ export function PostCard({
               </div>
             ) : null}
 
-            <div style={{ marginTop: "14px" }}>
+            <div>
               <TweetActionBar
                 postId={post.id}
                 href={href}
