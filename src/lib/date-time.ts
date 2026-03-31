@@ -4,10 +4,6 @@ function normalizeLocale(locale?: string) {
   return locale === "en" || locale === "en-US" ? "en-US" : "ar-BH";
 }
 
-function getPreferredTimeZone() {
-  return DEFAULT_TIME_ZONE;
-}
-
 function getNow() {
   return new Date();
 }
