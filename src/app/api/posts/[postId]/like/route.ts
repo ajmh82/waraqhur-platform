@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 import { prisma } from "@/lib/prisma";
+import { createInAppNotification } from "@/services/notification-service";
 
 async function requireSessionUser() {
   const cookieStore = await cookies();
@@ -78,6 +79,7 @@ export async function POST(
   try {
     const { postId } = await context.params;
     const userId = auth.current.user.id;
+    const actorUsername = auth.current.user.username;
 
     const post = await prisma.post.findUnique({ where: { id: postId } });
     if (!post) {
@@ -87,11 +89,37 @@ export async function POST(
       );
     }
 
+    const existingLike = await prisma.like.findUnique({
+      where: { userId_postId: { userId, postId } },
+      select: { userId: true },
+    });
+
     await prisma.like.upsert({
       where: { userId_postId: { userId, postId } },
       update: {},
       create: { userId, postId },
     });
+
+    if (!existingLike && post.authorUserId && post.authorUserId !== userId) {
+      const actionUrl = post.slug ? `/posts/${post.slug}` : `/posts/${post.id}`;
+      await createInAppNotification({
+        userId: post.authorUserId,
+        title: "إعجاب جديد",
+        body: `@${actorUsername} أعجب بتغريدتك`,
+        payload: {
+          event: "post.liked",
+          actionUrl,
+          entityType: "post",
+          entityId: post.id,
+          metadata: {
+            postId: post.id,
+            postSlug: post.slug ?? null,
+            actorUserId: userId,
+            actorUsername,
+          },
+        },
+      });
+    }
 
     const likesCount = await prisma.like.count({ where: { postId } });
 

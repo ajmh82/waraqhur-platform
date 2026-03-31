@@ -23,17 +23,14 @@ export async function GET() {
 
   try {
     const current = await getCurrentUserFromSession(sessionValue);
+    const userId = current.user.id;
 
-    const unreadCount = await prisma.notification.count({
+    const unreadCount = await prisma.directMessage.count({
       where: {
-        userId: current.user.id,
-        channel: "IN_APP",
         readAt: null,
-        NOT: {
-          payload: {
-            path: ["event"],
-            equals: "dm.message.received",
-          },
+        senderUserId: { not: userId },
+        thread: {
+          OR: [{ participantAUserId: userId }, { participantBUserId: userId }],
         },
       },
     });

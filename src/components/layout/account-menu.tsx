@@ -347,13 +347,11 @@ export function AccountMenu() {
     );
   }
 
-  const hasAnyUnread = hasUnreadNotifications || hasUnreadMessages;
-
   return (
     <div className="account-menu" ref={rootRef}>
       <button
         type="button"
-        className={`account-menu__trigger ${hasAnyUnread ? "has-unread" : ""}`}
+        className={`account-menu__trigger ${hasUnreadNotifications ? "has-unread" : ""}`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="Open account menu"

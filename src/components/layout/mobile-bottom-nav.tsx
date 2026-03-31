@@ -25,7 +25,6 @@ export function MobileBottomNav() {
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -96,50 +95,6 @@ export function MobileBottomNav() {
     return () => {
       active = false;
       clearInterval(id);
-    };
-  }, [isAuthenticated, pathname]);
-
-
-  useEffect(() => {
-    if (isAuthenticated === false) {
-      setHasUnreadNotifications(false);
-      return;
-    }
-
-    let active = true;
-
-    async function loadUnreadNotifications() {
-      try {
-        const response = await fetch("/api/notifications/unread-count", {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-          headers: { Accept: "application/json" },
-        });
-
-        const payload = await response.json().catch(() => null);
-
-        if (!response.ok) {
-          if (active) setHasUnreadNotifications(false);
-          return;
-        }
-
-        if (active) setHasUnreadNotifications(extractHasUnread(payload));
-      } catch {
-        if (active) setHasUnreadNotifications(false);
-      }
-    }
-
-    void loadUnreadNotifications();
-    const id = setInterval(loadUnreadNotifications, 15000);
-
-    const onChanged = () => void loadUnreadNotifications();
-    window.addEventListener("notifications:changed", onChanged);
-
-    return () => {
-      active = false;
-      clearInterval(id);
-      window.removeEventListener("notifications:changed", onChanged);
     };
   }, [isAuthenticated, pathname]);
 
@@ -223,7 +178,7 @@ export function MobileBottomNav() {
               {item.icon}
             </span>
 
-            {((item.key === "messages" && hasUnreadMessages) || (item.key === "home" && hasUnreadNotifications)) ? (
+            {item.key === "messages" && hasUnreadMessages ? (
               <span
                 aria-hidden="true"
                 style={{

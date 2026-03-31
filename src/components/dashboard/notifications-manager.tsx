@@ -1,7 +1,16 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatDateTimeInMakkah } from "@/lib/date-time";
+
+interface NotificationItemPayload {
+  event?: string | null;
+  actionUrl?: string | null;
+  entityType?: string | null;
+  entityId?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
 
 interface NotificationItem {
   id: string;
@@ -10,6 +19,7 @@ interface NotificationItem {
   body: string;
   readAt: string | null;
   createdAt: string;
+  payload?: NotificationItemPayload | null;
 }
 
 interface NotificationsManagerProps {
@@ -29,6 +39,10 @@ const copy = {
     markAll: "تعليم الكل كمقروء",
     markingAll: "جارٍ التعليم...",
     actionFailed: "تعذر تنفيذ العملية.",
+    open: "فتح",
+    accept: "قبول",
+    reject: "رفض",
+    processing: "جارٍ التنفيذ...",
   },
   en: {
     empty: "No notifications yet.",
@@ -41,16 +55,84 @@ const copy = {
     markAll: "Mark all as read",
     markingAll: "Marking...",
     actionFailed: "Action failed.",
+    open: "Open",
+    accept: "Accept",
+    reject: "Reject",
+    processing: "Processing...",
   },
 } as const;
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function getNotificationTargetUrl(item: NotificationItem): string | null {
+  const payload = item.payload;
+  const metadata = asRecord(payload?.metadata);
+  const event = asString(payload?.event) ?? asString(item.type);
+  const actionUrl = asString(payload?.actionUrl);
+
+  if (actionUrl) return actionUrl;
+
+  const postSlug = asString(metadata?.postSlug);
+  const postId = asString(metadata?.postId);
+  const commentId = asString(metadata?.commentId);
+  const threadId = asString(metadata?.threadId);
+
+  if (event === "post.replied" || event === "comment.replied") {
+    const postPath = postSlug
+      ? `/posts/${encodeURIComponent(postSlug)}`
+      : postId
+        ? `/posts/${postId}`
+        : null;
+    if (!postPath) return null;
+    return commentId ? `${postPath}#comment-${commentId}` : postPath;
+  }
+
+  if (
+    event === "post.liked" ||
+    event === "post.reposted" ||
+    event === "post.bookmarked"
+  ) {
+    if (postSlug) return `/posts/${encodeURIComponent(postSlug)}`;
+    if (postId) return `/posts/${postId}`;
+    return null;
+  }
+
+  if (event === "dm.request.accepted" && threadId) {
+    return `/messages/${threadId}`;
+  }
+
+  if (event === "dm.request.sent" || event === "dm.request.rejected") {
+    return "/messages";
+  }
+
+  return null;
+}
+
+function getDmRequestId(item: NotificationItem): string | null {
+  const metadata = asRecord(item.payload?.metadata);
+  return asString(metadata?.requestId) ?? asString(item.payload?.entityId);
+}
+
+function getDmRequesterUsername(item: NotificationItem): string | null {
+  const metadata = asRecord(item.payload?.metadata);
+  return asString(metadata?.requesterUsername);
+}
 
 export function NotificationsManager({
   locale = "ar",
   initialItems,
 }: NotificationsManagerProps) {
+  const router = useRouter();
   const t = copy[locale];
   const [items, setItems] = useState(initialItems);
   const [error, setError] = useState<string | null>(null);
+  const [actionId, setActionId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   async function markOneAsRead(notificationId: string) {
@@ -67,7 +149,7 @@ export function NotificationsManager({
 
     if (!response.ok || !payload?.success) {
       setError(payload?.error?.message ?? t.actionFailed);
-      return;
+      return false;
     }
 
     setItems((current) =>
@@ -81,6 +163,8 @@ export function NotificationsManager({
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("notifications:changed"));
     }
+
+    return true;
   }
 
   async function markAllAsRead() {
@@ -109,6 +193,64 @@ export function NotificationsManager({
   }
 
   const unreadCount = items.filter((item) => !item.readAt).length;
+
+  async function openNotification(item: NotificationItem) {
+    setError(null);
+    const targetUrl = getNotificationTargetUrl(item);
+    if (!targetUrl) return;
+
+    if (!item.readAt) {
+      const ok = await markOneAsRead(item.id);
+      if (!ok) return;
+    }
+
+    router.push(targetUrl);
+  }
+
+  async function handleRequestAction(
+    item: NotificationItem,
+    action: "accept" | "reject"
+  ) {
+    const requestId = getDmRequestId(item);
+    if (!requestId) {
+      setError(t.actionFailed);
+      return;
+    }
+
+    setError(null);
+    setActionId(`${item.id}:${action}`);
+    try {
+      const response = await fetch(`/api/messages/requests/${requestId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.success) {
+        setError(payload?.error?.message ?? t.actionFailed);
+        return;
+      }
+
+      const nowIso = new Date().toISOString();
+      setItems((current) =>
+        current.map((entry) =>
+          entry.id === item.id ? { ...entry, readAt: nowIso } : entry
+        )
+      );
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("notifications:changed"));
+      }
+
+      if (action === "accept" && typeof payload?.data?.thread?.id === "string") {
+        router.push(`/messages/${payload.data.thread.id}`);
+        return;
+      }
+    } finally {
+      setActionId(null);
+    }
+  }
 
   return (
     <div style={{ display: "grid", gap: "12px" }}>
@@ -145,76 +287,135 @@ export function NotificationsManager({
         </div>
       ) : (
         <div style={{ display: "grid", gap: "12px" }}>
-          {items.map((n) => (
-            <article
-              key={n.id}
-              className="dashboard-card"
-              style={{
-                padding: "16px",
-                display: "grid",
-                gap: "8px",
-                border: n.readAt
-                  ? "1px solid rgba(255,255,255,0.08)"
-                  : "1px solid rgba(125,211,252,0.28)",
-                background: n.readAt
-                  ? "rgba(255,255,255,0.03)"
-                  : "rgba(56,189,248,0.08)",
-              }}
-            >
-              <div
+          {items.map((n) => {
+            const targetUrl = getNotificationTargetUrl(n);
+            const isDmRequest = (n.payload?.event ?? n.type) === "dm.request.sent";
+            const requestActionBusy = actionId === `${n.id}:accept` || actionId === `${n.id}:reject`;
+            const requesterUsername = getDmRequesterUsername(n);
+
+            return (
+              <article
+                key={n.id}
+                className="dashboard-card"
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "10px",
-                  alignItems: "center",
-                  flexWrap: "wrap",
+                  padding: "16px",
+                  display: "grid",
+                  gap: "8px",
+                  border: n.readAt
+                    ? "1px solid rgba(255,255,255,0.08)"
+                    : "1px solid rgba(125,211,252,0.28)",
+                  background: n.readAt
+                    ? "rgba(255,255,255,0.03)"
+                    : "rgba(56,189,248,0.08)",
                 }}
               >
-                <strong style={{ fontSize: "15px" }}>{n.title || t.unknownTitle}</strong>
-                <span
+                <div
                   style={{
-                    fontSize: "12px",
-                    color: n.readAt ? "var(--muted)" : "#7dd3fc",
-                    fontWeight: 700,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "10px",
+                    alignItems: "center",
+                    flexWrap: "wrap",
                   }}
                 >
-                  {n.readAt ? t.read : t.unread}
-                </span>
-              </div>
-
-              <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.8 }}>
-                {n.body || t.unknownBody}
-              </p>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "10px",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                <span style={{ fontSize: "12px", color: "var(--muted)" }}>
-                  {t.createdAt}:{" "}
-                  {formatDateTimeInMakkah(
-                    n.createdAt,
-                    locale === "en" ? "en-US" : "ar-BH"
-                  )}
-                </span>
-
-                {!n.readAt ? (
-                  <button
-                    type="button"
-                    className="btn small"
-                    onClick={() => markOneAsRead(n.id)}
+                  <strong style={{ fontSize: "15px" }}>{n.title || t.unknownTitle}</strong>
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      color: n.readAt ? "var(--muted)" : "#7dd3fc",
+                      fontWeight: 700,
+                    }}
                   >
-                    {t.markRead}
-                  </button>
-                ) : null}
-              </div>
-            </article>
-          ))}
+                    {n.readAt ? t.read : t.unread}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void openNotification(n)}
+                  disabled={!targetUrl}
+                  style={{
+                    textAlign: "start",
+                    margin: 0,
+                    color: "var(--muted)",
+                    lineHeight: 1.8,
+                    border: 0,
+                    background: "transparent",
+                    padding: 0,
+                    cursor: targetUrl ? "pointer" : "default",
+                    opacity: targetUrl ? 1 : 0.9,
+                  }}
+                >
+                  {isDmRequest && requesterUsername
+                    ? locale === "en"
+                      ? `@${requesterUsername} sent you a new chat request.`
+                      : `@${requesterUsername} أرسل لك طلب محادثة جديدة.`
+                    : n.body || t.unknownBody}
+                </button>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "10px",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span style={{ fontSize: "12px", color: "var(--muted)" }}>
+                    {t.createdAt}:{" "}
+                    {formatDateTimeInMakkah(
+                      n.createdAt,
+                      locale === "en" ? "en-US" : "ar-BH"
+                    )}
+                  </span>
+
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {isDmRequest ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn small"
+                          disabled={requestActionBusy}
+                          onClick={() => void handleRequestAction(n, "accept")}
+                        >
+                          {requestActionBusy ? t.processing : t.accept}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn small"
+                          disabled={requestActionBusy}
+                          onClick={() => void handleRequestAction(n, "reject")}
+                        >
+                          {requestActionBusy ? t.processing : t.reject}
+                        </button>
+                      </>
+                    ) : null}
+
+                    {targetUrl ? (
+                      <button
+                        type="button"
+                        className="btn small"
+                        onClick={() => void openNotification(n)}
+                      >
+                        {t.open}
+                      </button>
+                    ) : null}
+
+                    {!n.readAt ? (
+                      <button
+                        type="button"
+                        className="btn small"
+                        onClick={() => void markOneAsRead(n.id)}
+                      >
+                        {t.markRead}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
     </div>

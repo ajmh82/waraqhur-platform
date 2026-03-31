@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 import { prisma } from "@/lib/prisma";
+import { createInAppNotification } from "@/services/notification-service";
 
 async function requireSessionUser() {
   const cookieStore = await cookies();
@@ -71,6 +72,7 @@ export async function POST(
   try {
     const { postId } = await context.params;
     const currentUserId = auth.current.user.id;
+    const actorUsername = auth.current.user.username;
 
     const originalPost = await prisma.post.findUnique({
       where: {
@@ -117,6 +119,33 @@ export async function POST(
           authorUserId: currentUserId,
           updatedByUserId: currentUserId,
           publishedAt: new Date(),
+        },
+      });
+    }
+
+    if (
+      originalPost.authorUserId &&
+      originalPost.authorUserId !== currentUserId &&
+      !existingRepost
+    ) {
+      const actionUrl = originalPost.slug
+        ? `/posts/${originalPost.slug}`
+        : `/posts/${originalPost.id}`;
+      await createInAppNotification({
+        userId: originalPost.authorUserId,
+        title: "إعادة نشر جديدة",
+        body: `@${actorUsername} أعاد نشر تغريدتك`,
+        payload: {
+          event: "post.reposted",
+          actionUrl,
+          entityType: "post",
+          entityId: originalPost.id,
+          metadata: {
+            postId: originalPost.id,
+            postSlug: originalPost.slug ?? null,
+            actorUserId: currentUserId,
+            actorUsername,
+          },
         },
       });
     }

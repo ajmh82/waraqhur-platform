@@ -5,6 +5,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 import { createCommentSchema } from "@/services/content-schemas";
 import { prisma } from "@/lib/prisma";
+import { createInAppNotification } from "@/services/notification-service";
 
 async function requireSessionUser() {
   const cookieStore = await cookies();
@@ -135,6 +136,75 @@ export async function POST(request: Request) {
         likes: true,
       },
     });
+
+    const actorUsername = auth.current.user.username;
+    const normalizedReplyBody = comment.content.replace(/\s+/g, " ").trim();
+    const replyPreview =
+      normalizedReplyBody.length > 140
+        ? `${normalizedReplyBody.slice(0, 137)}...`
+        : normalizedReplyBody;
+    const postForNotification = await prisma.post.findUnique({
+      where: { id: input.postId },
+      select: { id: true, slug: true, authorUserId: true },
+    });
+
+    const actionUrl = postForNotification?.slug
+      ? `/posts/${postForNotification.slug}#comment-${comment.id}`
+      : `/posts/${input.postId}#comment-${comment.id}`;
+
+    if (postForNotification?.authorUserId && postForNotification.authorUserId !== auth.current.user.id) {
+      await createInAppNotification({
+        userId: postForNotification.authorUserId,
+        title: "رد جديد",
+        body: `@${actorUsername} رد: "${replyPreview}"`,
+        payload: {
+          event: "post.replied",
+          actionUrl,
+          entityType: "comment",
+          entityId: comment.id,
+          metadata: {
+            postId: input.postId,
+            postSlug: postForNotification.slug ?? null,
+            commentId: comment.id,
+            actorUserId: auth.current.user.id,
+            actorUsername,
+          },
+        },
+      });
+    }
+
+    if (input.parentId) {
+      const parentComment = await prisma.comment.findUnique({
+        where: { id: input.parentId },
+        select: { id: true, authorUserId: true },
+      });
+
+      if (
+        parentComment?.authorUserId &&
+        parentComment.authorUserId !== auth.current.user.id &&
+        parentComment.authorUserId !== postForNotification?.authorUserId
+      ) {
+        await createInAppNotification({
+          userId: parentComment.authorUserId,
+          title: "رد على تعليقك",
+          body: `@${actorUsername} رد: "${replyPreview}"`,
+          payload: {
+            event: "comment.replied",
+            actionUrl,
+            entityType: "comment",
+            entityId: comment.id,
+            metadata: {
+              postId: input.postId,
+              postSlug: postForNotification?.slug ?? null,
+              commentId: comment.id,
+              parentCommentId: parentComment.id,
+              actorUserId: auth.current.user.id,
+              actorUsername,
+            },
+          },
+        });
+      }
+    }
 
     return NextResponse.json(
       {

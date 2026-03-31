@@ -214,13 +214,18 @@ export async function POST(request: Request) {
     await createInAppNotification({
       userId: targetUserId,
       title: "New chat request",
-      body: "You have received a new private chat request.",
+      body: `لديك طلب محادثة جديد من @${auth.current.user.username}`,
       payload: {
         event: "dm.request.sent",
         actionUrl: "/messages",
         entityType: "direct_message_request",
         entityId: dmRequest.id,
-        metadata: { requestId: dmRequest.id, requesterUserId, targetUserId },
+        metadata: {
+          requestId: dmRequest.id,
+          requesterUserId,
+          targetUserId,
+          requesterUsername: auth.current.user.username,
+        },
       },
     });
 
