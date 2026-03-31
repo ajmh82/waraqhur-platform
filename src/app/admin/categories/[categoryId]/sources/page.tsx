@@ -253,7 +253,7 @@ export default async function AdminCategorySourcesPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="اSearch بالاسم أو slug أو handle"
+          placeholder="ابحث بالاسم أو slug أو handle"
           className="search-input"
           style={{ minWidth: "280px" }}
         />

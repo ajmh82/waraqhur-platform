@@ -229,7 +229,7 @@ export default async function AdminUserSessionsPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="اSearch داخل Session ID"
+          placeholder="ابحث داخل Session ID"
           className="search-input"
           style={{ minWidth: "280px" }}
         />

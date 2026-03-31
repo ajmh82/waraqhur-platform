@@ -76,7 +76,7 @@ export default async function AdminRolesPage({ searchParams }: { searchParams: P
       <form action="/admin/roles" method="GET" style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         {selectedType !== "ALL" ? <input type="hidden" name="type" value={selectedType} /> : null}
         {selectedSort !== "newest" ? <input type="hidden" name="sort" value={selectedSort} /> : null}
-        <input type="text" name="q" defaultValue={query} placeholder="اSearch باسم الدور أو الصلاحية" style={{ minWidth: "300px" }} />
+        <input type="text" name="q" defaultValue={query} placeholder="ابحث باسم الدور أو الصلاحية" style={{ minWidth: "300px" }} />
         <button type="submit" className="btn small">Search</button>
         <Link href={buildHref(selectedType, "", selectedSort, 1)} className="btn small">مسح الSearch</Link>
       </form>

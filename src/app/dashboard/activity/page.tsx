@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
 type ActivityItem = {
@@ -11,7 +12,8 @@ type ActivityItem = {
 type ActivityData = { items: ActivityItem[] };
 
 export default async function DashboardActivityPage() {
-  const isAr = true;
+  const cookieStore = await cookies();
+  const isAr = cookieStore.get("locale")?.value !== "en";
   let items: ActivityItem[] = [];
 
   try {

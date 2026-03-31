@@ -264,7 +264,7 @@ export default async function AdminUserActivityPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="اSearch داخل action"
+          placeholder="ابحث داخل action"
           className="search-input"
           style={{ minWidth: "280px" }}
         />

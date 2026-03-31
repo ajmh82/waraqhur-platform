@@ -5,7 +5,7 @@ function requireEnv(name: string): string {
     if (process.env.CI === "true" && process.env.GITHUB_ACTIONS === "true") {
       return "";
     }
-    throw new Error(`Missing required environment variable: `);
+    throw new Error(`Missing required environment variable: ${name}`);
   }
 
   return value;

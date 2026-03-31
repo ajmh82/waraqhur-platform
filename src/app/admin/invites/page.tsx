@@ -77,7 +77,7 @@ export default async function AdminInvitesPage({ searchParams }: { searchParams:
       <form action="/admin/invites" method="GET" style={{ marginBottom: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         {selectedStatus !== "ALL" ? <input type="hidden" name="status" value={selectedStatus} /> : null}
         {selectedSort !== "newest" ? <input type="hidden" name="sort" value={selectedSort} /> : null}
-        <input type="text" name="q" defaultValue={query} placeholder="اSearch بالبريد أو المُرسِل أو الدور" style={{ minWidth: "300px" }} />
+        <input type="text" name="q" defaultValue={query} placeholder="ابحث بالبريد أو المُرسِل أو الدور" style={{ minWidth: "300px" }} />
         <button type="submit" className="btn small">Search</button>
         <Link href={buildHref(selectedStatus, "", selectedSort, 1)} className="btn small">مسح الSearch</Link>
       </form>

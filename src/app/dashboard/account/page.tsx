@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
 type AccountData = {
@@ -16,7 +17,8 @@ export default async function DashboardAccountPage({
   searchParams?: Promise<{ status?: string }>;
 }) {
   const params = (await searchParams) ?? {};
-  const isAr = true;
+  const cookieStore = await cookies();
+  const isAr = cookieStore.get("locale")?.value !== "en";
 
   let data: AccountData | null = null;
   try {

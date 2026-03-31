@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
 type InviteRow = { id: string; email: string; status: string; createdAt: string };
@@ -20,7 +21,8 @@ export default async function DashboardInvitesPage({
   }>;
 }) {
   const params = (await searchParams) ?? {};
-  const isAr = true;
+  const cookieStore = await cookies();
+  const isAr = cookieStore.get("locale")?.value !== "en";
 
   let data: InviteData = { remaining: 5, total: 5, sent: [] };
   try {
@@ -96,8 +98,7 @@ export default async function DashboardInvitesPage({
             <input
               className="settings-form__input"
               readOnly
-              value={inviteLink}
-              onFocus={(e) => e.currentTarget.select()}
+              defaultValue={inviteLink}
             />
           </div>
         ) : null}

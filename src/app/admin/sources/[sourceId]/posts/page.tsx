@@ -306,7 +306,7 @@ export default async function AdminSourcePostsPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="اSearch بالعنوان أو slug"
+          placeholder="ابحث بالعنوان أو slug"
           className="search-input"
           style={{ minWidth: "280px" }}
         />

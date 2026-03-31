@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { dashboardApiGet } from "@/lib/dashboard-api";
 
 type SecurityData = {
@@ -7,7 +8,8 @@ type SecurityData = {
 };
 
 export default async function DashboardSecurityPage() {
-  const isAr = true;
+  const cookieStore = await cookies();
+  const isAr = cookieStore.get("locale")?.value !== "en";
   let data: SecurityData | null = null;
 
   try {

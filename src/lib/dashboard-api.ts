@@ -8,7 +8,7 @@ function getBaseUrl(host: string | null) {
   const isLocalhost =
     host.includes("localhost") || host.startsWith("127.0.0.1");
 
-  return `${isLocalhost ? "http" : "http"}://${host}`;
+  return `${isLocalhost ? "http" : "https"}://${host}`;
 }
 
 export async function dashboardApiGet<T>(path: string): Promise<T> {

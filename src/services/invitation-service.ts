@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { InviteStatus, UserStatus, VerificationStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { env } from "@/lib/env";
 import { hashPassword } from "@/lib/auth-password";
 import { getEmailService } from "@/services/email/email-service";
 import { createInAppNotification } from "@/services/notification-service";
 import type { AcceptInvitationInput } from "@/services/invitation-schemas";
 
 function buildInvitationAcceptUrl(token: string) {
-  const url = new URL("/accept-invitation", "http://localhost:3000");
+  const url = new URL("/accept-invitation", env.appUrl);
   url.searchParams.set("token", token);
   return url.toString();
 }

@@ -3,28 +3,11 @@ import { NextResponse } from "next/server";
 
 const SESSION_COOKIE_NAME = "waraqhur_session";
 
-const PUBLIC_PATHS = [
-  "/",
-  "/login",
-  "/register",
-  "/accept-invitation",
-  "/timeline",
-  "/api/",
-  "/posts/",
-  "/categories/",
-  "/sources/",
-  "/u/",
-];
-
 function isProtectedPath(pathname: string) {
   return (
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/admin")
   );
-}
-
-function isPublicPath(pathname: string) {
-  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p));
 }
 
 export function middleware(request: NextRequest) {

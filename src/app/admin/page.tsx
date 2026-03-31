@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AppHeader } from "@/components/layout/app-header";
 import { SectionHeading } from "@/components/content/section-heading";
 
 const adminCards = [
@@ -47,11 +46,7 @@ const adminCards = [
 
 export default function AdminIndexPage() {
   return (
-    <main className="page-stack">
-      <div className="page-container">
-        <AppHeader />
-
-        <section className="page-section">
+    <section className="dashboard-panel">
           <SectionHeading
             eyebrow="لوحة الإدارة"
             title="مركز الإدارة الرئيسي"
@@ -84,8 +79,6 @@ export default function AdminIndexPage() {
               </Link>
             ))}
           </div>
-        </section>
-      </div>
-    </main>
+    </section>
   );
 }

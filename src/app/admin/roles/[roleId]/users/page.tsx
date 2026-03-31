@@ -216,7 +216,7 @@ export default async function AdminRoleUsersPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="اSearch باسم المستخدم أو البريد"
+          placeholder="ابحث باسم المستخدم أو البريد"
           className="search-input"
           style={{ minWidth: "280px" }}
         />

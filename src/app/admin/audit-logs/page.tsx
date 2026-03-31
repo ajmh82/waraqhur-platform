@@ -68,7 +68,7 @@ export default async function AdminAuditLogsPage({ searchParams }: { searchParam
         {selectedActorType !== "ALL" ? <input type="hidden" name="actorType" value={selectedActorType} /> : null}
         {selectedTargetType !== "ALL" ? <input type="hidden" name="targetType" value={selectedTargetType} /> : null}
         {selectedSort !== "newest" ? <input type="hidden" name="sort" value={selectedSort} /> : null}
-        <input type="text" name="q" defaultValue={query} placeholder="اSearch في الإجراء أو المعرّف" style={{ minWidth: "300px" }} />
+        <input type="text" name="q" defaultValue={query} placeholder="ابحث في الإجراء أو المعرّف" style={{ minWidth: "300px" }} />
         <button type="submit" className="btn small">Search</button>
         <Link href={buildHref(selectedActorType, selectedTargetType, "", selectedSort, 1)} className="btn small">مسح الSearch</Link>
       </form>

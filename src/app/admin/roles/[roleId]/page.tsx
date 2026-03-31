@@ -10,7 +10,7 @@ interface AdminRoleRecord {
   key: string;
   name: string;
   description: string | null;
-  isنظامي: boolean;
+  isSystem: boolean;
   usersCount: number;
   users: Array<{
     id: string;
@@ -105,7 +105,7 @@ export default async function AdminRoleDetailsPage({
         <div className="state-card">
           <strong>نوع الدور</strong>
           <p style={{ fontSize: "28px", margin: "10px 0 0" }}>
-            {role.isنظامي ? "SYSTEM" : "CUSTOM"}
+            {role.isSystem ? "SYSTEM" : "CUSTOM"}
           </p>
         </div>
         <div className="state-card">
@@ -127,7 +127,7 @@ export default async function AdminRoleDetailsPage({
           <p><strong>الاسم:</strong> {role.name}</p>
           <p><strong>المعرّف:</strong> {role.key}</p>
           <p><strong>الوصف:</strong> {role.description ?? "-"}</p>
-          <p><strong>نوع الدور:</strong> {role.isنظامي ? "نظامي" : "مخصص"}</p>
+          <p><strong>نوع الدور:</strong> {role.isSystem ? "نظامي" : "مخصص"}</p>
           <p><strong>تاريخ الإنشاء:</strong> {formatDateTimeInMakkah(role.createdAt, "ar-BH")}</p>
           <p><strong>آخر تحديث:</strong> {formatDateTimeInMakkah(role.updatedAt, "ar-BH")}</p>
         </div>
