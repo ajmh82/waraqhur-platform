@@ -123,16 +123,19 @@ export async function POST(
       });
     }
 
+    const notificationRecipientUserId =
+      originalPost.authorUserId ?? originalPost.updatedByUserId ?? null;
+
     if (
-      originalPost.authorUserId &&
-      originalPost.authorUserId !== currentUserId &&
+      notificationRecipientUserId &&
+      notificationRecipientUserId !== currentUserId &&
       !existingRepost
     ) {
       const actionUrl = originalPost.slug
         ? `/posts/${originalPost.slug}`
         : `/posts/${originalPost.id}`;
       await createInAppNotification({
-        userId: originalPost.authorUserId,
+        userId: notificationRecipientUserId,
         title: "إعادة نشر جديدة",
         body: `@${actorUsername} أعاد نشر تغريدتك`,
         payload: {

@@ -145,16 +145,24 @@ export async function POST(request: Request) {
         : normalizedReplyBody;
     const postForNotification = await prisma.post.findUnique({
       where: { id: input.postId },
-      select: { id: true, slug: true, authorUserId: true },
+      select: { id: true, slug: true, authorUserId: true, updatedByUserId: true },
     });
 
     const actionUrl = postForNotification?.slug
       ? `/posts/${postForNotification.slug}#comment-${comment.id}`
       : `/posts/${input.postId}#comment-${comment.id}`;
 
-    if (postForNotification?.authorUserId && postForNotification.authorUserId !== auth.current.user.id) {
+    const postNotificationRecipientUserId =
+      postForNotification?.authorUserId ??
+      postForNotification?.updatedByUserId ??
+      null;
+
+    if (
+      postNotificationRecipientUserId &&
+      postNotificationRecipientUserId !== auth.current.user.id
+    ) {
       await createInAppNotification({
-        userId: postForNotification.authorUserId,
+        userId: postNotificationRecipientUserId,
         title: "رد جديد",
         body: `@${actorUsername} رد: "${replyPreview}"`,
         payload: {
@@ -164,7 +172,7 @@ export async function POST(request: Request) {
           entityId: comment.id,
           metadata: {
             postId: input.postId,
-            postSlug: postForNotification.slug ?? null,
+            postSlug: postForNotification?.slug ?? null,
             commentId: comment.id,
             actorUserId: auth.current.user.id,
             actorUsername,
@@ -182,7 +190,7 @@ export async function POST(request: Request) {
       if (
         parentComment?.authorUserId &&
         parentComment.authorUserId !== auth.current.user.id &&
-        parentComment.authorUserId !== postForNotification?.authorUserId
+        parentComment.authorUserId !== postNotificationRecipientUserId
       ) {
         await createInAppNotification({
           userId: parentComment.authorUserId,

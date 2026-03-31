@@ -100,10 +100,17 @@ export async function POST(
       create: { userId, postId },
     });
 
-    if (!existingLike && post.authorUserId && post.authorUserId !== userId) {
+    const notificationRecipientUserId =
+      post.authorUserId ?? post.updatedByUserId ?? null;
+
+    if (
+      !existingLike &&
+      notificationRecipientUserId &&
+      notificationRecipientUserId !== userId
+    ) {
       const actionUrl = post.slug ? `/posts/${post.slug}` : `/posts/${post.id}`;
       await createInAppNotification({
-        userId: post.authorUserId,
+        userId: notificationRecipientUserId,
         title: "إعجاب جديد",
         body: `@${actorUsername} أعجب بتغريدتك`,
         payload: {
