@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface TweetActionBarProps {
   postId: string;
@@ -25,31 +25,48 @@ interface SearchUser {
   avatarUrl: string | null;
 }
 
+interface ThreadLite {
+  id: string;
+  otherUser: SearchUser;
+}
+
 const copy = {
   ar: {
     shareFailed: "تعذر تنفيذ المشاركة.",
     shareCopied: "تم نسخ رابط التغريدة.",
     shareExternal: "مشاركة خارجية",
-    shareToDm: "إرسال للخاص",
+    shareToDm: "إرسال عبر الرسائل",
+    shareTitle: "إرسال التغريدة",
+    conversations: "المحادثات المفتوحة",
+    users: "المستخدمون",
+    searchUsersPlaceholder: "ابحث باسم المستخدم أو الاسم المعروض...",
+    searchLoading: "جارٍ البحث...",
+    noConversations: "لا توجد محادثات مفتوحة.",
+    noUsers: "لا يوجد مستخدمون مطابقون.",
+    sentToConversation: "تم إرسال التغريدة للمحادثة.",
+    sendFailed: "تعذر الإرسال.",
     closeShare: "إغلاق",
-    dmPrompt: "اكتب اسم المستخدم للإرسال له (بدون @):",
-    dmSearching: "جارٍ البحث عن المستخدم...",
-    dmUserNotFound: "لم يتم العثور على مستخدم مطابق.",
+    dmSearching: "جارٍ تجهيز الإرسال...",
     dmRequestSent: "تم إرسال طلب محادثة. بعد القبول يمكنك إرسال الرابط.",
-    dmSent: "تم إرسال الرابط في الخاص.",
     dmFailed: "تعذر الإرسال للخاص.",
   },
   en: {
     shareFailed: "Failed to share.",
     shareCopied: "Post link copied.",
     shareExternal: "External Share",
-    shareToDm: "Send in DM",
+    shareToDm: "Send in Messages",
+    shareTitle: "Share post",
+    conversations: "Open conversations",
+    users: "Users",
+    searchUsersPlaceholder: "Search username or display name...",
+    searchLoading: "Searching...",
+    noConversations: "No open conversations.",
+    noUsers: "No matching users.",
+    sentToConversation: "Post sent to conversation.",
+    sendFailed: "Failed to send.",
     closeShare: "Close",
-    dmPrompt: "Enter username to send to (without @):",
-    dmSearching: "Searching user...",
-    dmUserNotFound: "No matching user found.",
+    dmSearching: "Preparing send...",
     dmRequestSent: "Chat request sent. You can send the link after acceptance.",
-    dmSent: "Link sent in DM.",
     dmFailed: "Failed to send in DM.",
   },
 } as const;
@@ -77,8 +94,13 @@ export function TweetActionBar({
   const [sharesCount, setSharesCount] = useState(initialSharesCount);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
+  const [threads, setThreads] = useState<ThreadLite[]>([]);
+  const [shareSearch, setShareSearch] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
+  const searchRequestIdRef = useRef(0);
   const t = copy[locale];
 
   function getTargetUrl() {
@@ -146,10 +168,15 @@ export function TweetActionBar({
     setShareNotice(null);
 
     const targetUrl = getTargetUrl();
+    const shareText = `${targetUrl}`;
 
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
-        await navigator.share({ url: targetUrl });
+        await navigator.share({
+          title: "Waraqhur",
+          text: shareText,
+          url: targetUrl,
+        });
         setSharesCount((value) => value + 1);
         setShareNotice(t.shareCopied);
         return;
@@ -160,32 +187,13 @@ export function TweetActionBar({
 
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       try {
-        await navigator.clipboard.writeText(targetUrl);
+        await navigator.clipboard.writeText(shareText);
         setSharesCount((value) => value + 1);
         setShareNotice(t.shareCopied);
       } catch {
         setShareError(t.shareFailed);
       }
     }
-  }
-
-  async function searchUser(query: string): Promise<SearchUser | null> {
-    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
-      credentials: "include",
-      cache: "no-store",
-    });
-
-    const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload?.success) {
-      return null;
-    }
-
-    const users = Array.isArray(payload?.data?.users) ? (payload.data.users as SearchUser[]) : [];
-    if (users.length === 0) return null;
-
-    const normalized = query.toLowerCase();
-    const exact = users.find((u) => u.username.toLowerCase() === normalized);
-    return exact ?? users[0] ?? null;
   }
 
   async function openOrRequestThread(targetUserId: string) {
@@ -219,58 +227,80 @@ export function TweetActionBar({
     return Boolean(response.ok && payload?.success);
   }
 
-  async function handleShareToDm() {
-    setShareError(null);
-    setShareNotice(null);
-
-    if (typeof window === "undefined") return;
-
-    const raw = window.prompt(t.dmPrompt);
-    if (raw === null) return;
-
-    const query = raw.trim().replace(/^@+/, "");
-    if (query.length < 2) {
-      setShareError(t.dmUserNotFound);
+  async function sendPostToThread(threadId: string) {
+    const sent = await sendMessageToThread(threadId, getTargetUrl());
+    if (!sent) {
+      setShareError(t.sendFailed);
       return;
     }
+    setShareNotice(t.sentToConversation);
+    setSharesCount((value) => value + 1);
+  }
 
-    setShareBusy(true);
-    setShareNotice(t.dmSearching);
+  async function loadOpenConversations() {
+    const response = await fetch("/api/messages", {
+      credentials: "include",
+      cache: "no-store",
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.success) {
+      setThreads([]);
+      return;
+    }
+    const list = Array.isArray(payload?.data?.threads)
+      ? payload.data.threads
+      : [];
+    const mapped = list
+      .map((thread: unknown) => {
+        const t = thread as {
+          id?: string;
+          otherUser?: SearchUser;
+        };
+        if (!t?.id || !t?.otherUser?.id) return null;
+        return {
+          id: t.id,
+          otherUser: t.otherUser,
+        };
+      })
+      .filter(Boolean) as Array<{ id: string; otherUser: SearchUser }>;
+    setThreads(mapped);
+  }
 
+  async function handleLiveSearch(query: string) {
+    const normalized = query.trim();
+    if (normalized.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    const requestId = ++searchRequestIdRef.current;
+    setSearchLoading(true);
     try {
-      const user = await searchUser(query);
-      if (!user) {
-        setShareNotice(null);
-        setShareError(t.dmUserNotFound);
+      const response = await fetch(`/api/search?q=${encodeURIComponent(normalized)}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.success) {
+        if (requestId !== searchRequestIdRef.current) return;
+        setSearchResults([]);
         return;
       }
-
-      const threadResult = await openOrRequestThread(user.id);
-      if (!threadResult.ok) {
-        setShareNotice(null);
-        setShareError(t.dmFailed);
-        return;
-      }
-
-      if (!threadResult.threadId) {
-        setShareNotice(t.dmRequestSent);
-        setSharesCount((value) => value + 1);
-        return;
-      }
-
-      const sent = await sendMessageToThread(threadResult.threadId, getTargetUrl());
-      if (!sent) {
-        setShareNotice(null);
-        setShareError(t.dmFailed);
-        return;
-      }
-
-      setShareNotice(t.dmSent);
-      setSharesCount((value) => value + 1);
+      const users = Array.isArray(payload?.data?.users)
+        ? (payload.data.users as SearchUser[])
+        : [];
+      if (requestId !== searchRequestIdRef.current) return;
+      setSearchResults(users.slice(0, 8));
     } finally {
-      setShareBusy(false);
+      if (requestId === searchRequestIdRef.current) {
+        setSearchLoading(false);
+      }
     }
   }
+
+  useEffect(() => {
+    if (!shareOpen) return;
+    void loadOpenConversations();
+  }, [shareOpen]);
 
   return (
     <div
@@ -320,9 +350,13 @@ export function TweetActionBar({
       <button
         type="button"
         onClick={() => {
-          setShareOpen((value) => !value);
+          const nextOpen = !shareOpen;
+          setShareOpen(nextOpen);
           setShareError(null);
           setShareNotice(null);
+          if (nextOpen) {
+            void handleLiveSearch(shareSearch);
+          }
         }}
         className="tweet-action-bar__item tweet-action-bar__item--share"
       >
@@ -349,19 +383,121 @@ export function TweetActionBar({
             boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
           }}
         >
-          <button
-            type="button"
-            className="btn small"
-            onClick={handleShareToDm}
-            disabled={shareBusy}
-          >
-            {shareBusy ? t.dmSearching : t.shareToDm}
-          </button>
+          <strong style={{ fontSize: "14px" }}>{t.shareTitle}</strong>
+
+          <div style={{ display: "grid", gap: "8px" }}>
+            <span style={{ fontSize: "12px", color: "var(--muted)" }}>{t.conversations}</span>
+            {threads.length === 0 ? (
+              <p style={{ margin: 0, fontSize: "12px", color: "var(--muted)" }}>
+                {t.noConversations}
+              </p>
+            ) : (
+              <div style={{ display: "grid", gap: "6px", maxHeight: "180px", overflowY: "auto" }}>
+                {threads.map((thread) => (
+                  <button
+                    key={thread.id}
+                    type="button"
+                    className="btn small"
+                    disabled={shareBusy}
+                    onClick={async () => {
+                      setShareBusy(true);
+                      setShareError(null);
+                      setShareNotice(null);
+                      try {
+                        await sendPostToThread(thread.id);
+                      } finally {
+                        setShareBusy(false);
+                      }
+                    }}
+                    style={{ justifyContent: "space-between" }}
+                  >
+                    <span>{thread.otherUser.displayName}</span>
+                    <span>@{thread.otherUser.username}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gap: "8px" }}>
+            <span style={{ fontSize: "12px", color: "var(--muted)" }}>{t.users}</span>
+            <input
+              type="search"
+              value={shareSearch}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setShareSearch(nextValue);
+                void handleLiveSearch(nextValue);
+              }}
+              placeholder={t.searchUsersPlaceholder}
+              style={{
+                borderRadius: "10px",
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(255,255,255,0.04)",
+                color: "inherit",
+                padding: "8px 10px",
+              }}
+            />
+            {searchLoading ? (
+              <p style={{ margin: 0, fontSize: "12px", color: "var(--muted)" }}>
+                {t.searchLoading}
+              </p>
+            ) : null}
+            {!searchLoading && shareSearch.trim().length >= 2 && searchResults.length === 0 ? (
+              <p style={{ margin: 0, fontSize: "12px", color: "var(--muted)" }}>
+                {t.noUsers}
+              </p>
+            ) : null}
+            {searchResults.length > 0 ? (
+              <div style={{ display: "grid", gap: "6px", maxHeight: "180px", overflowY: "auto" }}>
+                {searchResults.map((user) => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    className="btn small"
+                    disabled={shareBusy}
+                    onClick={async () => {
+                      setShareBusy(true);
+                      setShareError(null);
+                      setShareNotice(null);
+                      try {
+                        const threadResult = await openOrRequestThread(user.id);
+                        if (!threadResult.ok) {
+                          setShareError(t.dmFailed);
+                          return;
+                        }
+                        if (!threadResult.threadId) {
+                          setShareNotice(t.dmRequestSent);
+                          return;
+                        }
+                        await sendPostToThread(threadResult.threadId);
+                      } finally {
+                        setShareBusy(false);
+                      }
+                    }}
+                    style={{ justifyContent: "space-between" }}
+                  >
+                    <span>{user.displayName}</span>
+                    <span>@{user.username}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
 
           <button
             type="button"
             className="btn small"
-            onClick={handleExternalShare}
+            onClick={async () => {
+              setShareBusy(true);
+              setShareError(null);
+              setShareNotice(null);
+              try {
+                await handleExternalShare();
+              } finally {
+                setShareBusy(false);
+              }
+            }}
             disabled={shareBusy}
           >
             {t.shareExternal}

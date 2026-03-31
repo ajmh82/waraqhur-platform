@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CategoryBadge } from "@/components/content/category-badge";
 import { SourceBadge } from "@/components/content/source-badge";
 import { TweetActionBar } from "@/components/social/tweet-action-bar";
@@ -42,9 +43,47 @@ interface PostCardProps {
       id: string;
       title: string;
       slug: string | null;
+      excerpt?: string | null;
+      content?: string | null;
+      coverImageUrl?: string | null;
+      createdAt?: string;
+      updatedAt?: string;
+      commentsCount?: number;
+      likesCount?: number;
+      repostsCount?: number;
+      bookmarksCount?: number;
+      viewsCount?: number;
+      category?: {
+        id: string;
+        name: string;
+        slug: string;
+      } | null;
+      source?: {
+        id: string;
+        name: string;
+        slug: string;
+      } | null;
       author: {
         id: string;
+        email?: string;
         username: string;
+        displayName?: string;
+        avatarUrl?: string | null;
+        isFollowing?: boolean;
+        isOwnProfile?: boolean;
+      } | null;
+      metadata?: {
+        ingestion?: {
+          provider?: string;
+          fetchedAt?: string;
+          originalUrl?: string | null;
+        };
+        social?: {
+          postKind?: string;
+          hashtags?: string[];
+          mediaType?: "image" | "video" | null;
+          mediaUrl?: string | null;
+        };
       } | null;
     } | null;
     quotedPost?: {
@@ -129,48 +168,58 @@ export function PostCard({
   post,
   locale = "ar",
 }: PostCardProps) {
+  const router = useRouter();
   const [isMediaOpen, setIsMediaOpen] = useState(false);
   const t = copy[locale];
-
-  const href = post.slug ? `/posts/${post.slug}` : "/timeline";
-  const originalUrl = post.metadata?.ingestion?.originalUrl ?? null;
-  const provider = post.metadata?.ingestion?.provider ?? null;
-  const social = post.metadata?.social ?? null;
+  const targetPost = post.repostOfPost ?? post;
+  const repostActor = post.repostOfPost ? post.author : null;
+  const href = `/posts/${encodeURIComponent(targetPost.slug ?? targetPost.id)}`;
+  const originalUrl = targetPost.metadata?.ingestion?.originalUrl ?? null;
+  const provider = targetPost.metadata?.ingestion?.provider ?? null;
+  const social = targetPost.metadata?.social ?? null;
   const isTweet = social?.postKind === "tweet";
 
-  const mediaType =
-    social?.mediaType ?? (post.coverImageUrl ? "image" : null);
-  const mediaUrl = social?.mediaUrl ?? post.coverImageUrl ?? null;
+  const mediaType = social?.mediaType ?? (targetPost.coverImageUrl ? "image" : null);
+  const mediaUrl = social?.mediaUrl ?? targetPost.coverImageUrl ?? null;
 
-  const mainText =
-    post.content?.trim() ||
-    post.excerpt?.trim() ||
-    post.title?.trim() ||
-    "";
+  const titleText = (targetPost.title || "").trim();
+  const bodyText = ((targetPost.content || targetPost.excerpt || "") || "").trim();
+  const showTitle = !isTweet && titleText.length > 0;
+  const showBodyText = !showTitle || bodyText.length === 0 ? bodyText : bodyText !== titleText ? bodyText : "";
+  const mainText = isTweet
+    ? targetPost.content?.trim() || targetPost.excerpt?.trim() || titleText
+    : showBodyText;
 
-  const username = post.author?.username ?? "unknown";
-  const displayName = post.author?.displayName ?? username;
-  const wasEdited =
-    Boolean(post.updatedAt) &&
-    post.updatedAt !== post.createdAt;
+  const username = targetPost.author?.username ?? "unknown";
+  const displayName = targetPost.author?.displayName ?? username;
+  const wasEdited = Boolean(targetPost.updatedAt) && targetPost.updatedAt !== targetPost.createdAt;
+
+  function handleCardClick(event: React.MouseEvent<HTMLElement>) {
+    const target = event.target as HTMLElement;
+    if (target.closest("a,button,input,textarea,select,label,video")) {
+      return;
+    }
+    router.push(href);
+  }
 
   return (
     <>
-      <article className="tweet-card">
-        {post.repostOfPost ? (
+      <article
+        className="tweet-card"
+        onClick={handleCardClick}
+        style={{ cursor: "pointer" }}
+      >
+        {post.repostOfPost && repostActor ? (
           <div className="tweet-card__repost-bar">
-            🔁 {t.repost}
-            {post.repostOfPost.author
-              ? ` ${locale === "en" ? "from" : "من"} @${post.repostOfPost.author.username}`
-              : ""}
+            🔁 {locale === "en" ? `@${repostActor.username} reposted` : `@${repostActor.username} أعاد النشر`}
           </div>
         ) : null}
 
         <div className="tweet-card__body">
-          <div className="tweet-card__avatar">
-            {post.author?.avatarUrl ? (
+          <Link href={`/u/${encodeURIComponent(username)}`} className="tweet-card__avatar">
+            {targetPost.author?.avatarUrl ? (
               <img
-                src={post.author.avatarUrl}
+                src={targetPost.author.avatarUrl}
                 alt={displayName}
                 style={{
                   width: "100%",
@@ -182,7 +231,7 @@ export function PostCard({
             ) : (
               username.charAt(0).toUpperCase()
             )}
-          </div>
+          </Link>
 
           <div className="tweet-card__content">
             <div
@@ -203,8 +252,8 @@ export function PostCard({
               >
                 <div style={{ display: "grid", gap: "4px" }}>
                   <strong style={{ fontSize: "16px", lineHeight: 1.2 }}>
-                    {post.author ? (
-                      <Link href={`/u/${post.author.username}`}>
+                    {targetPost.author ? (
+                      <Link href={`/u/${encodeURIComponent(targetPost.author.username)}`}>
                         {displayName}
                       </Link>
                     ) : (
@@ -240,30 +289,30 @@ export function PostCard({
                 </div>
               </div>
 
-              {post.author && !post.author.isOwnProfile ? (
+              {targetPost.author && !targetPost.author.isOwnProfile ? (
                 <FollowUserButton
-                  userId={post.author.id}
-                  initialIsFollowing={Boolean(post.author.isFollowing)}
+                  userId={targetPost.author.id}
+                  initialIsFollowing={Boolean(targetPost.author.isFollowing)}
                   locale={locale}
                 />
               ) : null}
             </div>
 
             <div className="tweet-card__badges">
-              {post.source ? (
-                <SourceBadge name={post.source.name} slug={post.source.slug} />
+              {targetPost.source ? (
+                <SourceBadge name={targetPost.source.name} slug={targetPost.source.slug} />
               ) : null}
-              {post.category ? (
+              {targetPost.category ? (
                 <CategoryBadge
-                  name={post.category.name}
-                  slug={post.category.slug}
+                  name={targetPost.category.name}
+                  slug={targetPost.category.slug}
                 />
               ) : null}
             </div>
 
-            {!isTweet ? (
+            {showTitle ? (
               <Link href={href} className="tweet-card__title-link">
-                <h3>{post.title}</h3>
+                <h3>{titleText}</h3>
               </Link>
             ) : null}
 
@@ -304,7 +353,7 @@ export function PostCard({
               >
                 <img
                   src={mediaUrl}
-                  alt={post.title || "Post image"}
+                  alt={titleText || "Post image"}
                   style={{
                     display: "block",
                     width: "100%",
@@ -380,7 +429,7 @@ export function PostCard({
             {post.author?.isOwnProfile ? (
               <TweetOwnerControls
                 postId={post.id}
-                initialContent={mainText}
+                initialContent={post.content?.trim() || post.excerpt?.trim() || post.title?.trim() || ""}
                 initialMediaUrl={mediaUrl}
                 initialMediaType={mediaType}
                 initialIsPinned={Boolean(post.isPinned)}
@@ -402,12 +451,12 @@ export function PostCard({
 
             <div style={{ marginTop: "14px" }}>
               <TweetActionBar
-                postId={post.id}
+                postId={targetPost.id}
                 href={href}
-                commentsCount={post.commentsCount}
-                initialLikesCount={post.likesCount ?? 0}
-                initialRepostsCount={post.repostsCount ?? 0}
-                initialBookmarksCount={post.bookmarksCount ?? 0}
+                commentsCount={targetPost.commentsCount ?? 0}
+                initialLikesCount={targetPost.likesCount ?? 0}
+                initialRepostsCount={targetPost.repostsCount ?? 0}
+                initialBookmarksCount={targetPost.bookmarksCount ?? 0}
                 compact
                 locale={locale}
               />
@@ -510,7 +559,7 @@ export function PostCard({
               {mediaType === "image" ? (
                 <img
                   src={mediaUrl}
-                  alt={post.title || "Post image"}
+                  alt={titleText || "Post image"}
                   style={{
                     display: "block",
                     maxWidth: "100%",

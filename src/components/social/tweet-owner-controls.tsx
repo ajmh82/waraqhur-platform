@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 interface TweetOwnerControlsProps {
@@ -41,6 +41,7 @@ const copy = {
     pinShort: "تثبيت",
     unpinShort: "إلغاء التثبيت",
     pinFailed: "تعذر تحديث حالة التثبيت.",
+    actions: "خيارات التغريدة",
   },
   en: {
     edit: "Edit Post",
@@ -65,6 +66,7 @@ const copy = {
     pinShort: "Pin",
     unpinShort: "Unpin",
     pinFailed: "Failed to update pin state.",
+    actions: "Post actions",
   },
 } as const;
 
@@ -86,7 +88,9 @@ export function TweetOwnerControls({
   const [previewType, setPreviewType] = useState<"image" | "video" | null>(initialMediaType);
   const [removeMedia, setRemoveMedia] = useState(false);
   const [isPinned, setIsPinned] = useState(initialIsPinned);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const t = copy[locale];
 
   useEffect(() => {
@@ -106,6 +110,19 @@ export function TweetOwnerControls({
   useEffect(() => {
     setIsPinned(initialIsPinned);
   }, [initialIsPinned]);
+
+  useEffect(() => {
+    function onDocumentClick(event: MouseEvent) {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener("click", onDocumentClick);
+    }
+    return () => document.removeEventListener("click", onDocumentClick);
+  }, [menuOpen]);
 
   function resetEditor() {
     setContent(initialContent);
@@ -276,54 +293,97 @@ export function TweetOwnerControls({
   }
 
   return (
-    <div style={{ display: "grid", gap: "10px" }}>
-      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+    <div ref={rootRef} style={{ display: "grid", gap: "10px", justifyItems: "end" }}>
+      <div style={{ position: "relative" }}>
         <button
           type="button"
           className="btn small"
-          onClick={() => {
-            if (isEditing) {
-              resetEditor();
-              return;
-            }
-            setIsEditing(true);
-          }}
-          disabled={isPending}
-        >
-          {isEditing ? t.cancel : compact ? t.editShort : t.edit}
-        </button>
-
-        <button
-          type="button"
-          className="btn small"
-          onClick={handleTogglePin}
+          onClick={() => setMenuOpen((value) => !value)}
+          aria-expanded={menuOpen}
+          aria-label={t.actions}
           disabled={isPending}
           style={{
-            borderColor: "rgba(45,212,191,0.35)",
-            color: "#99f6e4",
+            minWidth: "38px",
+            minHeight: "34px",
+            padding: "0 10px",
+            borderRadius: "999px",
           }}
         >
-          {compact
-            ? isPinned
-              ? t.unpinShort
-              : t.pinShort
-            : isPinned
-              ? t.unpin
-              : t.pin}
+          ⋯
         </button>
 
-        <button
-          type="button"
-          className="btn small"
-          onClick={handleDelete}
-          disabled={isPending}
-          style={{
-            borderColor: "rgba(248,113,113,0.3)",
-            color: "#fecaca",
-          }}
-        >
-          {compact ? t.deleteShort : t.delete}
-        </button>
+        {menuOpen ? (
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 6px)",
+              insetInlineEnd: 0,
+              zIndex: 25,
+              display: "grid",
+              gap: "6px",
+              minWidth: "180px",
+              padding: "8px",
+              borderRadius: "12px",
+              background: "rgba(2,6,23,0.96)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+            }}
+          >
+            <button
+              type="button"
+              className="btn small"
+              onClick={() => {
+                setMenuOpen(false);
+                if (isEditing) {
+                  resetEditor();
+                  return;
+                }
+                setIsEditing(true);
+              }}
+              disabled={isPending}
+            >
+              {isEditing ? t.cancel : compact ? t.editShort : t.edit}
+            </button>
+
+            <button
+              type="button"
+              className="btn small"
+              onClick={() => {
+                setMenuOpen(false);
+                void handleTogglePin();
+              }}
+              disabled={isPending}
+              style={{
+                borderColor: "rgba(45,212,191,0.35)",
+                color: "#99f6e4",
+              }}
+            >
+              {compact
+                ? isPinned
+                  ? t.unpinShort
+                  : t.pinShort
+                : isPinned
+                  ? t.unpin
+                  : t.pin}
+            </button>
+
+            <button
+              type="button"
+              className="btn small"
+              onClick={() => {
+                setMenuOpen(false);
+                void handleDelete();
+              }}
+              disabled={isPending}
+              style={{
+                borderColor: "rgba(248,113,113,0.3)",
+                color: "#fecaca",
+              }}
+            >
+              {compact ? t.deleteShort : t.delete}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {isEditing ? (

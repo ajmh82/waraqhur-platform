@@ -4,6 +4,23 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserFromSession } from "@/services/auth-service";
 
+function getSocialMetadata(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object") {
+    return null;
+  }
+
+  const value = metadata as {
+    social?: {
+      postKind?: string;
+      hashtags?: string[];
+      mediaType?: "image" | "video" | null;
+      mediaUrl?: string | null;
+    };
+  };
+
+  return value.social ?? null;
+}
+
 async function getOptionalCurrentUserId() {
   try {
     const cookieStore = await cookies();
@@ -42,10 +59,30 @@ export async function GET(
           include: {
             category: true,
             source: true,
+            author: {
+              include: {
+                profile: true,
+              },
+            },
             comments: true,
             likes: true,
             reposts: true,
             bookmarks: true,
+            repostOfPost: {
+              include: {
+                category: true,
+                source: true,
+                author: {
+                  include: {
+                    profile: true,
+                  },
+                },
+                comments: true,
+                likes: true,
+                reposts: true,
+                bookmarks: true,
+              },
+            },
           },
         },
         followers: true,
@@ -123,14 +160,14 @@ export async function GET(
       canViewContent && user.pinnedPostId
         ? await prisma.post.findUnique({
             where: { id: user.pinnedPostId },
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-              excerpt: true,
-              createdAt: true,
+            include: {
               category: true,
               source: true,
+              author: {
+                include: {
+                  profile: true,
+                },
+              },
               comments: true,
               likes: true,
               reposts: true,
@@ -140,73 +177,193 @@ export async function GET(
         : null;
 
     const pinnedPostPayload = pinnedPost
-      ? {
-          id: pinnedPost.id,
-          title: pinnedPost.title,
-          slug: pinnedPost.slug,
-          excerpt: pinnedPost.excerpt,
-          createdAt: pinnedPost.createdAt.toISOString(),
-          commentsCount: pinnedPost.comments.length,
-          likesCount: pinnedPost.likes.length,
-          repostsCount: pinnedPost.reposts.length,
-          bookmarksCount: pinnedPost.bookmarks.length,
-          viewsCount:
-            pinnedPost.comments.length +
-            pinnedPost.likes.length +
-            pinnedPost.reposts.length +
-            pinnedPost.bookmarks.length +
-            1,
-          category: pinnedPost.category
-            ? {
-                id: pinnedPost.category.id,
-                name: pinnedPost.category.name,
-                slug: pinnedPost.category.slug,
-              }
-            : null,
-          source: pinnedPost.source
-            ? {
-                id: pinnedPost.source.id,
-                name: pinnedPost.source.name,
-                slug: pinnedPost.source.slug,
-              }
-            : null,
-          isPinned: true,
-        }
+      ? (() => {
+          const pinnedSocial = getSocialMetadata(pinnedPost.metadata);
+          return {
+            id: pinnedPost.id,
+            title: pinnedPost.title,
+            slug: pinnedPost.slug,
+            excerpt: pinnedPost.excerpt,
+            content: pinnedPost.content,
+            coverImageUrl: pinnedPost.coverImageUrl,
+            createdAt: pinnedPost.createdAt.toISOString(),
+            updatedAt: pinnedPost.updatedAt.toISOString(),
+            commentsCount: pinnedPost.comments.length,
+            likesCount: pinnedPost.likes.length,
+            repostsCount: pinnedPost.reposts.length,
+            bookmarksCount: pinnedPost.bookmarks.length,
+            viewsCount:
+              pinnedPost.comments.length +
+              pinnedPost.likes.length +
+              pinnedPost.reposts.length +
+              pinnedPost.bookmarks.length +
+              1,
+            category: pinnedPost.category
+              ? {
+                  id: pinnedPost.category.id,
+                  name: pinnedPost.category.name,
+                  slug: pinnedPost.category.slug,
+                }
+              : null,
+            source: pinnedPost.source
+              ? {
+                  id: pinnedPost.source.id,
+                  name: pinnedPost.source.name,
+                  slug: pinnedPost.source.slug,
+                }
+              : null,
+            author: pinnedPost.author
+              ? {
+                  id: pinnedPost.author.id,
+                  email: pinnedPost.author.email,
+                  username: pinnedPost.author.username,
+                  displayName:
+                    pinnedPost.author.profile?.displayName ??
+                    pinnedPost.author.username,
+                  avatarUrl: pinnedPost.author.profile?.avatarUrl ?? null,
+                  isFollowing,
+                  isOwnProfile,
+                }
+              : null,
+            metadata: {
+              social: pinnedSocial
+                ? {
+                    postKind: pinnedSocial.postKind ?? null,
+                    hashtags: pinnedSocial.hashtags ?? [],
+                    mediaType: pinnedSocial.mediaType ?? null,
+                    mediaUrl: pinnedSocial.mediaUrl ?? null,
+                  }
+                : undefined,
+            },
+            isPinned: true,
+          };
+        })()
       : null;
 
     const mappedPosts = canViewContent
-      ? user.authoredPosts.map((post) => ({
-          id: post.id,
-          title: post.title,
-          slug: post.slug,
-          excerpt: post.excerpt,
-          createdAt: post.createdAt.toISOString(),
-          commentsCount: post.comments.length,
-          likesCount: post.likes.length,
-          repostsCount: post.reposts.length,
-          bookmarksCount: post.bookmarks.length,
-          viewsCount:
-            post.comments.length +
-            post.likes.length +
-            post.reposts.length +
-            post.bookmarks.length +
-            1,
-          category: post.category
-            ? {
-                id: post.category.id,
-                name: post.category.name,
-                slug: post.category.slug,
-              }
-            : null,
-          source: post.source
-            ? {
-                id: post.source.id,
-                name: post.source.name,
-                slug: post.source.slug,
-              }
-            : null,
-          isPinned: user.pinnedPostId === post.id,
-        }))
+      ? user.authoredPosts
+          .filter((post) => !post.repostOfPostId)
+          .map((post) => {
+          const social = getSocialMetadata(post.metadata);
+          const repostSocial = getSocialMetadata(post.repostOfPost?.metadata);
+
+          return {
+            id: post.id,
+            title: post.title,
+            slug: post.slug,
+            excerpt: post.excerpt,
+            content: post.content,
+            coverImageUrl: post.coverImageUrl,
+            createdAt: post.createdAt.toISOString(),
+            updatedAt: post.updatedAt.toISOString(),
+            commentsCount: post.comments.length,
+            likesCount: post.likes.length,
+            repostsCount: post.reposts.length,
+            bookmarksCount: post.bookmarks.length,
+            viewsCount:
+              post.comments.length +
+              post.likes.length +
+              post.reposts.length +
+              post.bookmarks.length +
+              1,
+            category: post.category
+              ? {
+                  id: post.category.id,
+                  name: post.category.name,
+                  slug: post.category.slug,
+                }
+              : null,
+            source: post.source
+              ? {
+                  id: post.source.id,
+                  name: post.source.name,
+                  slug: post.source.slug,
+                }
+              : null,
+            author: post.author
+              ? {
+                  id: post.author.id,
+                  email: post.author.email,
+                  username: post.author.username,
+                  displayName:
+                    post.author.profile?.displayName ?? post.author.username,
+                  avatarUrl: post.author.profile?.avatarUrl ?? null,
+                  isFollowing,
+                  isOwnProfile,
+                }
+              : null,
+            repostOfPost:
+              post.repostOfPost && post.repostOfPost.status === "PUBLISHED"
+                ? {
+                    id: post.repostOfPost.id,
+                    title: post.repostOfPost.title,
+                    slug: post.repostOfPost.slug,
+                    excerpt: post.repostOfPost.excerpt,
+                    content: post.repostOfPost.content,
+                    coverImageUrl: post.repostOfPost.coverImageUrl,
+                    createdAt: post.repostOfPost.createdAt.toISOString(),
+                    updatedAt: post.repostOfPost.updatedAt.toISOString(),
+                    commentsCount: post.repostOfPost.comments.length,
+                    likesCount: post.repostOfPost.likes.length,
+                    repostsCount: post.repostOfPost.reposts.length,
+                    bookmarksCount: post.repostOfPost.bookmarks.length,
+                    viewsCount:
+                      post.repostOfPost.comments.length +
+                      post.repostOfPost.likes.length +
+                      post.repostOfPost.reposts.length +
+                      post.repostOfPost.bookmarks.length +
+                      1,
+                    category: post.repostOfPost.category
+                      ? {
+                          id: post.repostOfPost.category.id,
+                          name: post.repostOfPost.category.name,
+                          slug: post.repostOfPost.category.slug,
+                        }
+                      : null,
+                    source: post.repostOfPost.source
+                      ? {
+                          id: post.repostOfPost.source.id,
+                          name: post.repostOfPost.source.name,
+                          slug: post.repostOfPost.source.slug,
+                        }
+                      : null,
+                    author: post.repostOfPost.author
+                      ? {
+                          id: post.repostOfPost.author.id,
+                          email: post.repostOfPost.author.email,
+                          username: post.repostOfPost.author.username,
+                          displayName:
+                            post.repostOfPost.author.profile?.displayName ??
+                            post.repostOfPost.author.username,
+                          avatarUrl:
+                            post.repostOfPost.author.profile?.avatarUrl ?? null,
+                        }
+                      : null,
+                    metadata: {
+                      social: repostSocial
+                        ? {
+                            postKind: repostSocial.postKind ?? null,
+                            hashtags: repostSocial.hashtags ?? [],
+                            mediaType: repostSocial.mediaType ?? null,
+                            mediaUrl: repostSocial.mediaUrl ?? null,
+                          }
+                        : undefined,
+                    },
+                  }
+                : null,
+            metadata: {
+              social: social
+                ? {
+                    postKind: social.postKind ?? null,
+                    hashtags: social.hashtags ?? [],
+                    mediaType: social.mediaType ?? null,
+                    mediaUrl: social.mediaUrl ?? null,
+                  }
+                : undefined,
+            },
+            isPinned: user.pinnedPostId === post.id,
+          };
+        })
       : [];
 
     const posts = (() => {
@@ -264,21 +421,28 @@ export async function GET(
           include: {
             category: true,
             source: true,
+            author: {
+              include: {
+                profile: true,
+              },
+            },
             comments: true,
             likes: true,
             reposts: true,
             bookmarks: true,
             repostOfPost: {
-              select: {
-                id: true,
-                title: true,
-                slug: true,
+              include: {
+                category: true,
+                source: true,
                 author: {
-                  select: {
-                    id: true,
-                    username: true,
+                  include: {
+                    profile: true,
                   },
                 },
+                comments: true,
+                likes: true,
+                reposts: true,
+                bookmarks: true,
               },
             },
           },
@@ -286,11 +450,29 @@ export async function GET(
       : [];
 
     const reposts = repostPosts.map((post) => ({
+      ...(() => {
+        const social = getSocialMetadata(post.metadata);
+        return {
+          metadata: {
+            social: social
+              ? {
+                  postKind: social.postKind ?? null,
+                  hashtags: social.hashtags ?? [],
+                  mediaType: social.mediaType ?? null,
+                  mediaUrl: social.mediaUrl ?? null,
+                }
+              : undefined,
+          },
+        };
+      })(),
       id: post.id,
       title: post.title,
       slug: post.slug,
       excerpt: post.excerpt,
+      content: post.content,
+      coverImageUrl: post.coverImageUrl,
       createdAt: post.createdAt.toISOString(),
+      updatedAt: post.updatedAt.toISOString(),
       commentsCount: post.comments.length,
       likesCount: post.likes.length,
       repostsCount: post.reposts.length,
@@ -320,14 +502,70 @@ export async function GET(
             id: post.repostOfPost.id,
             title: post.repostOfPost.title,
             slug: post.repostOfPost.slug,
+            excerpt: post.repostOfPost.excerpt,
+            content: post.repostOfPost.content,
+            coverImageUrl: post.repostOfPost.coverImageUrl,
+            createdAt: post.repostOfPost.createdAt.toISOString(),
+            updatedAt: post.repostOfPost.updatedAt.toISOString(),
+            commentsCount: post.repostOfPost.comments.length,
+            likesCount: post.repostOfPost.likes.length,
+            repostsCount: post.repostOfPost.reposts.length,
+            bookmarksCount: post.repostOfPost.bookmarks.length,
+            viewsCount:
+              post.repostOfPost.comments.length +
+              post.repostOfPost.likes.length +
+              post.repostOfPost.reposts.length +
+              post.repostOfPost.bookmarks.length +
+              1,
+            category: post.repostOfPost.category
+              ? {
+                  id: post.repostOfPost.category.id,
+                  name: post.repostOfPost.category.name,
+                  slug: post.repostOfPost.category.slug,
+                }
+              : null,
+            source: post.repostOfPost.source
+              ? {
+                  id: post.repostOfPost.source.id,
+                  name: post.repostOfPost.source.name,
+                  slug: post.repostOfPost.source.slug,
+                }
+              : null,
             author: post.repostOfPost.author
               ? {
                   id: post.repostOfPost.author.id,
+                  email: post.repostOfPost.author.email,
                   username: post.repostOfPost.author.username,
+                  displayName:
+                    post.repostOfPost.author.profile?.displayName ??
+                    post.repostOfPost.author.username,
+                  avatarUrl: post.repostOfPost.author.profile?.avatarUrl ?? null,
                 }
               : null,
+            metadata: (() => {
+              const repostSocial = getSocialMetadata(post.repostOfPost.metadata);
+              return {
+                social: repostSocial
+                  ? {
+                      postKind: repostSocial.postKind ?? null,
+                      hashtags: repostSocial.hashtags ?? [],
+                      mediaType: repostSocial.mediaType ?? null,
+                      mediaUrl: repostSocial.mediaUrl ?? null,
+                    }
+                  : undefined,
+              };
+            })(),
           }
         : null,
+      author: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        displayName: user.profile?.displayName ?? user.username,
+        avatarUrl: user.profile?.avatarUrl ?? null,
+        isFollowing,
+        isOwnProfile,
+      },
       isPinned: false,
     }));
 

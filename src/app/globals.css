@@ -664,39 +664,53 @@ a {
 }
 
 .tweet-action-bar__item {
-  min-width: 46px !important;
-  min-height: 46px !important;
-  padding: 0 12px !important;
-  background: rgba(255,255,255,0.05) !important;
-  color: rgba(255,255,255,0.84) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: rgba(255,255,255,0.72) !important;
+  box-shadow: none !important;
+  opacity: 0.92;
+  gap: 6px !important;
 }
 
 .tweet-action-bar__item:hover {
-  transform: scale(1.03);
+  transform: none;
+  opacity: 1;
 }
 
 .tweet-action-bar__item--comment:hover {
   color: #7dd3fc !important;
-  background: rgba(56, 189, 248, 0.12) !important;
+  background: transparent !important;
 }
 
 .tweet-action-bar__item--like:hover,
 .tweet-action-bar__item--like.tweet-action-bar__item--active {
   color: #ff8ea1 !important;
-  background: rgba(244, 63, 94, 0.14) !important;
+  background: transparent !important;
 }
 
 .tweet-action-bar__item--repost:hover,
 .tweet-action-bar__item--repost.tweet-action-bar__item--active {
   color: #86efac !important;
-  background: rgba(34, 197, 94, 0.14) !important;
+  background: transparent !important;
 }
 
 .tweet-action-bar__item--share:hover,
 .tweet-action-bar__item--share.tweet-action-bar__item--active {
   color: #93c5fd !important;
-  background: rgba(59, 130, 246, 0.14) !important;
+  background: transparent !important;
+}
+
+.tweet-action-bar__icon {
+  font-size: 14px !important;
+}
+
+.tweet-action-bar__count {
+  font-size: 11px !important;
+  font-weight: 700 !important;
 }
 
 .mobile-bottom-nav {
